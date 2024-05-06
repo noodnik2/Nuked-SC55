@@ -32,7 +32,7 @@ target_sources(nuked-sc55-backend
     src/utils/files.cpp src/utils/files.h
 )
 target_link_libraries(nuked-sc55-backend PRIVATE SDL2::SDL2)
-target_compile_features(nuked-sc55-backend PRIVATE cxx_std_11)
+target_compile_features(nuked-sc55-backend PRIVATE cxx_std_23)
 
 #==============================================================================
 # Frontend
@@ -50,7 +50,7 @@ elseif(WIN32)
 endif()
 
 target_link_libraries(nuked-sc55 PRIVATE SDL2::SDL2 SDL2::SDL2main nuked-sc55-backend)
-target_compile_features(nuked-sc55 PRIVATE cxx_std_11)
+target_compile_features(nuked-sc55 PRIVATE cxx_std_23)
 
 if(USE_RTMIDI)
     target_link_libraries(nuked-sc55 PRIVATE RtMidi::rtmidi)
