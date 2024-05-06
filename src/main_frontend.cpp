@@ -33,7 +33,6 @@
  */
 #include <stdio.h>
 #include <string.h>
-#define SDL_MAIN_HANDLED
 #include "SDL.h"
 #include "mcu.h"
 #include "mcu_opcodes.h"
@@ -43,7 +42,6 @@
 #include "lcd.h"
 #include "submcu.h"
 #include "midi.h"
-#include "utf8main.h"
 #include "utils/files.h"
 #include "emu.h"
 #include "ringbuffer.h"

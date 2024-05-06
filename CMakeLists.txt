@@ -1,8 +1,6 @@
 cmake_minimum_required (VERSION 3.15)
 project (NukedSC55 VERSION 0.2.0 LANGUAGES CXX)
 
-include(3rdparty/Utf8Main/utf8main.cmake)
-
 find_package(SDL2 REQUIRED)
 
 if(NOT WIN32)
@@ -51,7 +49,7 @@ elseif(WIN32)
     target_sources(nuked-sc55 PRIVATE src/midi_win32.cpp)
 endif()
 
-target_link_libraries(nuked-sc55 PRIVATE SDL2::SDL2 nuked-sc55-backend)
+target_link_libraries(nuked-sc55 PRIVATE SDL2::SDL2 SDL2::SDL2main nuked-sc55-backend)
 target_compile_features(nuked-sc55 PRIVATE cxx_std_11)
 
 if(USE_RTMIDI)
