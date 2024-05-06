@@ -37,39 +37,39 @@
 struct mcu_t;
 
 struct pcm_t {
-    uint32_t ram1[32][8];
-    uint16_t ram2[32][16];
-    uint32_t select_channel;
-    uint32_t voice_mask;
-    uint32_t voice_mask_pending;
-    uint32_t voice_mask_updating;
-    uint32_t write_latch;
-    uint32_t wave_read_address;
-    uint8_t wave_byte_latch;
-    uint32_t read_latch;
-    uint8_t config_reg_3c; // SC55:c3 JV880:c0
-    uint8_t config_reg_3d;
-    uint32_t irq_channel;
-    uint32_t irq_assert;
+    uint32_t ram1[32][8]{};
+    uint16_t ram2[32][16]{};
+    uint32_t select_channel = 0;
+    uint32_t voice_mask = 0;
+    uint32_t voice_mask_pending = 0;
+    uint32_t voice_mask_updating = 0;
+    uint32_t write_latch = 0;
+    uint32_t wave_read_address = 0;
+    uint8_t wave_byte_latch = 0;
+    uint32_t read_latch = 0;
+    uint8_t config_reg_3c = 0; // SC55:c3 JV880:c0
+    uint8_t config_reg_3d = 0;
+    uint32_t irq_channel = 0;
+    uint32_t irq_assert = 0;
 
-    uint32_t nfs;
+    uint32_t nfs = 0;
 
-    uint32_t tv_counter;
+    uint32_t tv_counter = 0;
 
-    uint64_t cycles;
+    uint64_t cycles = 0;
 
-    uint16_t eram[0x4000];
+    uint16_t eram[0x4000]{};
 
-    int accum_l;
-    int accum_r;
-    int rcsum[2];
+    int accum_l = 0;
+    int accum_r = 0;
+    int rcsum[2]{};
 
-    mcu_t* mcu;
+    mcu_t* mcu = nullptr;
 
-    uint8_t waverom1[0x200000];
-    uint8_t waverom2[0x200000];
-    uint8_t waverom3[0x100000];
-    uint8_t waverom_exp[0x800000];
+    uint8_t waverom1[0x200000]{};
+    uint8_t waverom2[0x200000]{};
+    uint8_t waverom3[0x100000]{};
+    uint8_t waverom_exp[0x800000]{};
 };
 
 void PCM_Write(pcm_t& pcm, uint32_t address, uint8_t data);

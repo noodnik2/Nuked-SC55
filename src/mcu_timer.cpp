@@ -51,7 +51,6 @@ enum {
 
 void TIMER_Init(mcu_timer_t& timer, mcu_t& mcu)
 {
-    memset(&timer, 0, sizeof(mcu_timer_t));
     timer.mcu = &mcu;
 }
 

@@ -79,7 +79,7 @@ bool FE_AllocateInstance(frontend_t& container, fe_emu_instance_t** result)
     }
 
     fe_emu_instance_t& fe = container.instances[container.instances_in_use];
-    memset(&fe, 0, sizeof(fe_emu_instance_t));
+    fe = fe_emu_instance_t();
     ++container.instances_in_use;
 
     if (result)

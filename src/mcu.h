@@ -188,87 +188,102 @@ static const int ROMSM_SIZE = 0x1000;
 
 static const uint32_t uart_buffer_size = 8192;
 
+enum {
+    ROM_SET_MK2 = 0,
+    ROM_SET_ST,
+    ROM_SET_MK1,
+    ROM_SET_CM300,
+    ROM_SET_JV880,
+    ROM_SET_SCB55,
+    ROM_SET_RLP3237,
+    ROM_SET_SC155,
+    ROM_SET_SC155MK2,
+    ROM_SET_COUNT
+};
+
 typedef void(*mcu_sample_callback)(void* userdata, int* sample);
 
+void MCU_DefaultSampleCallback(void* userdata, int* sample);
+
 struct mcu_t {
-    uint16_t r[8];
-    uint16_t pc;
-    uint16_t sr;
-    uint8_t cp, dp, ep, tp, br;
-    uint8_t sleep;
-    uint8_t ex_ignore;
-    int32_t exception_pending;
-    uint8_t interrupt_pending[INTERRUPT_SOURCE_MAX];
-    uint8_t trapa_pending[16];
-    uint64_t cycles;
+    uint16_t r[8]{};
+    uint16_t pc = 0;
+    uint16_t sr = 0;
+    uint8_t cp = 0, dp = 0, ep = 0, tp = 0, br = 0;
+    uint8_t sleep = 0;
+    uint8_t ex_ignore = 0;
+    int32_t exception_pending = 0;
+    uint8_t interrupt_pending[INTERRUPT_SOURCE_MAX]{};
+    uint8_t trapa_pending[16]{};
+    uint64_t cycles = 0;
 
-    uint8_t rom1[ROM1_SIZE];
-    uint8_t rom2[ROM2_SIZE];
-    uint8_t ram[RAM_SIZE];
-    uint8_t sram[SRAM_SIZE];
-    uint8_t nvram[NVRAM_SIZE];
-    uint8_t cardram[CARDRAM_SIZE];
+    uint8_t rom1[ROM1_SIZE]{};
+    uint8_t rom2[ROM2_SIZE]{};
+    uint8_t ram[RAM_SIZE]{};
+    uint8_t sram[SRAM_SIZE]{};
+    uint8_t nvram[NVRAM_SIZE]{};
+    uint8_t cardram[CARDRAM_SIZE]{};
 
-    uint8_t dev_register[0x80];
+    uint8_t dev_register[0x80]{};
 
-    uint16_t ad_val[4];
-    uint8_t ad_nibble;
-    uint8_t sw_pos;
-    uint8_t io_sd;
+    uint16_t ad_val[4]{};
+    uint8_t ad_nibble = 0;
+    uint8_t sw_pos = 3;
+    uint8_t io_sd = 0;
 
-    submcu_t* sm;
-    pcm_t* pcm;
-    mcu_timer_t* timer;
-    lcd_t* lcd;
+    submcu_t* sm = nullptr;
+    pcm_t* pcm = nullptr;
+    mcu_timer_t* timer = nullptr;
+    lcd_t* lcd = nullptr;
 
-    uint32_t uart_write_ptr;
-    uint32_t uart_read_ptr;
-    uint8_t uart_buffer[uart_buffer_size];
+    uint32_t uart_write_ptr = 0;
+    uint32_t uart_read_ptr = 0;
+    uint8_t uart_buffer[uart_buffer_size]{};
 
-    uint8_t uart_rx_byte;
-    uint64_t uart_rx_delay;
-    uint64_t uart_tx_delay;
+    uint8_t uart_rx_byte = 0;
+    uint64_t uart_rx_delay = 0;
+    uint64_t uart_tx_delay = 0;
 
-    int romset;
+    int romset = ROM_SET_MK2;
 
-    int mcu_mk1; // 0 - SC-55mkII, SC-55ST. 1 - SC-55, CM-300/SCC-1
-    int mcu_cm300; // 0 - SC-55, 1 - CM-300/SCC-1
-    int mcu_st; // 0 - SC-55mk2, 1 - SC-55ST
-    int mcu_jv880; // 0 - SC-55, 1 - JV880
-    int mcu_scb55; // 0 - sub mcu (e.g SC-55mk2), 1 - no sub mcu (e.g SCB-55)
-    int mcu_sc155; // 0 - SC-55(MK2), 1 - SC-155(MK2)
+    int mcu_mk1 = 0; // 0 - SC-55mkII, SC-55ST. 1 - SC-55, CM-300/SCC-1
+    int mcu_cm300 = 0; // 0 - SC-55, 1 - CM-300/SCC-1
+    int mcu_st = 0; // 0 - SC-55mk2, 1 - SC-55ST
+    int mcu_jv880 = 0; // 0 - SC-55, 1 - JV880
+    int mcu_scb55 = 0; // 0 - sub mcu (e.g SC-55mk2), 1 - no sub mcu (e.g SCB-55)
+    int mcu_sc155 = 0; // 0 - SC-55(MK2), 1 - SC-155(MK2)
 
-    int rom2_mask;
+    int rom2_mask = ROM2_SIZE - 1;
 
-    int ga_int[8];
-    int ga_int_enable;
-    int ga_int_trigger;
-    int ga_lcd_counter;
+    int ga_int[8]{};
+    int ga_int_enable = 0;
+    int ga_int_trigger = 0;
+    int ga_lcd_counter = 0;
 
-    SDL_atomic_t mcu_button_pressed;
+    SDL_atomic_t mcu_button_pressed{};
 
-    uint8_t mcu_p0_data;
-    uint8_t mcu_p1_data;
+    uint8_t mcu_p0_data = 0;
+    uint8_t mcu_p1_data = 0;
 
-    int adf_rd;
+    int adf_rd = 0;
 
-    uint64_t analog_end_time;
+    uint64_t analog_end_time = 0;
 
-    int ssr_rd;
+    int ssr_rd = 0;
 
-    uint32_t operand_type;
-    uint16_t operand_ea;
-    uint8_t operand_ep;
-    uint8_t operand_size;
-    uint8_t operand_reg;
-    uint8_t operand_status;
-    uint16_t operand_data;
-    uint8_t opcode_extended;
+    uint32_t operand_type = 0;
+    uint16_t operand_ea = 0;
+    uint8_t operand_ep = 0;
+    uint8_t operand_size = 0;
+    uint8_t operand_reg = 0;
+    uint8_t operand_status = 0;
+    uint16_t operand_data = 0;
+    uint8_t opcode_extended = 0;
 
-    void* callback_userdata;
-    mcu_sample_callback sample_callback;
+    void* callback_userdata = nullptr;
+    mcu_sample_callback sample_callback = MCU_DefaultSampleCallback;
 
-    SDL_mutex *work_thread_lock;
+    SDL_mutex *work_thread_lock = nullptr;
 };
 
 bool MCU_Init(mcu_t& mcu, submcu_t& sm, pcm_t& pcm, mcu_timer_t& timer, lcd_t& lcd);
@@ -514,19 +529,6 @@ enum {
     MCU_BUTTON_RHYTHM = 13,
 };
 
-
-enum {
-    ROM_SET_MK2 = 0,
-    ROM_SET_ST,
-    ROM_SET_MK1,
-    ROM_SET_CM300,
-    ROM_SET_JV880,
-    ROM_SET_SCB55,
-    ROM_SET_RLP3237,
-    ROM_SET_SC155,
-    ROM_SET_SC155MK2,
-    ROM_SET_COUNT
-};
 
 uint8_t MCU_ReadP0(mcu_t& mcu);
 uint8_t MCU_ReadP1(mcu_t& mcu);

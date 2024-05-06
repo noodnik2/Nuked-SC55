@@ -775,15 +775,10 @@ void MCU_DefaultSampleCallback(void* userdata, int* sample)
 
 bool MCU_Init(mcu_t& mcu, submcu_t& sm, pcm_t& pcm, mcu_timer_t& timer, lcd_t& lcd)
 {
-    memset(&mcu, 0, sizeof(mcu_t));
-    mcu.sw_pos = 3;
     mcu.sm = &sm;
     mcu.pcm = &pcm;
     mcu.timer = &timer;
     mcu.lcd = &lcd;
-    mcu.romset = ROM_SET_MK2;
-    mcu.rom2_mask = ROM2_SIZE - 1;
-    mcu.sample_callback = MCU_DefaultSampleCallback;
     mcu.work_thread_lock = SDL_CreateMutex();
     if (!mcu.work_thread_lock)
     {

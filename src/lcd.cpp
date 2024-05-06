@@ -209,7 +209,6 @@ void LCD_LoadBack(lcd_t& lcd, const std::filesystem::path& path)
 
 void LCD_Init(lcd_t& lcd, mcu_t& mcu)
 {
-    memset(&lcd, 0, sizeof(lcd_t));
     lcd.mcu = &mcu;
 }
 

@@ -46,26 +46,26 @@ static const int lcd_width_max = 1024;
 static const int lcd_height_max = 1024;
 
 struct lcd_t {
-    mcu_t* mcu;
+    mcu_t* mcu = nullptr;
 
-    size_t lcd_width;
-    size_t lcd_height;
+    size_t lcd_width = 0;
+    size_t lcd_height = 0;
 
-    uint32_t LCD_DL, LCD_N, LCD_F, LCD_D, LCD_C, LCD_B, LCD_ID, LCD_S;
-    uint32_t LCD_DD_RAM, LCD_AC, LCD_CG_RAM;
-    uint32_t LCD_RAM_MODE;
-    uint8_t LCD_Data[80];
-    uint8_t LCD_CG[64];
+    uint32_t LCD_DL = 0, LCD_N = 0, LCD_F = 0, LCD_D = 0, LCD_C = 0, LCD_B = 0, LCD_ID = 0, LCD_S = 0;
+    uint32_t LCD_DD_RAM = 0, LCD_AC = 0, LCD_CG_RAM = 0;
+    uint32_t LCD_RAM_MODE = 0;
+    uint8_t LCD_Data[80]{};
+    uint8_t LCD_CG[64]{};
 
-    uint8_t lcd_enable;
-    bool lcd_quit_requested;
+    uint8_t lcd_enable = 0;
+    bool lcd_quit_requested = false;
 
-    uint32_t lcd_buffer[lcd_height_max][lcd_width_max];
-    uint32_t lcd_background[268][741];
+    uint32_t lcd_buffer[lcd_height_max][lcd_width_max]{};
+    uint32_t lcd_background[268][741]{};
 
-    SDL_Window *window;
-    SDL_Renderer *renderer;
-    SDL_Texture *texture;
+    SDL_Window *window = nullptr;
+    SDL_Renderer *renderer = nullptr;
+    SDL_Texture *texture = nullptr;
 };
 
 

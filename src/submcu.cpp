@@ -310,7 +310,6 @@ void SM_SetStatus(submcu_t& sm, uint32_t condition, uint32_t mask)
 
 void SM_Init(submcu_t& sm, mcu_t& mcu)
 {
-    memset(&sm, 0, sizeof(submcu_t));
     sm.mcu = &mcu;
 }
 
