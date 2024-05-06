@@ -55,6 +55,10 @@ void CALLBACK MIDI_Callback(
     DWORD_PTR dwParam2
 )
 {
+    (void)hMidiIn;
+    (void)dwInstance;
+    (void)dwParam2;
+
     switch (wMsg)
     {
         case MIM_OPEN:
@@ -124,7 +128,7 @@ void CALLBACK MIDI_Callback(
     }
 }
 
-int MIDI_Init(frontend_t& frontend, int port)
+bool MIDI_Init(frontend_t& frontend, int port)
 {
     midi_frontend = &frontend;
 
@@ -143,15 +147,20 @@ int MIDI_Init(frontend_t& frontend, int port)
     }
 
     MIDIINCAPSA caps;
+    MMRESULT result;
 
-    midiInGetDevCapsA(port, &caps, sizeof(MIDIINCAPSA));
-
-    auto res = midiInOpen(&midi_handle, port, (DWORD_PTR)MIDI_Callback, 0, CALLBACK_FUNCTION);
-
-    if (res != MMSYSERR_NOERROR)
+    result = midiInGetDevCapsA(port, &caps, sizeof(MIDIINCAPSA));
+    if (result != MMSYSERR_NOERROR)
     {
-        printf("Can't open midi input\n");
-        return 0;
+        printf("midiInGetDevCapsA failed\n");
+        return false;
+    }
+
+    result = midiInOpen(&midi_handle, port, (DWORD_PTR)MIDI_Callback, 0, CALLBACK_FUNCTION);
+    if (result != MMSYSERR_NOERROR)
+    {
+        printf("midiInOpen failed\n");
+        return false;
     }
 
     printf("Opened midi port: %s\n", caps.szPname);
@@ -159,11 +168,28 @@ int MIDI_Init(frontend_t& frontend, int port)
     midi_buffer.lpData = midi_in_buffer;
     midi_buffer.dwBufferLength = sizeof(midi_in_buffer);
 
-    auto r1 = midiInPrepareHeader(midi_handle, &midi_buffer, sizeof(MIDIHDR));
-    auto r2 = midiInAddBuffer(midi_handle, &midi_buffer, sizeof(MIDIHDR));
-    auto r3 = midiInStart(midi_handle);
+    result = midiInPrepareHeader(midi_handle, &midi_buffer, sizeof(MIDIHDR));
+    if (result != MMSYSERR_NOERROR)
+    {
+        printf("midiInPrepareHeader failed\n");
+        return false;
+    }
 
-    return 1;
+    result = midiInAddBuffer(midi_handle, &midi_buffer, sizeof(MIDIHDR));
+    if (result != MMSYSERR_NOERROR)
+    {
+        printf("midiInAddBuffer failed\n");
+        return false;
+    }
+
+    result = midiInStart(midi_handle);
+    if (result != MMSYSERR_NOERROR)
+    {
+        printf("midiInStart failed\n");
+        return false;
+    }
+
+    return true;
 }
 
 void MIDI_Quit()

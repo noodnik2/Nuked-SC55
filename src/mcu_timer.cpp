@@ -220,6 +220,7 @@ void TIMER_Clock(mcu_timer_t& timer, uint64_t cycles)
         {
             frt_t *ftimer = &timer.frt[i];
             uint32_t offset = 0x10 * i;
+            (void)offset; // unused
 
             switch (ftimer->tcr & 3)
             {

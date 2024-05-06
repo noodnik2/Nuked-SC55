@@ -367,21 +367,25 @@ uint8_t SM_PopStack(submcu_t& sm)
 
 void SM_Opcode_NotImplemented(submcu_t& sm, uint8_t opcode)
 {
+    (void)opcode;
     SM_ErrorTrap(sm);
 }
 
 void SM_Opcode_SEI(submcu_t& sm, uint8_t opcode) // 78
 {
+    (void)opcode;
     SM_SetStatus(sm, 1, SM_STATUS_I);
 }
 
 void SM_Opcode_CLD(submcu_t& sm, uint8_t opcode) // d8
 {
+    (void)opcode;
     SM_SetStatus(sm, 0, SM_STATUS_D);
 }
 
 void SM_Opcode_CLT(submcu_t& sm, uint8_t opcode) // 12
 {
+    (void)opcode;
     SM_SetStatus(sm, 0, SM_STATUS_T);
 }
 
@@ -437,11 +441,13 @@ void SM_Opcode_LDY(submcu_t& sm, uint8_t opcode) // a0, a4, ac, b4, bc
 
 void SM_Opcode_TXS(submcu_t& sm, uint8_t opcode) // 9a
 {
+    (void)opcode;
     sm.s = sm.x;
 }
 
 void SM_Opcode_TXA(submcu_t& sm, uint8_t opcode) // 8a
 {
+    (void)opcode;
     sm.a = sm.x;
     SM_Update_NZ(sm, sm.a);
 }
@@ -479,12 +485,14 @@ void SM_Opcode_STA(submcu_t& sm, uint8_t opcode) // 85, 95, 8d, 9d, 99, 81, 91
 
 void SM_Opcode_INX(submcu_t& sm, uint8_t opcode) // e8
 {
+    (void)opcode;
     sm.x++;
     SM_Update_NZ(sm, sm.x);
 }
 
 void SM_Opcode_INY(submcu_t& sm, uint8_t opcode) // c8
 {
+    (void)opcode;
     sm.y++;
     SM_Update_NZ(sm, sm.y);
 }
@@ -555,6 +563,7 @@ void SM_Opcode_CPY(submcu_t& sm, uint8_t opcode) // c0, c4, cc
 
 void SM_Opcode_BEQ(submcu_t& sm, uint8_t opcode) // f0
 {
+    (void)opcode;
     int8_t diff = SM_ReadAdvance(sm);
     if ((sm.sr & SM_STATUS_Z) != 0)
         sm.pc += diff;
@@ -562,6 +571,7 @@ void SM_Opcode_BEQ(submcu_t& sm, uint8_t opcode) // f0
 
 void SM_Opcode_BCC(submcu_t& sm, uint8_t opcode) // 90
 {
+    (void)opcode;
     int8_t diff = SM_ReadAdvance(sm);
     if ((sm.sr & SM_STATUS_C) == 0)
         sm.pc += diff;
@@ -569,6 +579,7 @@ void SM_Opcode_BCC(submcu_t& sm, uint8_t opcode) // 90
 
 void SM_Opcode_BCS(submcu_t& sm, uint8_t opcode) // b0
 {
+    (void)opcode;
     int8_t diff = SM_ReadAdvance(sm);
     if ((sm.sr & SM_STATUS_C) != 0)
         sm.pc += diff;
@@ -576,6 +587,7 @@ void SM_Opcode_BCS(submcu_t& sm, uint8_t opcode) // b0
 
 void SM_Opcode_LDM(submcu_t& sm, uint8_t opcode) // 3c
 {
+    (void)opcode;
     uint8_t val = SM_ReadAdvance(sm);
     SM_Write(sm, SM_ReadAdvance(sm), val);
 }
@@ -625,16 +637,19 @@ void SM_Opcode_LDA(submcu_t& sm, uint8_t opcode) // a9, a5, b5, ad, bd, b9, a1, 
 
 void SM_Opcode_CLI(submcu_t& sm, uint8_t opcode) // 58
 {
+    (void)opcode;
     SM_SetStatus(sm, 0, SM_STATUS_I);
 }
 
 void SM_Opcode_STP(submcu_t& sm, uint8_t opcode) // 42
 {
+    (void)opcode;
     sm.sleep = 1;
 }
 
 void SM_Opcode_PHA(submcu_t& sm, uint8_t opcode) // 48
 {
+    (void)opcode;
     SM_PushStack(sm, sm.a);
 }
 
@@ -673,6 +688,7 @@ void SM_Opcode_SEB_CLB(submcu_t& sm, uint8_t opcode)
 
 void SM_Opcode_RTI(submcu_t& sm, uint8_t opcode) // 40
 {
+    (void)opcode;
     sm.sr = SM_PopStack(sm);
     sm.pc = SM_PopStack(sm);
     sm.pc |= SM_PopStack(sm) << 8;
@@ -680,12 +696,14 @@ void SM_Opcode_RTI(submcu_t& sm, uint8_t opcode) // 40
 
 void SM_Opcode_PLA(submcu_t& sm, uint8_t opcode) // 68
 {
+    (void)opcode;
     sm.a = SM_PopStack(sm);
     SM_Update_NZ(sm, sm.a);
 }
 
 void SM_Opcode_BRA(submcu_t& sm, uint8_t opcode) // 80
 {
+    (void)opcode;
     int8_t disp = SM_ReadAdvance(sm);
     sm.pc += disp;
 }
@@ -748,6 +766,7 @@ void SM_Opcode_CMP(submcu_t& sm, uint8_t opcode) // c9, c5, d5, cd, dd, d9, c1, 
 
 void SM_Opcode_BNE(submcu_t& sm, uint8_t opcode) // d0
 {
+    (void)opcode;
     int8_t diff = SM_ReadAdvance(sm);
     if ((sm.sr & SM_STATUS_Z) == 0)
         sm.pc += diff;
@@ -755,6 +774,7 @@ void SM_Opcode_BNE(submcu_t& sm, uint8_t opcode) // d0
 
 void SM_Opcode_RTS(submcu_t& sm, uint8_t opcode) // 60
 {
+    (void)opcode;
     sm.pc = SM_PopStack(sm);
     sm.pc |= SM_PopStack(sm) << 8;
 }
@@ -864,6 +884,7 @@ void SM_Opcode_DEC(submcu_t& sm, uint8_t opcode) // 1a, c6, d6, ce, de
 
 void SM_Opcode_TAX(submcu_t& sm, uint8_t opcode) // aa
 {
+    (void)opcode;
     sm.x = sm.a;
     SM_Update_NZ(sm, sm.x);
 }
@@ -908,15 +929,19 @@ void SM_Opcode_STY(submcu_t& sm, uint8_t opcode) // 84 8c 94
 
 void SM_Opcode_SEC(submcu_t& sm, uint8_t opcode) // 38
 {
+    (void)opcode;
     SM_SetStatus(sm, 1, SM_STATUS_C);
 }
 
 void SM_Opcode_NOP(submcu_t& sm, uint8_t opcode) // EA
 {
+    (void)sm;
+    (void)opcode;
 }
 
 void SM_Opcode_BPL(submcu_t& sm, uint8_t opcode) // 10
 {
+    (void)opcode;
     int8_t diff = SM_ReadAdvance(sm);
     if ((sm.sr & SM_STATUS_N) == 0)
         sm.pc += diff;
@@ -924,6 +949,7 @@ void SM_Opcode_BPL(submcu_t& sm, uint8_t opcode) // 10
 
 void SM_Opcode_CLC(submcu_t& sm, uint8_t opcode) // 18
 {
+    (void)opcode;
     SM_SetStatus(sm, 0, SM_STATUS_C);
 }
 

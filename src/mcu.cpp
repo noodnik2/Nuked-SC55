@@ -70,6 +70,8 @@ enum {
 
 uint16_t MCU_SC155Sliders(mcu_t& mcu, uint32_t index)
 {
+    (void)mcu;
+    (void)index;
     // 0 - 1/9
     // 1 - 2/10
     // 2 - 3/11
@@ -155,6 +157,9 @@ READ_RCU:
         else
             goto READ_RCU;
     }
+    // TODO: really unreachable? maybe addressed upstream later?
+    printf("PANIC: reached end of MCU_AnalogReadPin\n");
+    exit(1);
 }
 
 void MCU_AnalogSample(mcu_t& mcu, int channel)

@@ -35,6 +35,6 @@
 
 struct frontend_t;
 
-int MIDI_Init(frontend_t& fe, int port);
+bool MIDI_Init(frontend_t& fe, int port);
 void MIDI_Quit(void);
 

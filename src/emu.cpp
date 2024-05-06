@@ -153,59 +153,77 @@ const char* rs_name[ROM_SET_COUNT] = {
 
 const char* roms[ROM_SET_COUNT][5] =
 {
-    "rom1.bin",
-    "rom2.bin",
-    "waverom1.bin",
-    "waverom2.bin",
-    "rom_sm.bin",
+    {
+        "rom1.bin",
+        "rom2.bin",
+        "waverom1.bin",
+        "waverom2.bin",
+        "rom_sm.bin",
+    },
 
-    "rom1.bin",
-    "rom2_st.bin",
-    "waverom1.bin",
-    "waverom2.bin",
-    "rom_sm.bin",
+    {
+        "rom1.bin",
+        "rom2_st.bin",
+        "waverom1.bin",
+        "waverom2.bin",
+        "rom_sm.bin",
+    },
 
-    "sc55_rom1.bin",
-    "sc55_rom2.bin",
-    "sc55_waverom1.bin",
-    "sc55_waverom2.bin",
-    "sc55_waverom3.bin",
+    {
+        "sc55_rom1.bin",
+        "sc55_rom2.bin",
+        "sc55_waverom1.bin",
+        "sc55_waverom2.bin",
+        "sc55_waverom3.bin",
+    },
 
-    "cm300_rom1.bin",
-    "cm300_rom2.bin",
-    "cm300_waverom1.bin",
-    "cm300_waverom2.bin",
-    "cm300_waverom3.bin",
+    {
+        "cm300_rom1.bin",
+        "cm300_rom2.bin",
+        "cm300_waverom1.bin",
+        "cm300_waverom2.bin",
+        "cm300_waverom3.bin",
+    },
 
-    "jv880_rom1.bin",
-    "jv880_rom2.bin",
-    "jv880_waverom1.bin",
-    "jv880_waverom2.bin",
-    "jv880_waverom_expansion.bin",
+    {
+        "jv880_rom1.bin",
+        "jv880_rom2.bin",
+        "jv880_waverom1.bin",
+        "jv880_waverom2.bin",
+        "jv880_waverom_expansion.bin",
+    },
 
-    "scb55_rom1.bin",
-    "scb55_rom2.bin",
-    "scb55_waverom1.bin",
-    "scb55_waverom2.bin",
-    "",
+    {
+        "scb55_rom1.bin",
+        "scb55_rom2.bin",
+        "scb55_waverom1.bin",
+        "scb55_waverom2.bin",
+        "",
+    },
 
-    "rlp3237_rom1.bin",
-    "rlp3237_rom2.bin",
-    "rlp3237_waverom1.bin",
-    "",
-    "",
+    {
+        "rlp3237_rom1.bin",
+        "rlp3237_rom2.bin",
+        "rlp3237_waverom1.bin",
+        "",
+        "",
+    },
 
-    "sc155_rom1.bin",
-    "sc155_rom2.bin",
-    "sc155_waverom1.bin",
-    "sc155_waverom2.bin",
-    "sc155_waverom3.bin",
+    {
+        "sc155_rom1.bin",
+        "sc155_rom2.bin",
+        "sc155_waverom1.bin",
+        "sc155_waverom2.bin",
+        "sc155_waverom3.bin",
+    },
 
-    "rom1.bin",
-    "rom2.bin",
-    "waverom1.bin",
-    "waverom2.bin",
-    "rom_sm.bin",
+    {
+        "rom1.bin",
+        "rom2.bin",
+        "waverom1.bin",
+        "waverom2.bin",
+        "rom_sm.bin",
+    },
 };
 
 void unscramble(uint8_t *src, uint8_t *dst, int len)
@@ -258,7 +276,7 @@ int EMU_DetectRomset(const std::filesystem::path& base_path)
     return ROM_SET_MK2;
 }
 
-bool EMU_ReadStreamExact(std::ifstream& s, void* into, size_t byte_count)
+bool EMU_ReadStreamExact(std::ifstream& s, void* into, std::streamsize byte_count)
 {
     if (s.read((char*)into, byte_count))
     {
@@ -267,7 +285,7 @@ bool EMU_ReadStreamExact(std::ifstream& s, void* into, size_t byte_count)
     return false;
 }
 
-size_t EMU_ReadStreamUpTo(std::ifstream& s, void* into, size_t byte_count)
+std::streamsize EMU_ReadStreamUpTo(std::ifstream& s, void* into, std::streamsize byte_count)
 {
     if (s.read((char*)into, byte_count))
     {
@@ -367,7 +385,7 @@ bool EMU_LoadRoms(emu_t& emu, int romset, const std::filesystem::path& base_path
         return false;
     }
 
-    size_t rom2_read = EMU_ReadStreamUpTo(s_rf[1], emu.mcu->rom2, ROM2_SIZE);
+    std::streamsize rom2_read = EMU_ReadStreamUpTo(s_rf[1], emu.mcu->rom2, ROM2_SIZE);
 
     if (rom2_read == ROM2_SIZE || rom2_read == ROM2_SIZE / 2)
     {

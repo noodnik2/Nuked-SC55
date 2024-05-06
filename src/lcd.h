@@ -49,8 +49,8 @@ static const int lcd_height_max = 1024;
 struct lcd_t {
     mcu_t* mcu;
 
-    int lcd_width;
-    int lcd_height;
+    size_t lcd_width;
+    size_t lcd_height;
 
     uint32_t LCD_DL, LCD_N, LCD_F, LCD_D, LCD_C, LCD_B, LCD_ID, LCD_S;
     uint32_t LCD_DD_RAM, LCD_AC, LCD_CG_RAM;
