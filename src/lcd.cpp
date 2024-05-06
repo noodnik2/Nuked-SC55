@@ -41,8 +41,8 @@
 #include "lcd_font.h"
 #include "mcu.h"
 #include "submcu.h"
-#include "utils/files.h"
 #include "emu.h"
+#include <fstream>
 
 void LCD_Enable(lcd_t& lcd, uint32_t enable)
 {
@@ -197,16 +197,14 @@ const int button_map_jv880[][2] =
 };
 
 
-void LCD_LoadBack(lcd_t& lcd, const std::string& path)
+void LCD_LoadBack(lcd_t& lcd, const std::filesystem::path& path)
 {
-    FILE *raw;
+    std::ifstream file(path, std::ios::binary);
 
-    raw = Files::utf8_fopen(path.c_str(), "rb");
-    if (!raw)
+    if (!file)
         return;
 
-    fread(lcd.lcd_background, 1, sizeof(lcd.lcd_background), raw);
-    fclose(raw);
+    file.read((char*)lcd.lcd_background, sizeof(lcd.lcd_background));
 }
 
 void LCD_Init(lcd_t& lcd, mcu_t& mcu)

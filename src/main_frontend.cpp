@@ -42,10 +42,10 @@
 #include "lcd.h"
 #include "submcu.h"
 #include "midi.h"
-#include "utils/files.h"
 #include "emu.h"
 #include "ringbuffer.h"
 #include "math_util.h"
+#include <filesystem>
 
 #if __linux__
 #include <unistd.h>
@@ -356,7 +356,7 @@ bool FE_Init()
     return true;
 }
 
-bool FE_CreateInstance(frontend_t& container, const std::string& basePath, int romset)
+bool FE_CreateInstance(frontend_t& container, const std::filesystem::path& basePath, int romset)
 {
     fe_emu_instance_t* fe = nullptr;
 
@@ -374,7 +374,7 @@ bool FE_CreateInstance(frontend_t& container, const std::string& basePath, int r
 
     EMU_SetSampleCallback(fe->emu, FE_ReceiveSample, fe);
 
-    LCD_LoadBack(*fe->emu.lcd, basePath + "/back.data");
+    LCD_LoadBack(*fe->emu.lcd, basePath / "back.data");
 
     if (!EMU_LoadRoms(fe->emu, romset, basePath))
     {
@@ -417,7 +417,6 @@ void FE_Quit(frontend_t& container)
 int main(int argc, char *argv[])
 {
     (void)argc;
-    std::string basePath;
 
     int port = 0;
     int audioDeviceIndex = -1;
@@ -548,26 +547,18 @@ int main(int argc, char *argv[])
         }
     }
 
-#if __linux__
-    char self_path[PATH_MAX];
-    memset(&self_path[0], 0, PATH_MAX);
+    std::filesystem::path base_path(argv[0]);
+    base_path = std::filesystem::absolute(base_path);
+    base_path = base_path.parent_path();
 
-    if(readlink("/proc/self/exe", self_path, PATH_MAX) == -1)
-        basePath = Files::real_dirname(argv[0]);
-    else
-        basePath = Files::dirname(self_path);
-#else
-    basePath = Files::real_dirname(argv[0]);
-#endif
+    printf("Base path is: %s\n", base_path.generic_string().c_str());
 
-    printf("Base path is: %s\n", argv[0]);
-
-    if(Files::dirExists(basePath + "/../share/nuked-sc55"))
-        basePath += "/../share/nuked-sc55";
+    if (std::filesystem::exists(base_path / "../share/nuked-sc55"))
+        base_path = base_path / "../share/nuked-sc55";
 
     if (autodetect)
     {
-        romset = EMU_DetectRomset(basePath);
+        romset = EMU_DetectRomset(base_path);
         printf("ROM set autodetect: %s\n", EMU_RomsetName(romset));
     }
 
@@ -579,7 +570,7 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < instance_count; ++i)
     {
-        if (!FE_CreateInstance(frontend, basePath, romset))
+        if (!FE_CreateInstance(frontend, base_path, romset))
         {
             fprintf(stderr, "FATAL ERROR: Failed to create instance %d\n", i);
             return 1;

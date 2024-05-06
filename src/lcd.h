@@ -35,6 +35,7 @@
 
 #include <stdint.h>
 #include <string>
+#include <filesystem>
 
 struct mcu_t;
 
@@ -69,7 +70,7 @@ struct lcd_t {
 };
 
 
-void LCD_LoadBack(lcd_t& lcd, const std::string& path);
+void LCD_LoadBack(lcd_t& lcd, const std::filesystem::path& path);
 void LCD_Init(lcd_t& lcd, mcu_t& mcu);
 bool LCD_CreateWindow(lcd_t& lcd);
 void LCD_UnInit(lcd_t& lcd);

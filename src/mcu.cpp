@@ -42,7 +42,6 @@
 #include "lcd.h"
 #include "submcu.h"
 #include "midi.h"
-#include "utils/files.h"
 
 #if __linux__
 #include <unistd.h>
