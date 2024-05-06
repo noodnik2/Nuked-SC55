@@ -394,8 +394,6 @@ bool FE_CreateInstance(frontend_t& container, const std::filesystem::path& baseP
 
 void FE_DestroyInstance(fe_emu_instance_t& fe)
 {
-    EMU_Free(fe.emu);
-    RB_Free(fe.sample_buffer);
     fe.thread = nullptr;
     fe.running = false;
 }

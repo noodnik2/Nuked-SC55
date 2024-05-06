@@ -39,49 +39,18 @@
 #include "pcm.h"
 #include <string>
 #include <fstream>
+#include <span>
 
 bool EMU_Init(emu_t& emu)
 {
-    memset(&emu, 0, sizeof(emu_t));
-
-    emu.mcu = (mcu_t*)malloc(sizeof(mcu_t));
-    if (!emu.mcu)
-    {
-        EMU_Free(emu);
-        return false;
-    }
-
-    emu.sm = (submcu_t*)malloc(sizeof(submcu_t));
-    if (!emu.sm)
-    {
-        EMU_Free(emu);
-        return false;
-    }
-
-    emu.timer = (mcu_timer_t*)malloc(sizeof(mcu_timer_t));
-    if (!emu.timer)
-    {
-        EMU_Free(emu);
-        return false;
-    }
-
-    emu.lcd = (lcd_t*)malloc(sizeof(lcd_t));
-    if (!emu.lcd)
-    {
-        EMU_Free(emu);
-        return false;
-    }
-
-    emu.pcm = (pcm_t*)malloc(sizeof(pcm_t));
-    if (!emu.pcm)
-    {
-        EMU_Free(emu);
-        return false;
-    }
+    emu.mcu   = std::make_unique<mcu_t>();
+    emu.sm    = std::make_unique<submcu_t>();
+    emu.timer = std::make_unique<mcu_timer_t>();
+    emu.lcd   = std::make_unique<lcd_t>();
+    emu.pcm   = std::make_unique<pcm_t>();
 
     if (!MCU_Init(*emu.mcu, *emu.sm, *emu.pcm, *emu.timer, *emu.lcd))
     {
-        EMU_Free(emu);
         return false;
     }
 
@@ -91,39 +60,6 @@ bool EMU_Init(emu_t& emu)
     LCD_Init(*emu.lcd, *emu.mcu);
 
     return true;
-}
-
-void EMU_Free(emu_t& emu)
-{
-    if (emu.lcd)
-    {
-        LCD_UnInit(*emu.lcd);
-    }
-    if (emu.pcm)
-    {
-        free(emu.pcm);
-        emu.pcm = nullptr;
-    }
-    if (emu.lcd)
-    {
-        free(emu.lcd);
-        emu.lcd = nullptr;
-    }
-    if (emu.timer)
-    {
-        free(emu.timer);
-        emu.timer = nullptr;
-    }
-    if (emu.sm)
-    {
-        free(emu.sm);
-        emu.sm = nullptr;
-    }
-    if (emu.mcu)
-    {
-        free(emu.mcu);
-        emu.mcu = nullptr;
-    }
 }
 
 void EMU_Reset(emu_t& emu)
@@ -285,6 +221,11 @@ bool EMU_ReadStreamExact(std::ifstream& s, void* into, std::streamsize byte_coun
     return false;
 }
 
+bool EMU_ReadStreamExact(std::ifstream& s, std::span<uint8_t> into, std::streamsize byte_count)
+{
+    return EMU_ReadStreamExact(s, into.data(), byte_count);
+}
+
 std::streamsize EMU_ReadStreamUpTo(std::ifstream& s, void* into, std::streamsize byte_count)
 {
     if (s.read((char*)into, byte_count))
@@ -296,13 +237,7 @@ std::streamsize EMU_ReadStreamUpTo(std::ifstream& s, void* into, std::streamsize
 
 bool EMU_LoadRoms(emu_t& emu, int romset, const std::filesystem::path& base_path)
 {
-    uint8_t* tempbuf = (uint8_t*)malloc(0x800000);
-    if (!tempbuf)
-    {
-        fprintf(stderr, "FATAL ERROR: Failed to allocate tempbuf\n");
-        fflush(stderr);
-        return false;
-    }
+    std::vector<uint8_t> tempbuf(0x800000);
 
     const size_t rf_num = 5;
     std::ifstream s_rf[rf_num];
@@ -373,7 +308,6 @@ bool EMU_LoadRoms(emu_t& emu, int romset, const std::filesystem::path& base_path
     {
         fprintf(stderr, "FATAL ERROR: One of required data ROM files is missing: %s.\n", errors_list.c_str());
         fflush(stderr);
-        free(tempbuf);
         return false;
     }
 
@@ -381,7 +315,6 @@ bool EMU_LoadRoms(emu_t& emu, int romset, const std::filesystem::path& base_path
     {
         fprintf(stderr, "FATAL ERROR: Failed to read the mcu ROM1.\n");
         fflush(stderr);
-        free(tempbuf);
         return false;
     }
 
@@ -395,7 +328,6 @@ bool EMU_LoadRoms(emu_t& emu, int romset, const std::filesystem::path& base_path
     {
         fprintf(stderr, "FATAL ERROR: Failed to read the mcu ROM2.\n");
         fflush(stderr);
-        free(tempbuf);
         return false;
     }
 
@@ -405,31 +337,28 @@ bool EMU_LoadRoms(emu_t& emu, int romset, const std::filesystem::path& base_path
         {
             fprintf(stderr, "FATAL ERROR: Failed to read the WaveRom1.\n");
             fflush(stderr);
-            free(tempbuf);
             return false;
         }
 
-        unscramble(tempbuf, emu.pcm->waverom1, 0x100000);
+        unscramble(tempbuf.data(), emu.pcm->waverom1, 0x100000);
 
         if (!EMU_ReadStreamExact(s_rf[3], tempbuf, 0x100000))
         {
             fprintf(stderr, "FATAL ERROR: Failed to read the WaveRom2.\n");
             fflush(stderr);
-            free(tempbuf);
             return false;
         }
 
-        unscramble(tempbuf, emu.pcm->waverom2, 0x100000);
+        unscramble(tempbuf.data(), emu.pcm->waverom2, 0x100000);
 
         if (!EMU_ReadStreamExact(s_rf[4], tempbuf, 0x100000))
         {
             fprintf(stderr, "FATAL ERROR: Failed to read the WaveRom3.\n");
             fflush(stderr);
-            free(tempbuf);
             return false;
         }
 
-        unscramble(tempbuf, emu.pcm->waverom3, 0x100000);
+        unscramble(tempbuf.data(), emu.pcm->waverom3, 0x100000);
     }
     else if (emu.mcu->mcu_jv880)
     {
@@ -437,24 +366,22 @@ bool EMU_LoadRoms(emu_t& emu, int romset, const std::filesystem::path& base_path
         {
             fprintf(stderr, "FATAL ERROR: Failed to read the WaveRom1.\n");
             fflush(stderr);
-            free(tempbuf);
             return false;
         }
 
-        unscramble(tempbuf, emu.pcm->waverom1, 0x200000);
+        unscramble(tempbuf.data(), emu.pcm->waverom1, 0x200000);
 
         if (!EMU_ReadStreamExact(s_rf[3], tempbuf, 0x200000))
         {
             fprintf(stderr, "FATAL ERROR: Failed to read the WaveRom2.\n");
             fflush(stderr);
-            free(tempbuf);
             return false;
         }
 
-        unscramble(tempbuf, emu.pcm->waverom2, 0x200000);
+        unscramble(tempbuf.data(), emu.pcm->waverom2, 0x200000);
 
         if (s_rf[4] && EMU_ReadStreamExact(s_rf[4], tempbuf, 0x800000))
-            unscramble(tempbuf, emu.pcm->waverom_exp, 0x800000);
+            unscramble(tempbuf.data(), emu.pcm->waverom_exp, 0x800000);
         else
             printf("WaveRom EXP not found, skipping it.\n");
     }
@@ -464,11 +391,10 @@ bool EMU_LoadRoms(emu_t& emu, int romset, const std::filesystem::path& base_path
         {
             fprintf(stderr, "FATAL ERROR: Failed to read the WaveRom1.\n");
             fflush(stderr);
-            free(tempbuf);
             return false;
         }
 
-        unscramble(tempbuf, emu.pcm->waverom1, 0x200000);
+        unscramble(tempbuf.data(), emu.pcm->waverom1, 0x200000);
 
         if (s_rf[3])
         {
@@ -476,23 +402,19 @@ bool EMU_LoadRoms(emu_t& emu, int romset, const std::filesystem::path& base_path
             {
                 fprintf(stderr, "FATAL ERROR: Failed to read the WaveRom2.\n");
                 fflush(stderr);
-                free(tempbuf);
                 return false;
             }
 
-            unscramble(tempbuf, emu.mcu->mcu_scb55 ? emu.pcm->waverom3 : emu.pcm->waverom2, 0x100000);
+            unscramble(tempbuf.data(), emu.mcu->mcu_scb55 ? emu.pcm->waverom3 : emu.pcm->waverom2, 0x100000);
         }
 
         if (s_rf[4] && !EMU_ReadStreamExact(s_rf[4], emu.sm->sm_rom, ROMSM_SIZE))
         {
             fprintf(stderr, "FATAL ERROR: Failed to read the sub mcu ROM.\n");
             fflush(stderr);
-            free(tempbuf);
             return false;
         }
     }
-
-    free(tempbuf);
 
     return true;
 }

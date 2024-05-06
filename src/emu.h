@@ -35,6 +35,7 @@
 
 #include "mcu.h"
 #include <filesystem>
+#include <memory>
 
 struct submcu_t;
 struct mcu_timer_t;
@@ -42,15 +43,14 @@ struct lcd_t;
 struct pcm_t;
 
 struct emu_t {
-    mcu_t*       mcu;
-    submcu_t*    sm;
-    mcu_timer_t* timer;
-    lcd_t*       lcd;
-    pcm_t*       pcm;
+    std::unique_ptr<mcu_t>       mcu;
+    std::unique_ptr<submcu_t>    sm;
+    std::unique_ptr<mcu_timer_t> timer;
+    std::unique_ptr<lcd_t>       lcd;
+    std::unique_ptr<pcm_t>       pcm;
 };
 
 bool EMU_Init(emu_t& emu);
-void EMU_Free(emu_t& emu);
 
 // Should be called after loading roms
 void EMU_Reset(emu_t& emu);

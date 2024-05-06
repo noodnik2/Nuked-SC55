@@ -33,8 +33,7 @@
  */
 #pragma once
 
-#include <stdint.h>
-#include <string>
+#include <cstdint>
 #include <filesystem>
 
 struct mcu_t;

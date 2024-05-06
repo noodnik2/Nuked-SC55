@@ -44,7 +44,7 @@ struct audio_frame_t {
 };
 
 struct ringbuffer_t {
-    audio_frame_t* frames;
+    std::vector<audio_frame_t> frames;
     size_t frame_count;
     size_t read_head;
     size_t write_head;
@@ -53,21 +53,12 @@ struct ringbuffer_t {
 
 inline bool RB_Init(ringbuffer_t& rb, size_t frame_count)
 {
-    rb.frames = (audio_frame_t*)calloc(frame_count, sizeof(audio_frame_t));
-    if (!rb.frames)
-    {
-        return false;
-    }
+    rb.frames.resize(frame_count);
     rb.frame_count = frame_count;
     rb.read_head = 0;
     rb.write_head = 0;
     rb.oversampling = false;
     return true;
-}
-
-inline void RB_Free(ringbuffer_t& rb)
-{
-    free(rb.frames);
 }
 
 inline void RB_SetOversamplingEnabled(ringbuffer_t& rb, bool enabled)
