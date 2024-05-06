@@ -1,6 +1,9 @@
 cmake_minimum_required (VERSION 3.15)
 project (NukedSC55 VERSION 0.2.0 LANGUAGES CXX)
 
+#==============================================================================
+# Dependencies
+#==============================================================================
 find_package(SDL2 REQUIRED)
 
 if(NOT WIN32)
@@ -10,6 +13,17 @@ endif()
 if(USE_RTMIDI)
     find_package(rtmidi REQUIRED)
 endif()
+
+#==============================================================================
+# Support functions
+#==============================================================================
+function(target_enable_warnings tgt)
+    if(MSVC)
+        target_compile_options(${tgt} PRIVATE /W4)
+    else()
+        target_compile_options(${tgt} PRIVATE -Wall -Wextra -pedantic)
+    endif()
+endfunction()
 
 #==============================================================================
 # Backend
@@ -31,6 +45,7 @@ target_sources(nuked-sc55-backend
 )
 target_link_libraries(nuked-sc55-backend PRIVATE SDL2::SDL2)
 target_compile_features(nuked-sc55-backend PRIVATE cxx_std_23)
+target_enable_warnings(nuked-sc55-backend)
 
 #==============================================================================
 # Frontend
@@ -49,6 +64,7 @@ endif()
 
 target_link_libraries(nuked-sc55 PRIVATE SDL2::SDL2 SDL2::SDL2main nuked-sc55-backend)
 target_compile_features(nuked-sc55 PRIVATE cxx_std_23)
+target_enable_warnings(nuked-sc55)
 
 if(USE_RTMIDI)
     target_link_libraries(nuked-sc55 PRIVATE RtMidi::rtmidi)
