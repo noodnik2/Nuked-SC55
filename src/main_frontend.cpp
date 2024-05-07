@@ -76,11 +76,7 @@ bool FE_AllocateInstance(frontend_t& container, fe_emu_instance_t** result)
 
 void FE_SendMIDI(frontend_t& fe, size_t n, uint8_t* first, uint8_t* last)
 {
-    while (first != last)
-    {
-        MCU_PostUART(*fe.instances[n].emu.mcu, *first);
-        ++first;
-    }
+    EMU_PostMIDI(fe.instances[n].emu, std::span(first, last));
 }
 
 void FE_BroadcastMIDI(frontend_t& fe, uint8_t* first, uint8_t* last)
@@ -236,34 +232,6 @@ bool FE_OpenAudio(frontend_t& fe, int deviceIndex, int pageSize, int pageNum)
     return true;
 }
 
-enum class ResetType {
-    NONE,
-    GS_RESET,
-    GM_RESET,
-};
-
-void MIDI_Reset(mcu_t& mcu, ResetType resetType)
-{
-    const unsigned char gmReset[] = { 0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7 };
-    const unsigned char gsReset[] = { 0xF0, 0x41, 0x10, 0x42, 0x12, 0x40, 0x00, 0x7F, 0x00, 0x41, 0xF7 };
-    
-    if (resetType == ResetType::GS_RESET)
-    {
-        for (size_t i = 0; i < sizeof(gsReset); i++)
-        {
-            MCU_PostUART(mcu, gsReset[i]);
-        }
-    }
-    else  if (resetType == ResetType::GM_RESET)
-    {
-        for (size_t i = 0; i < sizeof(gmReset); i++)
-        {
-            MCU_PostUART(mcu, gmReset[i]);
-        }
-    }
-
-}
-
 void FE_RunInstance(fe_emu_instance_t& instance)
 {
     MCU_WorkThread_Lock(*instance.emu.mcu);
@@ -400,7 +368,7 @@ int main(int argc, char *argv[])
     int pageSize = 512;
     int pageNum = 32;
     bool autodetect = true;
-    ResetType resetType = ResetType::NONE;
+    EMU_SystemReset resetType = EMU_SystemReset::NONE;
     int instance_count = 1;
 
     Romset romset = Romset::MK2;
@@ -481,11 +449,11 @@ int main(int argc, char *argv[])
             }
             else if (!strcmp(argv[i], "-gs"))
             {
-                resetType = ResetType::GS_RESET;
+                resetType = EMU_SystemReset::GS_RESET;
             }
             else if (!strcmp(argv[i], "-gm"))
             {
-                resetType = ResetType::GM_RESET;
+                resetType = EMU_SystemReset::GM_RESET;
             }
             else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "-help") || !strcmp(argv[i], "--help"))
             {
@@ -573,12 +541,9 @@ int main(int argc, char *argv[])
         fflush(stderr);
     }
 
-    if (resetType != ResetType::NONE)
+    for (size_t i = 0; i < frontend.instances_in_use; ++i)
     {
-        for (size_t i = 0; i < frontend.instances_in_use; ++i)
-        {
-            MIDI_Reset(*frontend.instances[i].emu.mcu, resetType);
-        }
+        EMU_PostSystemReset(frontend.instances[i].emu, resetType);
     }
 
     FE_Run(frontend);

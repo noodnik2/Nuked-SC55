@@ -40,6 +40,7 @@
 #include "pcm.h"
 #include <filesystem>
 #include <memory>
+#include <span>
 
 struct EMU_Options
 {
@@ -65,3 +66,13 @@ void EMU_SetSampleCallback(emu_t& emu, mcu_sample_callback callback, void* userd
 Romset EMU_DetectRomset(const std::filesystem::path& base_path);
 bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_path);
 const char* EMU_RomsetName(Romset romset);
+
+void EMU_PostMIDI(emu_t& emu, std::span<const uint8_t> data);
+
+enum class EMU_SystemReset {
+    NONE,
+    GS_RESET,
+    GM_RESET,
+};
+
+void EMU_PostSystemReset(emu_t& emu, EMU_SystemReset reset);

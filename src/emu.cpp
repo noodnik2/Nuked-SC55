@@ -430,3 +430,31 @@ const char* EMU_RomsetName(Romset romset)
 {
     return rs_name[(size_t)romset];
 }
+
+void EMU_PostMIDI(emu_t& emu, std::span<const uint8_t> data)
+{
+    for (uint8_t byte : data)
+    {
+        MCU_PostUART(*emu.mcu, byte);
+    }
+}
+
+constexpr uint8_t GM_RESET_SEQ[] = { 0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7 };
+constexpr uint8_t GS_RESET_SEQ[] = { 0xF0, 0x41, 0x10, 0x42, 0x12, 0x40, 0x00, 0x7F, 0x00, 0x41, 0xF7 };
+
+void EMU_PostSystemReset(emu_t& emu, EMU_SystemReset reset)
+{
+    switch (reset)
+    {
+        case EMU_SystemReset::NONE:
+            // explicitly do nothing
+            break;
+        case EMU_SystemReset::GS_RESET:
+            EMU_PostMIDI(emu, GS_RESET_SEQ);
+            break;
+        case EMU_SystemReset::GM_RESET:
+            EMU_PostMIDI(emu, GM_RESET_SEQ);
+            break;
+    }
+}
+
