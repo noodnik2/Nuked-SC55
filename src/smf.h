@@ -7,39 +7,7 @@
 #include <string_view>
 #include <span>
 
-// Should use C++17 span but the project only targets C++11 for now.
-class SMF_ByteSpan
-{
-public:
-    SMF_ByteSpan() = default;
-
-    SMF_ByteSpan(const std::vector<uint8_t>& source)
-        : ptr(source.data()), len(source.size())
-    {
-    }
-
-    ~SMF_ByteSpan() = default;
-    // copyable
-    SMF_ByteSpan(const SMF_ByteSpan&) = default;
-    SMF_ByteSpan& operator=(const SMF_ByteSpan&) = default;
-    // moveable
-    SMF_ByteSpan(SMF_ByteSpan&&) = default;
-    SMF_ByteSpan& operator=(SMF_ByteSpan&&) = default;
-
-    const uint8_t& operator[](size_t offset) const
-    {
-        return ptr[offset];
-    }
-
-    size_t Size() const
-    {
-        return len;
-    }
-
-private:
-    const uint8_t* ptr = nullptr;
-    size_t         len = 0;
-};
+using SMF_ByteSpan = std::span<const uint8_t>;
 
 struct SMF_Header
 {
@@ -84,9 +52,9 @@ struct SMF_Event
                ((uint32_t)bytes[data_first + 4]);
     }
 
-    std::span<const uint8_t> GetData(SMF_ByteSpan bytes) const
+    SMF_ByteSpan GetData(SMF_ByteSpan bytes) const
     {
-        return std::span(&bytes[data_first], &bytes[data_last]);
+        return SMF_ByteSpan(&bytes[data_first], &bytes[data_last]);
     }
 };
 

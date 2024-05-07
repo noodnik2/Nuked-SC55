@@ -38,7 +38,7 @@ struct SMF_Reader
     [[nodiscard]]
     bool AtEnd() const
     {
-        return offset == bytes.Size();
+        return offset == bytes.size();
     }
 
     [[nodiscard]]
@@ -66,7 +66,7 @@ struct SMF_Reader
     [[nodiscard]]
     size_t RemainingBytes() const
     {
-        return bytes.Size() - offset;
+        return bytes.size() - offset;
     }
 
     [[nodiscard]]
