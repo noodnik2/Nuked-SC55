@@ -21,7 +21,7 @@ function(target_enable_warnings tgt)
     if(MSVC)
         target_compile_options(${tgt} PRIVATE /W4)
     else()
-        target_compile_options(${tgt} PRIVATE -Wall -Wextra -pedantic)
+        target_compile_options(${tgt} PRIVATE -Wall -Wextra -pedantic -Wshadow)
     endif()
 endfunction()
 
