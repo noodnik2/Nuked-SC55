@@ -48,7 +48,7 @@ target_compile_features(nuked-sc55-backend PRIVATE cxx_std_23)
 target_enable_warnings(nuked-sc55-backend)
 
 #==============================================================================
-# Frontend
+# Main Frontend
 #==============================================================================
 add_executable(nuked-sc55 ${SC55_FRONTEND_SRC} ${UTF8MAIN_SRCS})
 target_sources(nuked-sc55
@@ -78,4 +78,14 @@ if(APPLE)
     find_library(LIBCoreAudio CoreAudio)
     target_link_libraries(nuked-sc55 PRIVATE ${LIBCoreAudio})
 endif()
+
+#==============================================================================
+# Renderer Frontend
+#==============================================================================
+add_executable(nuked-sc55-render)
+target_sources(nuked-sc55-render PRIVATE src/render_frontend.cpp)
+
+target_link_libraries(nuked-sc55-render PRIVATE nuked-sc55-backend)
+target_compile_features(nuked-sc55-render PRIVATE cxx_std_23)
+target_enable_warnings(nuked-sc55-render)
 
