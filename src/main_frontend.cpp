@@ -54,7 +54,7 @@
 
 struct fe_emu_instance_t {
     emu_t        emu;
-    ringbuffer_t sample_buffer;
+    Ringbuffer   sample_buffer;
     SDL_Thread*  thread;
     bool         running;
 };
@@ -134,18 +134,18 @@ void FE_ReceiveSample(void* userdata, int *sample)
     sample[0] >>= 15;
     sample[1] >>= 15;
 
-    audio_frame_t frame;
+    AudioFrame frame;
     frame.left = (int16_t)clamp<int>(sample[0], INT16_MIN, INT16_MAX);
     frame.right = (int16_t)clamp<int>(sample[1], INT16_MIN, INT16_MAX);
 
-    RB_Write(fe.sample_buffer, frame);
+    fe.sample_buffer.Write(frame);
 }
 
 void FE_AudioCallback(void* userdata, Uint8* stream, int len)
 {
     frontend_t& frontend = *(frontend_t*)userdata;
 
-    const size_t num_frames = len / sizeof(audio_frame_t);
+    const size_t num_frames = len / sizeof(AudioFrame);
     memset(stream, 0, len);
 
     size_t renderable_count = num_frames;
@@ -153,13 +153,13 @@ void FE_AudioCallback(void* userdata, Uint8* stream, int len)
     {
         renderable_count = min(
             renderable_count,
-            RB_ReadableFrameCount(frontend.instances[i].sample_buffer)
+            frontend.instances[i].sample_buffer.ReadableFrameCount()
         );
     }
 
     for (size_t i = 0; i < frontend.instances_in_use; ++i)
     {
-        RB_ReadMix(frontend.instances[i].sample_buffer, (audio_frame_t*)stream, renderable_count);
+        frontend.instances[i].sample_buffer.ReadMix((AudioFrame*)stream, renderable_count);
     }
 }
 
@@ -287,11 +287,11 @@ int SDLCALL FE_RunInstance(void* userdata)
     MCU_WorkThread_Lock(*instance.emu.mcu);
     while (instance.running)
     {
-        RB_SetOversamplingEnabled(instance.sample_buffer, instance.emu.pcm->config_reg_3c & 0x40);
-        if (RB_IsFull(instance.sample_buffer))
+        instance.sample_buffer.SetOversamplingEnabled(instance.emu.pcm->config_reg_3c & 0x40);
+        if (instance.sample_buffer.IsFull())
         {
             MCU_WorkThread_Unlock(*instance.emu.mcu);
-            while (RB_IsFull(instance.sample_buffer))
+            while (instance.sample_buffer.IsFull())
             {
                 SDL_Delay(1);
             }
@@ -585,11 +585,7 @@ int main(int argc, char *argv[])
     for (size_t i = 0; i < frontend.instances_in_use; ++i)
     {
         fe_emu_instance_t& fe = frontend.instances[i];
-        if (!RB_Init(fe.sample_buffer, frontend.audio_buffer_size / 2))
-        {
-            fprintf(stderr, "FATAL ERROR: Failed to allocate ringbuffer %lld\n", i);
-            return 1;
-        }
+        fe.sample_buffer = Ringbuffer(frontend.audio_buffer_size / 2);
     }
 
     if (!MIDI_Init(frontend, port))

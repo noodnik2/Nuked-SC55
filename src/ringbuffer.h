@@ -38,100 +38,97 @@
 #include <cstring>
 #include "math_util.h"
 
-struct audio_frame_t {
+struct AudioFrame {
     int16_t left;
     int16_t right;
 };
 
-struct ringbuffer_t {
-    std::vector<audio_frame_t> frames;
-    size_t frame_count;
-    size_t read_head;
-    size_t write_head;
-    bool oversampling;
+class Ringbuffer {
+public:
+    Ringbuffer() = default;
+
+    Ringbuffer(size_t frame_count)
+        : m_frames(frame_count)
+    {
+    }
+
+    void SetOversamplingEnabled(bool enabled)
+    {
+        m_oversampling = enabled;
+        if (m_oversampling)
+        {
+            m_write_head &= ~1;
+        }
+    }
+
+    bool IsFull() const
+    {
+        if (m_oversampling)
+        {
+            return ((m_write_head + 2) % m_frames.size()) == m_read_head;
+        }
+        else
+        {
+            return ((m_write_head + 1) % m_frames.size()) == m_read_head;
+        }
+    }
+
+    void Write(const AudioFrame& frame)
+    {
+        m_frames[m_write_head] = frame;
+        m_write_head = (m_write_head + 1) % m_frames.size();
+    }
+
+    size_t ReadableFrameCount() const
+    {
+        if (m_read_head <= m_write_head)
+        {
+            return m_write_head - m_read_head;
+        }
+        else
+        {
+            return m_frames.size() - (m_read_head - m_write_head);
+        }
+    }
+
+    // Reads up to `frame_count` frames and returns the number of frames
+    // actually read.
+    size_t Read(AudioFrame* dest, size_t frame_count)
+    {
+        const size_t have_count = ReadableFrameCount();
+        const size_t read_count = min(have_count, frame_count);
+        size_t working_read_head = m_read_head;
+        // TODO make this one or two memcpys
+        for (size_t i = 0; i < read_count; ++i)
+        {
+            *dest = m_frames[working_read_head];
+            ++dest;
+            working_read_head = (working_read_head + 1) % m_frames.size();
+        }
+        m_read_head = working_read_head;
+        return read_count;
+    }
+
+    // Reads up to `frame_count` frames and returns the number of frames
+    // actually read. Mixes samples into dest by adding and clipping.
+    size_t ReadMix(AudioFrame* dest, size_t frame_count)
+    {
+        const size_t have_count = ReadableFrameCount();
+        const size_t read_count = min(have_count, frame_count);
+        size_t working_read_head = m_read_head;
+        for (size_t i = 0; i < read_count; ++i)
+        {
+            dest[i].left = saturating_add(dest[i].left, m_frames[working_read_head].left);
+            dest[i].right = saturating_add(dest[i].right, m_frames[working_read_head].right);
+            working_read_head = (working_read_head + 1) % m_frames.size();
+        }
+        m_read_head = working_read_head;
+        return read_count;
+    }
+
+private:
+    std::vector<AudioFrame> m_frames;
+    size_t m_read_head = 0;
+    size_t m_write_head = 0;
+    bool m_oversampling = false;
 };
-
-inline bool RB_Init(ringbuffer_t& rb, size_t frame_count)
-{
-    rb.frames.resize(frame_count);
-    rb.frame_count = frame_count;
-    rb.read_head = 0;
-    rb.write_head = 0;
-    rb.oversampling = false;
-    return true;
-}
-
-inline void RB_SetOversamplingEnabled(ringbuffer_t& rb, bool enabled)
-{
-    rb.oversampling = enabled;
-    if (rb.oversampling)
-    {
-        rb.write_head &= ~1;
-    }
-}
-
-inline bool RB_IsFull(ringbuffer_t& rb)
-{
-    if (rb.oversampling)
-    {
-        return ((rb.write_head + 2) % rb.frame_count) == rb.read_head;
-    }
-    else
-    {
-        return ((rb.write_head + 1) % rb.frame_count) == rb.read_head;
-    }
-}
-
-inline void RB_Write(ringbuffer_t& rb, const audio_frame_t& frame)
-{
-    rb.frames[rb.write_head] = frame;
-    rb.write_head = (rb.write_head + 1) % rb.frame_count;
-}
-
-inline size_t RB_ReadableFrameCount(ringbuffer_t& rb)
-{
-    if (rb.read_head <= rb.write_head)
-    {
-        return rb.write_head - rb.read_head;
-    }
-    else
-    {
-        return rb.frame_count - (rb.read_head - rb.write_head);
-    }
-}
-
-// Reads up to `frame_count` frames and returns the number of frames actually
-// read.
-inline size_t RB_Read(ringbuffer_t& rb, audio_frame_t* dest, size_t frame_count)
-{
-    const size_t have_count = RB_ReadableFrameCount(rb);
-    const size_t read_count = min(have_count, frame_count);
-    size_t read_head = rb.read_head;
-    // TODO make this one or two memcpys
-    for (size_t i = 0; i < read_count; ++i)
-    {
-        *dest = rb.frames[read_head];
-        ++dest;
-        read_head = (read_head + 1) % rb.frame_count;
-    }
-    rb.read_head = read_head;
-    return read_count;
-}
-
-// Reads up to `frame_count` frames and returns the number of frames actually
-// read. Mixes samples into dest by adding and clipping.
-inline size_t RB_ReadMix(ringbuffer_t& rb, audio_frame_t* dest, size_t frame_count)
-{
-    const size_t have_count = RB_ReadableFrameCount(rb);
-    const size_t read_count = min(have_count, frame_count);
-    size_t read_head = rb.read_head;
-    for (size_t i = 0; i < read_count; ++i)
-    {
-        dest[i].left = saturating_add(dest[i].left, rb.frames[read_head].left);
-        dest[i].right = saturating_add(dest[i].right, rb.frames[read_head].right);
-        read_head = (read_head + 1) % rb.frame_count;
-    }
-    rb.read_head = read_head;
-    return read_count;
-}
-
