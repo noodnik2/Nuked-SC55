@@ -31,21 +31,12 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-#include <stdio.h>
-#include <string.h>
 #include "mcu.h"
-#include "mcu_opcodes.h"
-#include "mcu_interrupt.h"
 #include "mcu_timer.h"
+#include "mcu_opcodes.h"
+#include "submcu.h"
 #include "pcm.h"
 #include "lcd.h"
-#include "submcu.h"
-#include "midi.h"
-
-#if __linux__
-#include <unistd.h>
-#include <limits.h>
-#endif
 
 void MCU_ErrorTrap(mcu_t& mcu)
 {

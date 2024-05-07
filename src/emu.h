@@ -34,13 +34,12 @@
 #pragma once
 
 #include "mcu.h"
+#include "submcu.h"
+#include "mcu_timer.h"
+#include "lcd.h"
+#include "pcm.h"
 #include <filesystem>
 #include <memory>
-
-struct submcu_t;
-struct mcu_timer_t;
-struct lcd_t;
-struct pcm_t;
 
 struct emu_t {
     std::unique_ptr<mcu_t>       mcu;

@@ -31,26 +31,10 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-#include <stdio.h>
-#include <string.h>
-#include "SDL.h"
-#include "mcu.h"
-#include "mcu_opcodes.h"
-#include "mcu_interrupt.h"
-#include "mcu_timer.h"
-#include "pcm.h"
-#include "lcd.h"
-#include "submcu.h"
-#include "midi.h"
 #include "emu.h"
+#include "midi.h"
 #include "ringbuffer.h"
-#include "math_util.h"
-#include <filesystem>
-
-#if __linux__
-#include <unistd.h>
-#include <limits.h>
-#endif
+#include <SDL.h>
 
 struct fe_emu_instance_t {
     emu_t        emu;

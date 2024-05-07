@@ -33,9 +33,7 @@
  */
 #pragma once
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
+#include <vector>
 #include "math_util.h"
 
 struct AudioFrame {

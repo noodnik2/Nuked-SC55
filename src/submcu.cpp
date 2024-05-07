@@ -31,11 +31,8 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-#include <stdio.h>
-#include <string.h>
-#include "SDL_audio.h"
-#include "mcu.h"
 #include "submcu.h"
+#include "mcu.h"
 
 enum {
     SM_VECTOR_UART3_TX = 0,
