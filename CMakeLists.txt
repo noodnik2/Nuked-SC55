@@ -28,7 +28,7 @@ endfunction()
 #==============================================================================
 # Backend
 #==============================================================================
-add_library(nuked-sc55-backend ${SC55_BACKEND_SRC})
+add_library(nuked-sc55-backend)
 target_sources(nuked-sc55-backend
     PRIVATE
     src/mcu.cpp src/mcu.h
@@ -50,7 +50,7 @@ target_enable_warnings(nuked-sc55-backend)
 #==============================================================================
 # Main Frontend
 #==============================================================================
-add_executable(nuked-sc55 ${SC55_FRONTEND_SRC} ${UTF8MAIN_SRCS})
+add_executable(nuked-sc55)
 target_sources(nuked-sc55
     PRIVATE
     src/main_frontend.cpp # main() is here!
