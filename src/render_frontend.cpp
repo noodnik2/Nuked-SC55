@@ -152,22 +152,17 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
 
 struct R_TrackRenderState
 {
-    Ringbuffer buffer;
+    std::vector<AudioFrame> buffer;
     size_t render_offset = 0;
     size_t us_simulated = 0;
 
-    void Flush(std::vector<AudioFrame>& output)
+    void MixInto(std::vector<AudioFrame>& output)
     {
-        size_t output_offset = render_offset;
-        size_t output_size = buffer.ReadableFrameCount();
-        size_t output_last = output_offset + output_size;
-        if (output_last > output.size())
+        if (output.size() < buffer.size())
         {
-            // TODO: don't resize every flush
-            output.resize(output_last, AudioFrame{});
+            output.resize(buffer.size(), AudioFrame{});
         }
-        buffer.ReadMix(&output[output_offset], output_size);
-        render_offset += output_size;
+        horizontal_sat_add_i16((int16_t*)output.data(), (int16_t*)buffer.data(), (int16_t*)(buffer.data() + buffer.size()));
     }
 };
 
@@ -182,7 +177,7 @@ void R_ReceiveSample(void* userdata, int* sample)
     frame.left = (int16_t)clamp<int>(sample[0], INT16_MIN, INT16_MAX);
     frame.right = (int16_t)clamp<int>(sample[1], INT16_MIN, INT16_MAX);
 
-    state->buffer.Write(frame);
+    state->buffer.push_back(frame);
 }
 
 void R_RunReset(emu_t& emu, EMU_SystemReset reset)
@@ -231,19 +226,13 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
         printf("Running system reset for #%02lld...\n", i);
         R_RunReset(emus[i], params.reset);
 
-        render_states[i].buffer = Ringbuffer(16 * 1024);
         EMU_SetSampleCallback(emus[i], R_ReceiveSample, &render_states[i]);
     }
-
-    WAV_Handle render_output;
-    render_output.Open(params.output_filename);
 
     SMF_Track track = SMF_MergeTracks(data);
 
     uint64_t division = data.header.division;
     uint64_t us_per_qn = 500000;
-
-    std::vector<AudioFrame> render_track;
 
     for (size_t i = 0; i < track.events.size(); ++i)
     {
@@ -258,16 +247,9 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
             // 24_000_000 / 1_000_000 = 24 cycles per microsecond.
             while (render_states[instance].us_simulated < this_event_time_us)
             {
-                render_states[instance].buffer.SetOversamplingEnabled(emus[instance].pcm->config_reg_3c & 0x40);
-
                 MCU_Step(*emus[instance].mcu);
                 MCU_Step(*emus[instance].mcu);
                 ++render_states[instance].us_simulated;
-
-                if (render_states[instance].buffer.IsFull())
-                {
-                    render_states[instance].Flush(render_track);
-                }
             }
         }
 
@@ -286,12 +268,16 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
 
     printf("\n");
 
+    WAV_Handle render_output;
+    render_output.Open(params.output_filename);
+
+    std::vector<AudioFrame> rendered_track;
     for (size_t instance = 0; instance < instances; ++instance)
     {
-        render_states[instance].Flush(render_track);
+        render_states[instance].MixInto(rendered_track);
     }
 
-    for (const auto& sample : render_track)
+    for (const auto& sample : rendered_track)
     {
         render_output.WriteSample(sample.left, sample.right);
     }
