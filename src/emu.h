@@ -41,6 +41,11 @@
 #include <filesystem>
 #include <memory>
 
+struct EMU_Options
+{
+    bool want_lcd;
+};
+
 struct emu_t {
     std::unique_ptr<mcu_t>       mcu;
     std::unique_ptr<submcu_t>    sm;
@@ -50,6 +55,7 @@ struct emu_t {
 };
 
 bool EMU_Init(emu_t& emu);
+bool EMU_Init(emu_t& emu, const EMU_Options& options);
 
 // Should be called after loading roms
 void EMU_Reset(emu_t& emu);

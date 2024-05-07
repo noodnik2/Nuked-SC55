@@ -93,7 +93,10 @@ void R_ReceiveSample(void* userdata, int* sample)
 bool R_RenderTrack(const SMF_Data& data, std::string_view output_filename)
 {
     emu_t emu;
-    EMU_Init(emu);
+    EMU_Init(emu, EMU_Options {
+        .want_lcd = false,
+    });
+
     Romset rs = EMU_DetectRomset(std::filesystem::path{});
     if (!EMU_LoadRoms(emu, rs, std::filesystem::path{}))
     {

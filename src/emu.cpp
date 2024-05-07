@@ -43,6 +43,13 @@
 
 bool EMU_Init(emu_t& emu)
 {
+    return EMU_Init(emu, EMU_Options {
+        .want_lcd = true,
+    });
+}
+
+bool EMU_Init(emu_t& emu, const EMU_Options& options)
+{
     emu.mcu   = std::make_unique<mcu_t>();
     emu.sm    = std::make_unique<submcu_t>();
     emu.timer = std::make_unique<mcu_timer_t>();
