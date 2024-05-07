@@ -189,7 +189,7 @@ bool FE_OpenAudio(frontend_t& fe, int deviceIndex, int pageSize, int pageNum)
     const mcu_t& mcu = *fe.instances[0].emu.mcu;
     
     spec.format = AUDIO_S16SYS;
-    spec.freq = (mcu.mcu_mk1 || mcu.mcu_jv880) ? 64000 : 66207;
+    spec.freq = MCU_GetOutputFrequency(mcu);
     spec.channels = 2;
     spec.callback = FE_AudioCallback;
     spec.userdata = &fe;
