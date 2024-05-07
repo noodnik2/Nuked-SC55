@@ -13,6 +13,7 @@ struct R_Parameters
     bool help = false;
     size_t instances = 1;
     EMU_SystemReset reset = EMU_SystemReset::NONE;
+    std::filesystem::path rom_directory;
 };
 
 enum class R_ParseError
@@ -24,6 +25,7 @@ enum class R_ParseError
     InstancesInvalid,
     InstancesOutOfRange,
     UnexpectedEnd,
+    RomDirectoryNotFound,
 };
 
 const char* R_ParseErrorStr(R_ParseError err)
@@ -44,6 +46,8 @@ const char* R_ParseErrorStr(R_ParseError err)
             return "Instances out of range (should be 1-16)";
         case R_ParseError::UnexpectedEnd:
             return "Expected another argument";
+        case R_ParseError::RomDirectoryNotFound:
+            return "Rom directory doesn't exist";
     }
 }
 
@@ -107,6 +111,20 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
             else
             {
                 result.reset = EMU_SystemReset::NONE;
+            }
+        }
+        else if (arg == "-d" || arg == "--rom-directory")
+        {
+            ++i;
+            if (i >= argc)
+            {
+                return R_ParseError::UnexpectedEnd;
+            }
+            arg = argv[i];
+            result.rom_directory = arg;
+            if (!std::filesystem::exists(result.rom_directory))
+            {
+                return R_ParseError::RomDirectoryNotFound;
             }
         }
         else
@@ -186,8 +204,8 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
 {
     const size_t instances = params.instances;
 
-    // TODO: allow this directory to be configured
-    Romset rs = EMU_DetectRomset(std::filesystem::path{});
+    Romset rs = EMU_DetectRomset(params.rom_directory);
+    printf("Detected romset: %s\n", EMU_RomsetName(rs));
 
     emu_t emus[SMF_CHANNEL_COUNT];
     R_TrackRenderState render_states[SMF_CHANNEL_COUNT];
@@ -197,7 +215,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
             .want_lcd = false,
         });
 
-        if (!EMU_LoadRoms(emus[i], rs, std::filesystem::path{}))
+        if (!EMU_LoadRoms(emus[i], rs, params.rom_directory))
         {
             return false;
         }
@@ -290,6 +308,7 @@ void R_Usage(const char* prog_name)
     printf("  -o <filename>                  Render to filename\n");
     printf("  -n, --instances <instances>    Number of emulators to use (increases effective polyphony, longer to render)\n");
     printf("  -r, --reset gs|gm              Send GS or GM reset before rendering.\n");
+    printf("  -d, --rom-directory <dir>      Sets the directory to load roms from.\n");
     printf("\n");
 }
 
