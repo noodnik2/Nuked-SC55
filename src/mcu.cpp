@@ -33,7 +33,6 @@
  */
 #include <stdio.h>
 #include <string.h>
-#include "SDL.h"
 #include "mcu.h"
 #include "mcu_opcodes.h"
 #include "mcu_interrupt.h"
@@ -328,7 +327,7 @@ uint8_t MCU_DeviceRead(mcu_t& mcu, uint32_t address)
         if (!mcu.mcu_jv880) return 0xff;
 
         uint8_t data = 0xff;
-        uint32_t button_pressed = (uint32_t)SDL_AtomicGet(&mcu.mcu_button_pressed);
+        uint32_t button_pressed = mcu.mcu_button_pressed;
 
         if (mcu.io_sd == 0b11111011)
             data &= ((button_pressed >> 0) & 0b11111) ^ 0xFF;
@@ -495,7 +494,7 @@ uint8_t MCU_Read(mcu_t& mcu, uint32_t address)
                     LCD_Enable(*mcu.lcd, (mcu.io_sd & 8) != 0);
 
                     uint8_t data = 0xff;
-                    uint32_t button_pressed = (uint32_t)SDL_AtomicGet(&mcu.mcu_button_pressed);
+                    uint32_t button_pressed = mcu.mcu_button_pressed;
 
                     if ((mcu.io_sd & 1) == 0)
                         data &= ((button_pressed >> 0) & 255) ^ 255;
@@ -779,17 +778,12 @@ bool MCU_Init(mcu_t& mcu, submcu_t& sm, pcm_t& pcm, mcu_timer_t& timer, lcd_t& l
     mcu.pcm = &pcm;
     mcu.timer = &timer;
     mcu.lcd = &lcd;
-    mcu.work_thread_lock = SDL_CreateMutex();
-    if (!mcu.work_thread_lock)
-    {
-        return false;
-    }
     return true;
 }
 
 void MCU_Deinit(mcu_t& mcu)
 {
-    SDL_DestroyMutex(mcu.work_thread_lock);
+    (void)mcu;
 }
 
 void MCU_Reset(mcu_t& mcu)
@@ -872,12 +866,12 @@ void MCU_UpdateUART_TX(mcu_t& mcu)
 
 void MCU_WorkThread_Lock(mcu_t& mcu)
 {
-    SDL_LockMutex(mcu.work_thread_lock);
+    mcu.work_thread_lock.lock();
 }
 
 void MCU_WorkThread_Unlock(mcu_t& mcu)
 {
-    SDL_UnlockMutex(mcu.work_thread_lock);
+    mcu.work_thread_lock.unlock();
 }
 
 void MCU_Step(mcu_t& mcu)
@@ -940,7 +934,7 @@ uint8_t MCU_ReadP0(mcu_t& mcu)
 uint8_t MCU_ReadP1(mcu_t& mcu)
 {
     uint8_t data = 0xff;
-    uint32_t button_pressed = (uint32_t)SDL_AtomicGet(&mcu.mcu_button_pressed);
+    uint32_t button_pressed = mcu.mcu_button_pressed;
 
     if ((mcu.mcu_p0_data & 1) == 0)
         data &= ((button_pressed >> 0) & 255) ^ 255;

@@ -562,7 +562,7 @@ void LCD_HandleEvent(lcd_t& lcd, const SDL_Event& sdl_event)
                     break;
 
                 int mask = 0;
-                uint32_t button_pressed = (uint32_t)SDL_AtomicGet(&lcd.mcu->mcu_button_pressed);
+                uint32_t button_pressed = lcd.mcu->mcu_button_pressed;
 
                 auto button_map = lcd.mcu->mcu_jv880 ? button_map_jv880 : button_map_sc55;
                 auto button_size = (lcd.mcu->mcu_jv880 ? sizeof(button_map_jv880) : sizeof(button_map_sc55)) / sizeof(button_map_sc55[0]);
@@ -577,7 +577,7 @@ void LCD_HandleEvent(lcd_t& lcd, const SDL_Event& sdl_event)
                 else
                     button_pressed &= ~mask;
 
-                SDL_AtomicSet(&lcd.mcu->mcu_button_pressed, (int)button_pressed);
+                lcd.mcu->mcu_button_pressed = button_pressed;
 
 #if 0
                 if (sdl_event.key.keysym.scancode >= SDL_SCANCODE_1 && sdl_event.key.keysym.scancode < SDL_SCANCODE_0)

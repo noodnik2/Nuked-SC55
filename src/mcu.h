@@ -33,10 +33,10 @@
  */
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
+#include <atomic>
+#include <thread>
 #include "mcu_interrupt.h"
-#include "SDL_atomic.h"
-#include "SDL.h"
 
 struct submcu_t;
 struct pcm_t;
@@ -261,7 +261,7 @@ struct mcu_t {
     int ga_int_trigger = 0;
     int ga_lcd_counter = 0;
 
-    SDL_atomic_t mcu_button_pressed{};
+    std::atomic<uint32_t> mcu_button_pressed;
 
     uint8_t mcu_p0_data = 0;
     uint8_t mcu_p1_data = 0;
@@ -284,7 +284,7 @@ struct mcu_t {
     void* callback_userdata = nullptr;
     mcu_sample_callback sample_callback = MCU_DefaultSampleCallback;
 
-    SDL_mutex *work_thread_lock = nullptr;
+    std::mutex work_thread_lock;
 };
 
 bool MCU_Init(mcu_t& mcu, submcu_t& sm, pcm_t& pcm, mcu_timer_t& timer, lcd_t& lcd);

@@ -41,6 +41,7 @@ struct mcu_t;
 struct SDL_Window;
 struct SDL_Renderer;
 struct SDL_Texture;
+union SDL_Event;
 
 static const int lcd_width_max = 1024;
 static const int lcd_height_max = 1024;
