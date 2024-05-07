@@ -61,6 +61,11 @@ struct SMF_Event
     // Offset to raw data bytes for this message within an SMF_ByteSpan.
     uint32_t data_first, data_last;
 
+    uint8_t GetChannel() const
+    {
+        return status & 0x0f;
+    }
+
     bool IsMetaEvent() const
     {
         return status == 0xff;
@@ -90,6 +95,8 @@ struct SMF_Data
     std::vector<uint8_t> bytes;
     std::vector<SMF_Track> tracks;
 };
+
+const size_t SMF_CHANNEL_COUNT = 16;
 
 SMF_Track SMF_MergeTracks(const SMF_Data& data);
 void SMF_PrintStats(const SMF_Data& data);
