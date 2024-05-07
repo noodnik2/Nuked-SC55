@@ -39,7 +39,7 @@
 struct fe_emu_instance_t {
     emu_t        emu;
     Ringbuffer   sample_buffer;
-    SDL_Thread*  thread;
+    std::thread  thread;
     bool         running;
 };
 
@@ -264,10 +264,8 @@ void MIDI_Reset(mcu_t& mcu, ResetType resetType)
 
 }
 
-int SDLCALL FE_RunInstance(void* userdata)
+void FE_RunInstance(fe_emu_instance_t& instance)
 {
-    fe_emu_instance_t& instance = *(fe_emu_instance_t*)userdata;
-
     MCU_WorkThread_Lock(*instance.emu.mcu);
     while (instance.running)
     {
@@ -285,8 +283,6 @@ int SDLCALL FE_RunInstance(void* userdata)
         MCU_Step(*instance.emu.mcu);
     }
     MCU_WorkThread_Unlock(*instance.emu.mcu);
-
-    return 0;
 }
 
 void FE_Run(frontend_t& fe)
@@ -296,7 +292,7 @@ void FE_Run(frontend_t& fe)
     for (size_t i = 0; i < fe.instances_in_use; ++i)
     {
         fe.instances[i].running = true;
-        fe.instances[i].thread = SDL_CreateThread(FE_RunInstance, "work thread", &fe.instances[i]);
+        fe.instances[i].thread = std::thread(FE_RunInstance, std::ref(fe.instances[i]));
     }
 
     while (working)
@@ -324,7 +320,7 @@ void FE_Run(frontend_t& fe)
     for (size_t i = 0; i < fe.instances_in_use; ++i)
     {
         fe.instances[i].running = false;
-        SDL_WaitThread(fe.instances[i].thread, 0);
+        fe.instances[i].thread.join();
     }
 }
 
@@ -378,7 +374,6 @@ bool FE_CreateInstance(frontend_t& container, const std::filesystem::path& baseP
 
 void FE_DestroyInstance(fe_emu_instance_t& fe)
 {
-    fe.thread = nullptr;
     fe.running = false;
 }
 
