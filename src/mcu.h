@@ -188,18 +188,19 @@ static const int ROMSM_SIZE = 0x1000;
 
 static const uint32_t uart_buffer_size = 8192;
 
-enum {
-    ROM_SET_MK2 = 0,
-    ROM_SET_ST,
-    ROM_SET_MK1,
-    ROM_SET_CM300,
-    ROM_SET_JV880,
-    ROM_SET_SCB55,
-    ROM_SET_RLP3237,
-    ROM_SET_SC155,
-    ROM_SET_SC155MK2,
-    ROM_SET_COUNT
+enum class Romset {
+    MK2,
+    ST,
+    MK1,
+    CM300,
+    JV880,
+    SCB55,
+    RLP3237,
+    SC155,
+    SC155MK2,
 };
+
+constexpr size_t ROMSET_COUNT = 9;
 
 typedef void(*mcu_sample_callback)(void* userdata, int* sample);
 
@@ -244,7 +245,7 @@ struct mcu_t {
     uint64_t uart_rx_delay = 0;
     uint64_t uart_tx_delay = 0;
 
-    int romset = ROM_SET_MK2;
+    Romset romset = Romset::MK2;
 
     int mcu_mk1 = 0; // 0 - SC-55mkII, SC-55ST. 1 - SC-55, CM-300/SCC-1
     int mcu_cm300 = 0; // 0 - SC-55, 1 - CM-300/SCC-1

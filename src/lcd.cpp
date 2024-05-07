@@ -214,7 +214,7 @@ void LCD_Init(lcd_t& lcd, mcu_t& mcu)
 
 bool LCD_CreateWindow(lcd_t& lcd)
 {
-    if (lcd.mcu->romset == ROM_SET_JV880)
+    if (lcd.mcu->romset == Romset::JV880)
     {
         lcd.lcd_width = 820;
         lcd.lcd_height = 100;

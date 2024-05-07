@@ -75,7 +75,7 @@ void EMU_SetSampleCallback(emu_t& emu, mcu_sample_callback callback, void* userd
     emu.mcu->sample_callback = callback;
 }
 
-const char* rs_name[ROM_SET_COUNT] = {
+const char* rs_name[(size_t)ROMSET_COUNT] = {
     "SC-55mk2",
     "SC-55st",
     "SC-55mk1",
@@ -87,7 +87,7 @@ const char* rs_name[ROM_SET_COUNT] = {
     "SC-155mk2"
 };
 
-const char* roms[ROM_SET_COUNT][5] =
+const char* roms[(size_t)ROMSET_COUNT][5] =
 {
     {
         "rom1.bin",
@@ -189,9 +189,9 @@ void unscramble(uint8_t *src, uint8_t *dst, int len)
     }
 }
 
-int EMU_DetectRomset(const std::filesystem::path& base_path)
+Romset EMU_DetectRomset(const std::filesystem::path& base_path)
 {
-    for (size_t i = 0; i < ROM_SET_COUNT; i++)
+    for (size_t i = 0; i < (size_t)ROMSET_COUNT; i++)
     {
         bool good = true;
         for (size_t j = 0; j < 5; j++)
@@ -206,10 +206,10 @@ int EMU_DetectRomset(const std::filesystem::path& base_path)
         }
         if (good)
         {
-            return i;
+            return (Romset)i;
         }
     }
-    return ROM_SET_MK2;
+    return Romset::MK2;
 }
 
 bool EMU_ReadStreamExact(std::ifstream& s, void* into, std::streamsize byte_count)
@@ -235,7 +235,7 @@ std::streamsize EMU_ReadStreamUpTo(std::ifstream& s, void* into, std::streamsize
     return 0;
 }
 
-bool EMU_LoadRoms(emu_t& emu, int romset, const std::filesystem::path& base_path)
+bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_path)
 {
     std::vector<uint8_t> tempbuf(0x800000);
 
@@ -251,31 +251,31 @@ bool EMU_LoadRoms(emu_t& emu, int romset, const std::filesystem::path& base_path
     emu.mcu->mcu_sc155 = false;
     switch (romset)
     {
-        case ROM_SET_MK2:
-        case ROM_SET_SC155MK2:
-            if (romset == ROM_SET_SC155MK2)
+        case Romset::MK2:
+        case Romset::SC155MK2:
+            if (romset == Romset::SC155MK2)
                 emu.mcu->mcu_sc155 = true;
             break;
-        case ROM_SET_ST:
+        case Romset::ST:
             emu.mcu->mcu_st = true;
             break;
-        case ROM_SET_MK1:
-        case ROM_SET_SC155:
+        case Romset::MK1:
+        case Romset::SC155:
             emu.mcu->mcu_mk1 = true;
             emu.mcu->mcu_st = false;
-            if (romset == ROM_SET_SC155)
+            if (romset == Romset::SC155)
                 emu.mcu->mcu_sc155 = true;
             break;
-        case ROM_SET_CM300:
+        case Romset::CM300:
             emu.mcu->mcu_mk1 = true;
             emu.mcu->mcu_cm300 = true;
             break;
-        case ROM_SET_JV880:
+        case Romset::JV880:
             emu.mcu->mcu_jv880 = true;
             emu.mcu->rom2_mask /= 2; // rom is half the size
             break;
-        case ROM_SET_SCB55:
-        case ROM_SET_RLP3237:
+        case Romset::SCB55:
+        case Romset::RLP3237:
             emu.mcu->mcu_scb55 = true;
             break;
     }
@@ -287,11 +287,11 @@ bool EMU_LoadRoms(emu_t& emu, int romset, const std::filesystem::path& base_path
 
     for(size_t i = 0; i < 5; ++i)
     {
-        if (roms[romset][i][0] == '\0')
+        if (roms[(size_t)romset][i][0] == '\0')
         {
             continue;
         }
-        rpaths[i] = base_path / roms[romset][i];
+        rpaths[i] = base_path / roms[(size_t)romset][i];
         s_rf[i] = std::ifstream(rpaths[i].c_str(), std::ios::binary);
         bool optional = emu.mcu->mcu_jv880 && i == 4;
         r_ok &= optional || s_rf[i];
@@ -419,7 +419,7 @@ bool EMU_LoadRoms(emu_t& emu, int romset, const std::filesystem::path& base_path
     return true;
 }
 
-const char* EMU_RomsetName(int romset)
+const char* EMU_RomsetName(Romset romset)
 {
-    return rs_name[romset];
+    return rs_name[(size_t)romset];
 }

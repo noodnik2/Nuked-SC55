@@ -356,7 +356,7 @@ bool FE_Init()
     return true;
 }
 
-bool FE_CreateInstance(frontend_t& container, const std::filesystem::path& basePath, int romset)
+bool FE_CreateInstance(frontend_t& container, const std::filesystem::path& basePath, Romset romset)
 {
     fe_emu_instance_t* fe = nullptr;
 
@@ -424,7 +424,7 @@ int main(int argc, char *argv[])
     ResetType resetType = ResetType::NONE;
     int instance_count = 1;
 
-    int romset = ROM_SET_MK2;
+    Romset romset = Romset::MK2;
 
     frontend_t frontend;
 
@@ -467,37 +467,37 @@ int main(int argc, char *argv[])
             }
             else if (!strcmp(argv[i], "-mk2"))
             {
-                romset = ROM_SET_MK2;
+                romset = Romset::MK2;
                 autodetect = false;
             }
             else if (!strcmp(argv[i], "-st"))
             {
-                romset = ROM_SET_ST;
+                romset = Romset::ST;
                 autodetect = false;
             }
             else if (!strcmp(argv[i], "-mk1"))
             {
-                romset = ROM_SET_MK1;
+                romset = Romset::MK1;
                 autodetect = false;
             }
             else if (!strcmp(argv[i], "-cm300"))
             {
-                romset = ROM_SET_CM300;
+                romset = Romset::CM300;
                 autodetect = false;
             }
             else if (!strcmp(argv[i], "-jv880"))
             {
-                romset = ROM_SET_JV880;
+                romset = Romset::JV880;
                 autodetect = false;
             }
             else if (!strcmp(argv[i], "-scb55"))
             {
-                romset = ROM_SET_SCB55;
+                romset = Romset::SCB55;
                 autodetect = false;
             }
             else if (!strcmp(argv[i], "-rlp3237"))
             {
-                romset = ROM_SET_RLP3237;
+                romset = Romset::RLP3237;
                 autodetect = false;
             }
             else if (!strcmp(argv[i], "-gs"))
@@ -534,12 +534,12 @@ int main(int argc, char *argv[])
             }
             else if (!strcmp(argv[i], "-sc155"))
             {
-                romset = ROM_SET_SC155;
+                romset = Romset::SC155;
                 autodetect = false;
             }
             else if (!strcmp(argv[i], "-sc155mk2"))
             {
-                romset = ROM_SET_SC155MK2;
+                romset = Romset::SC155MK2;
                 autodetect = false;
             }
         }

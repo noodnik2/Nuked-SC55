@@ -57,6 +57,6 @@ void EMU_Reset(emu_t& emu);
 
 void EMU_SetSampleCallback(emu_t& emu, mcu_sample_callback callback, void* userdata);
 
-int EMU_DetectRomset(const std::filesystem::path& base_path);
-bool EMU_LoadRoms(emu_t& emu, int romset, const std::filesystem::path& base_path);
-const char* EMU_RomsetName(int romset);
+Romset EMU_DetectRomset(const std::filesystem::path& base_path);
+bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_path);
+const char* EMU_RomsetName(Romset romset);
