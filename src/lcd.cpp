@@ -390,14 +390,14 @@ void LCD_FontRenderLR(lcd_t& lcd, uint8_t ch)
     {
         col = lcd_col2;
     }
-    for (int f = 0; f < 2; f++)
+    for (int letter = 0; letter < 2; letter++)
     {
         for (int i = 0; i < 12; i++)
         {
             for (int j = 0; j < 11; j++)
             {
-                if (LR[f][i][j])
-                    lcd.lcd_buffer[i+LR_xy[f][0]][j+LR_xy[f][1]] = col;
+                if (LR[letter][i][j])
+                    lcd.lcd_buffer[i+LR_xy[letter][0]][j+LR_xy[letter][1]] = col;
             }
         }
     }

@@ -1571,8 +1571,8 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
 
         pcm.nfs = 1;
 
-        int cycles = (reg_slots + 1) * 25;
+        int new_cycles = (reg_slots + 1) * 25;
 
-        pcm.cycles += pcm.mcu->mcu_jv880 ? (cycles * 25) / 29 : cycles;
+        pcm.cycles += pcm.mcu->mcu_jv880 ? (new_cycles * 25) / 29 : new_cycles;
     }
 }
