@@ -200,6 +200,12 @@ void R_RunReset(emu_t& emu, EMU_SystemReset reset)
     }
 }
 
+void R_PostEvent(emu_t& emu, const SMF_Data& data, const SMF_Event& ev)
+{
+    EMU_PostMIDI(emu, ev.status);
+    EMU_PostMIDI(emu, ev.GetData(data.bytes));
+}
+
 bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
 {
     const size_t instances = params.instances;
@@ -274,13 +280,8 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
         size_t destination = track.events[i].GetChannel() % instances;
         if (!track.events[i].IsMetaEvent())
         {
-            MCU_PostUART(*emus[destination].mcu, track.events[i].status);
-            for (uint32_t data_offset = track.events[i].data_first; data_offset != track.events[i].data_last; ++data_offset)
-            {
-                MCU_PostUART(*emus[destination].mcu, data.bytes[data_offset]);
-            }
+            R_PostEvent(emus[destination], data, track.events[i]);
         }
-
     }
 
     printf("\n");

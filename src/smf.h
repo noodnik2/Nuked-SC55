@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <vector>
 #include <string_view>
+#include <span>
 
 // Should use C++17 span but the project only targets C++11 for now.
 class SMF_ByteSpan
@@ -81,6 +82,11 @@ struct SMF_Event
         return ((uint32_t)bytes[data_first + 2]) << 16 |
                ((uint32_t)bytes[data_first + 3]) << 8  |
                ((uint32_t)bytes[data_first + 4]);
+    }
+
+    std::span<const uint8_t> GetData(SMF_ByteSpan bytes) const
+    {
+        return std::span(&bytes[data_first], &bytes[data_last]);
     }
 };
 

@@ -431,11 +431,16 @@ const char* EMU_RomsetName(Romset romset)
     return rs_name[(size_t)romset];
 }
 
+void EMU_PostMIDI(emu_t& emu, uint8_t byte)
+{
+    MCU_PostUART(*emu.mcu, byte);
+}
+
 void EMU_PostMIDI(emu_t& emu, std::span<const uint8_t> data)
 {
     for (uint8_t byte : data)
     {
-        MCU_PostUART(*emu.mcu, byte);
+        EMU_PostMIDI(emu, byte);
     }
 }
 

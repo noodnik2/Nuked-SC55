@@ -67,6 +67,7 @@ Romset EMU_DetectRomset(const std::filesystem::path& base_path);
 bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_path);
 const char* EMU_RomsetName(Romset romset);
 
+void EMU_PostMIDI(emu_t& emu, uint8_t data_byte);
 void EMU_PostMIDI(emu_t& emu, std::span<const uint8_t> data);
 
 enum class EMU_SystemReset {
