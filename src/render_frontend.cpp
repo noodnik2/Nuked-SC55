@@ -12,6 +12,7 @@ struct R_Parameters
     std::string_view output_filename;
     bool help = false;
     size_t instances = 1;
+    EMU_SystemReset reset = EMU_SystemReset::NONE;
 };
 
 enum class R_ParseError
@@ -87,6 +88,27 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
                 return R_ParseError::InstancesOutOfRange;
             }
         }
+        else if (arg == "-r" || arg == "--reset")
+        {
+            ++i;
+            if (i >= argc)
+            {
+                return R_ParseError::UnexpectedEnd;
+            }
+            arg = argv[i];
+            if (arg == "gm")
+            {
+                result.reset = EMU_SystemReset::GM_RESET;
+            }
+            else if (arg == "gs")
+            {
+                result.reset = EMU_SystemReset::GS_RESET;
+            }
+            else
+            {
+                result.reset = EMU_SystemReset::NONE;
+            }
+        }
         else
         {
             if (result.input_filename.size())
@@ -145,8 +167,25 @@ void R_ReceiveSample(void* userdata, int* sample)
     state->buffer.Write(frame);
 }
 
-bool R_RenderTrack(const SMF_Data& data, std::string_view output_filename, size_t instances)
+void R_RunReset(emu_t& emu, EMU_SystemReset reset)
 {
+    if (reset == EMU_SystemReset::NONE)
+    {
+        return;
+    }
+
+    EMU_PostSystemReset(emu, reset);
+
+    for (size_t i = 0; i < 24'000'000; ++i)
+    {
+        MCU_Step(*emu.mcu);
+    }
+}
+
+bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
+{
+    const size_t instances = params.instances;
+
     // TODO: allow this directory to be configured
     Romset rs = EMU_DetectRomset(std::filesystem::path{});
 
@@ -165,13 +204,15 @@ bool R_RenderTrack(const SMF_Data& data, std::string_view output_filename, size_
 
         EMU_Reset(emus[i]);
 
-        render_states[i].buffer = Ringbuffer(16 * 1024);
+        printf("Running system reset for #%02lld...\n", i);
+        R_RunReset(emus[i], params.reset);
 
+        render_states[i].buffer = Ringbuffer(16 * 1024);
         EMU_SetSampleCallback(emus[i], R_ReceiveSample, &render_states[i]);
     }
 
     WAV_Handle render_output;
-    render_output.Open(output_filename);
+    render_output.Open(params.output_filename);
 
     SMF_Track track = SMF_MergeTracks(data);
 
@@ -243,10 +284,12 @@ bool R_RenderTrack(const SMF_Data& data, std::string_view output_filename, size_
 
 void R_Usage(const char* prog_name)
 {
-    printf("usage: %s <input>\n", prog_name);
+    printf("Usage: %s <input>\n", prog_name);
+    printf("Options:\n");
     printf("  -h, --help                     Print this message\n");
     printf("  -o <filename>                  Render to filename\n");
     printf("  -n, --instances <instances>    Number of emulators to use (increases effective polyphony, longer to render)\n");
+    printf("  -r, --reset gs|gm              Send GS or GM reset before rendering.\n");
     printf("\n");
 }
 
@@ -271,7 +314,7 @@ int main(int argc, char* argv[])
     SMF_Data data;
     data = SMF_LoadEvents(params.input_filename);
 
-    if (!R_RenderTrack(data, params.output_filename, params.instances))
+    if (!R_RenderTrack(data, params))
     {
         printf("Failed to render track\n");
         return 1;
