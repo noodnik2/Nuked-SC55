@@ -38,7 +38,6 @@ target_sources(nuked-sc55-backend
     src/mcu_interrupt.cpp src/mcu_interrupt.h
     src/mcu_opcodes.cpp src/mcu_opcodes.h
     src/mcu_timer.cpp src/mcu_timer.h
-    src/midi.h
     src/pcm.cpp src/pcm.h
     src/submcu.cpp src/submcu.h
     src/emu.cpp src/emu.h
@@ -57,6 +56,7 @@ target_enable_warnings(nuked-sc55-backend)
 add_executable(nuked-sc55)
 target_sources(nuked-sc55
     PRIVATE
+    src/midi.h
     src/main_frontend.cpp # main() is here!
 )
 
