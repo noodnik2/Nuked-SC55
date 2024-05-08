@@ -529,8 +529,6 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
     int voice_active = pcm.voice_mask & pcm.voice_mask_pending;
     while (pcm.cycles < cycles)
     {
-        int tt[2] = {};
-
         { // final mixing
             int noise_mask = 0;
             int orval = 0;
@@ -610,10 +608,10 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
             pcm.ram1[30][1] = pcm.accum_r & write_mask;
             
 
-            tt[0] = (int)((pcm.ram1[30][2] & ~write_mask) << 12);
-            tt[1] = (int)((pcm.ram1[30][4] & ~write_mask) << 12);
+            int32_t samp_l = (int32_t)((pcm.ram1[30][2] & ~write_mask) << 12);
+            int32_t samp_r = (int32_t)((pcm.ram1[30][4] & ~write_mask) << 12);
 
-            MCU_PostSample(*pcm.mcu, tt);
+            MCU_PostSample(*pcm.mcu, samp_l, samp_r);
 
             xr = ((shifter >> 0) ^ (shifter >> 1) ^ (shifter >> 7) ^ (shifter >> 12)) & 1;
             shifter = (shifter >> 1) | (xr << 15);
@@ -635,10 +633,10 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
                 pcm.ram1[30][1] = pcm.accum_r & write_mask;
 
 
-                tt[0] = (int)((pcm.ram1[30][3] & ~write_mask) << 12);
-                tt[1] = (int)((pcm.ram1[30][5] & ~write_mask) << 12);
+                samp_l = (int32_t)((pcm.ram1[30][3] & ~write_mask) << 12);
+                samp_r = (int32_t)((pcm.ram1[30][5] & ~write_mask) << 12);
 
-                MCU_PostSample(*pcm.mcu, tt);
+                MCU_PostSample(*pcm.mcu, samp_l, samp_r);
             }
         }
 

@@ -126,15 +126,13 @@ void FE_RouteMIDI(frontend_t& fe, uint8_t* first, uint8_t* last)
     }
 }
 
-void FE_ReceiveSample(void* userdata, int *sample)
+void FE_ReceiveSample(void* userdata, int32_t left, int32_t right)
 {
     fe_emu_instance_t& fe = *(fe_emu_instance_t*)userdata;
-    sample[0] >>= 15;
-    sample[1] >>= 15;
 
     AudioFrame frame;
-    frame.left = (int16_t)clamp<int>(sample[0], INT16_MIN, INT16_MAX);
-    frame.right = (int16_t)clamp<int>(sample[1], INT16_MIN, INT16_MAX);
+    frame.left = (int16_t)clamp<int32_t>(left >> 15, INT16_MIN, INT16_MAX);
+    frame.right = (int16_t)clamp<int32_t>(right >> 15, INT16_MIN, INT16_MAX);
 
     fe.sample_buffer.Write(frame);
 }
