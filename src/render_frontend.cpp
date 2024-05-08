@@ -2,6 +2,7 @@
 #include "smf.h"
 #include "wav.h"
 #include "ringbuffer.h"
+#include "command_line.h"
 #include <string>
 #include <cstdio>
 #include <charconv>
@@ -58,58 +59,53 @@ const char* R_ParseErrorStr(R_ParseError err)
 
 R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
 {
-    for (int i = 1; i < argc; ++i)
+    CommandLineReader reader(argc, argv);
+
+    while (reader.Next())
     {
-        std::string_view arg = argv[i];
-        if (arg == "-o")
+        if (reader.Any("-o"))
         {
-            ++i;
-            if (i < argc)
-            {
-                arg = argv[i];
-                result.output_filename = arg;
-            }
-            else
+            if (!reader.Next())
             {
                 return R_ParseError::UnexpectedEnd;
             }
+
+            result.output_filename = reader.Arg();
         }
-        else if (arg == "-h" || arg == "--help" || arg == "-?")
+        else if (reader.Any("-h", "--help", "-?"))
         {
             result.help = true;
             return R_ParseError::Success;
         }
-        else if (arg == "-n" || arg == "--instances")
+        else if (reader.Any("-n", "--instances"))
         {
-            ++i;
-            if (i >= argc)
+            if (!reader.Next())
             {
                 return R_ParseError::UnexpectedEnd;
             }
-            arg = argv[i];
-            std::from_chars_result n = std::from_chars(arg.begin(), arg.end(), result.instances);
-            if (n.ec != std::errc{})
+
+            if (!reader.TryParse(result.instances))
             {
                 return R_ParseError::InstancesInvalid;
             }
+
             if (result.instances < 1 || result.instances > 16)
             {
                 return R_ParseError::InstancesOutOfRange;
             }
         }
-        else if (arg == "-r" || arg == "--reset")
+        else if (reader.Any("-r", "--reset"))
         {
-            ++i;
-            if (i >= argc)
+            if (!reader.Next())
             {
                 return R_ParseError::UnexpectedEnd;
             }
-            arg = argv[i];
-            if (arg == "gm")
+
+            if (reader.Arg() == "gm")
             {
                 result.reset = EMU_SystemReset::GM_RESET;
             }
-            else if (arg == "gs")
+            else if (reader.Arg() == "gs")
             {
                 result.reset = EMU_SystemReset::GS_RESET;
             }
@@ -118,15 +114,14 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
                 result.reset = EMU_SystemReset::NONE;
             }
         }
-        else if (arg == "-d" || arg == "--rom-directory")
+        else if (reader.Any("-d", "--rom-directory"))
         {
-            ++i;
-            if (i >= argc)
+            if (!reader.Next())
             {
                 return R_ParseError::UnexpectedEnd;
             }
-            arg = argv[i];
-            result.rom_directory = arg;
+
+            result.rom_directory = reader.Arg();
             if (!std::filesystem::exists(result.rom_directory))
             {
                 return R_ParseError::RomDirectoryNotFound;
@@ -138,7 +133,7 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
             {
                 return R_ParseError::MultipleInputs;
             }
-            result.input_filename = arg;
+            result.input_filename = reader.Arg();
         }
     }
 
