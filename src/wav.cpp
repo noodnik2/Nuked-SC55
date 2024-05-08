@@ -27,10 +27,10 @@ void WAV_WriteU32LE(std::ofstream& output, uint32_t value)
 
 void WAV_Handle::Open(const char* filename)
 {
-    Open(std::string_view(filename));
+    Open(std::filesystem::path(filename));
 }
 
-void WAV_Handle::Open(std::string_view filename)
+void WAV_Handle::Open(const std::filesystem::path& filename)
 {
     output.open(filename, std::ios::binary);
 

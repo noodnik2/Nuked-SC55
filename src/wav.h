@@ -5,7 +5,7 @@
 
 #include <fstream>
 #include <cstdint>
-#include <string_view>
+#include <filesystem>
 
 class WAV_Handle
 {
@@ -20,7 +20,7 @@ public:
     WAV_Handle& operator=(const WAV_Handle&) = delete;
 
     void Open(const char* filename);
-    void Open(std::string_view filename);
+    void Open(const std::filesystem::path& filename);
     void Close();
     void WriteSample(int16_t left, int16_t right);
     void Finish(uint32_t sample_rate);

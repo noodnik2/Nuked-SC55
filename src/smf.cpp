@@ -5,6 +5,7 @@
 #include <string>
 #include <fstream>
 #include <cstring>
+#include <cinttypes>
 
 // security: do not call without verifying [ptr,ptr+1] is a readable range
 // performance: 16 bit load + rol in clang and gcc, worse in MSVC
@@ -25,30 +26,28 @@ inline uint32_t UncheckedLoadU32BE(const uint8_t* ptr)
            ((uint32_t)(*(ptr + 3)) << 0);
 }
 
-struct SMF_Reader
+class SMF_Reader
 {
-    SMF_ByteSpan bytes;
-    size_t       offset = 0;
-
+public:
     SMF_Reader(SMF_ByteSpan bytes)
-        : bytes(bytes)
+        : m_bytes(bytes)
     {
     }
 
     [[nodiscard]]
     bool AtEnd() const
     {
-        return offset == bytes.size();
+        return m_offset == m_bytes.size();
     }
 
     [[nodiscard]]
     bool PutBack()
     {
-        if (offset == 0)
+        if (m_offset == 0)
         {
             return false;
         }
-        --offset;
+        --m_offset;
         return true;
     }
 
@@ -59,14 +58,14 @@ struct SMF_Reader
         {
             return false;
         }
-        offset += count;
+        m_offset += count;
         return true;
     }
 
     [[nodiscard]]
     size_t RemainingBytes() const
     {
-        return bytes.size() - offset;
+        return m_bytes.size() - m_offset;
     }
 
     [[nodiscard]]
@@ -76,8 +75,8 @@ struct SMF_Reader
         {
             return false;
         }
-        value = bytes[offset];
-        ++offset;
+        value = m_bytes[m_offset];
+        ++m_offset;
         return true;
     }
 
@@ -88,8 +87,8 @@ struct SMF_Reader
         {
             return false;
         }
-        value = UncheckedLoadU16BE(&bytes[offset]);
-        offset += sizeof(uint16_t);
+        value = UncheckedLoadU16BE(&m_bytes[m_offset]);
+        m_offset += sizeof(uint16_t);
         return true;
     }
 
@@ -100,8 +99,8 @@ struct SMF_Reader
         {
             return false;
         }
-        value = UncheckedLoadU32BE(&bytes[offset]);
-        offset += sizeof(uint32_t);
+        value = UncheckedLoadU32BE(&m_bytes[m_offset]);
+        m_offset += sizeof(uint32_t);
         return true;
     }
 
@@ -112,10 +111,19 @@ struct SMF_Reader
         {
             return false;
         }
-        memcpy(destination, &bytes[offset], count);
-        offset += count;
+        memcpy(destination, &m_bytes[m_offset], count);
+        m_offset += count;
         return true;
     }
+
+    size_t GetOffset() const
+    {
+        return m_offset;
+    }
+
+private:
+    SMF_ByteSpan m_bytes;
+    size_t       m_offset = 0;
 };
 
 inline void Check(bool stat, const char* msg)
@@ -200,7 +208,7 @@ bool SMF_ReadTrack(SMF_Reader& reader, SMF_Data& result, uint64_t expected_end)
     result.tracks.emplace_back();
     SMF_Track& new_track = result.tracks.back();
 
-    while (reader.offset < expected_end)
+    while (reader.GetOffset() < expected_end)
     {
         uint32_t delta_time;
         CHECK(SMF_ReadVarint(reader, delta_time));
@@ -237,16 +245,16 @@ bool SMF_ReadTrack(SMF_Reader& reader, SMF_Data& result, uint64_t expected_end)
             case 0xA0:
             case 0xB0:
             case 0xE0:
-                new_event.data_first = reader.offset;
+                new_event.data_first = reader.GetOffset();
                 CHECK(reader.Skip(2));
-                new_event.data_last = reader.offset;
+                new_event.data_last = reader.GetOffset();
                 break;
             // 1 param
             case 0xC0:
             case 0xD0:
-                new_event.data_first = reader.offset;
+                new_event.data_first = reader.GetOffset();
                 CHECK(reader.Skip(1));
-                new_event.data_last = reader.offset;
+                new_event.data_last = reader.GetOffset();
                 break;
             // variable length
             case 0xF0:
@@ -258,13 +266,13 @@ bool SMF_ReadTrack(SMF_Reader& reader, SMF_Data& result, uint64_t expected_end)
                             {
                                 uint32_t meta_len;
                                 // meta event type
-                                new_event.data_first = reader.offset;
+                                new_event.data_first = reader.GetOffset();
                                 CHECK(reader.Skip(1));
                                 // meta event len
                                 CHECK(SMF_ReadVarint(reader, meta_len));
                                 // meta event data
                                 CHECK(reader.Skip(meta_len));
-                                new_event.data_last = reader.offset;
+                                new_event.data_last = reader.GetOffset();
                                 break;
                             }
 
@@ -277,7 +285,7 @@ bool SMF_ReadTrack(SMF_Reader& reader, SMF_Data& result, uint64_t expected_end)
         }
     }
 
-    if (reader.offset > expected_end)
+    if (reader.GetOffset() > expected_end)
     {
         fprintf(stderr, "Read past expected track end\n");
         return false;
@@ -290,11 +298,11 @@ void SMF_PrintStats(const SMF_Data& data)
 {
     for (size_t i = 0; i < data.tracks.size(); ++i)
     {
-        fprintf(stderr, "Track %02lld: %lld events\n", i, data.tracks[i].events.size());
+        fprintf(stderr, "Track %02" PRIu64 ": %" PRIu64 " events\n", i, data.tracks[i].events.size());
     }
 }
 
-bool SMF_ReadAllBytes(std::string_view filename, std::vector<uint8_t>& buffer)
+bool SMF_ReadAllBytes(const std::filesystem::path& filename, std::vector<uint8_t>& buffer)
 {
     std::ifstream input(filename, std::ios::binary);
 
@@ -316,7 +324,7 @@ bool SMF_ReadAllBytes(std::string_view filename, std::vector<uint8_t>& buffer)
 
 bool SMF_ReadChunk(SMF_Reader& reader, SMF_Data& data)
 {
-    uint64_t chunk_start = reader.offset;
+    uint64_t chunk_start = reader.GetOffset();
 
     uint8_t chunk_type[4];
     CHECK(reader.ReadBytes(chunk_type, 4));
@@ -324,7 +332,7 @@ bool SMF_ReadChunk(SMF_Reader& reader, SMF_Data& data)
     uint32_t chunk_size = 0;
     CHECK(reader.ReadU32BE(chunk_size));
 
-    uint64_t chunk_end = reader.offset + chunk_size;
+    uint64_t chunk_end = reader.GetOffset() + chunk_size;
 
     if (memcmp(chunk_type, "MThd", 4) == 0)
     {
@@ -336,7 +344,7 @@ bool SMF_ReadChunk(SMF_Reader& reader, SMF_Data& data)
     }
     else
     {
-        fprintf(stderr, "Unexpected chunk type at %lld\n", chunk_start);
+        fprintf(stderr, "Unexpected chunk type at %" PRIu64 "\n", chunk_start);
         return false;
     }
 
@@ -345,10 +353,10 @@ bool SMF_ReadChunk(SMF_Reader& reader, SMF_Data& data)
 
 SMF_Data SMF_LoadEvents(const char* filename)
 {
-    return SMF_LoadEvents(std::string_view(filename));
+    return SMF_LoadEvents(std::filesystem::path(filename));
 }
 
-SMF_Data SMF_LoadEvents(std::string_view filename)
+SMF_Data SMF_LoadEvents(const std::filesystem::path& filename)
 {
     SMF_Data data;
 

@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <charconv>
 #include <chrono>
+#include <cinttypes>
 
 using namespace std::chrono_literals;
 
@@ -52,6 +53,7 @@ const char* R_ParseErrorStr(R_ParseError err)
         case R_ParseError::RomDirectoryNotFound:
             return "Rom directory doesn't exist";
     }
+    return "Unknown error";
 }
 
 R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
@@ -316,7 +318,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
 
         EMU_Reset(render_states[i].emu);
 
-        printf("Running system reset for #%02lld...\n", i);
+        printf("Running system reset for #%02" PRIu64 "...\n", i);
         R_RunReset(render_states[i].emu, params.reset);
 
         EMU_SetSampleCallback(render_states[i].emu, R_ReceiveSample, &render_states[i]);
@@ -343,7 +345,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
             const size_t total        = render_states[i].track->events.size();
             const float  percent_done = 100.f * (float)processed / (float)total;
 
-            printf("#%02lld %6.2f%% [%lld / %lld]\n", i, percent_done, processed, total);
+            printf("#%02" PRIu64 " %6.2f%% [%" PRIu64 " / %" PRIu64 "]\n", i, percent_done, processed, total);
         }
 
         if (!all_done)

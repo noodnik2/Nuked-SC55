@@ -20,7 +20,7 @@ std::filesystem::path P_GetProcessPath()
     }
 #else
     char path[PATH_MAX];
-    ssize_t actual_size = readlink("/proc/self/exe", result, sizeof(path));
+    ssize_t actual_size = readlink("/proc/self/exe", path, sizeof(path));
     if (actual_size == -1)
     {
         // TODO: handle error

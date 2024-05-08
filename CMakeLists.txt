@@ -1,6 +1,8 @@
 cmake_minimum_required (VERSION 3.15)
 project (NukedSC55 VERSION 0.2.0 LANGUAGES CXX)
 
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 #==============================================================================
 # Dependencies
 #==============================================================================
@@ -11,7 +13,7 @@ if(NOT WIN32)
 endif()
 
 if(USE_RTMIDI)
-    find_package(rtmidi REQUIRED)
+    find_package(rtmidi MODULE REQUIRED)
 endif()
 
 #==============================================================================

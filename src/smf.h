@@ -6,6 +6,7 @@
 #include <vector>
 #include <string_view>
 #include <span>
+#include <filesystem>
 
 using SMF_ByteSpan = std::span<const uint8_t>;
 
@@ -81,7 +82,7 @@ void SMF_SetDeltasFromTimestamps(SMF_Track& track);
 SMF_Track SMF_MergeTracks(const SMF_Data& data);
 void SMF_PrintStats(const SMF_Data& data);
 SMF_Data SMF_LoadEvents(const char* filename);
-SMF_Data SMF_LoadEvents(std::string_view filename);
+SMF_Data SMF_LoadEvents(const std::filesystem::path& filename);
 
 inline uint64_t SMF_TicksToUS(uint64_t ticks, uint64_t us_per_qn, uint64_t division)
 {

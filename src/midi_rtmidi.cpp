@@ -2,7 +2,7 @@
 #include "mcu.h"
 #include "emu.h"
 #include "midi.h"
-#include <rtmidi/RtMidi.h>
+#include <RtMidi.h>
 
 static RtMidiIn *s_midi_in = nullptr;
 

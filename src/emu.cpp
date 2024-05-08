@@ -40,6 +40,7 @@
 #include <string>
 #include <fstream>
 #include <span>
+#include <vector>
 
 bool EMU_Init(emu_t& emu)
 {
