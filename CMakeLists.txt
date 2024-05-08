@@ -42,6 +42,7 @@ target_sources(nuked-sc55-backend
     src/emu.cpp src/emu.h
     src/ringbuffer.h
     src/math_util.h
+    src/path_util.cpp src/path_util.h
 )
 target_link_libraries(nuked-sc55-backend PRIVATE SDL2::SDL2)
 target_compile_features(nuked-sc55-backend PRIVATE cxx_std_23)
@@ -94,3 +95,9 @@ target_link_libraries(nuked-sc55-render PRIVATE nuked-sc55-backend)
 target_compile_features(nuked-sc55-render PRIVATE cxx_std_23)
 target_enable_warnings(nuked-sc55-render)
 
+#==============================================================================
+# Installables
+#==============================================================================
+include(GNUInstallDirs)
+install(TARGETS nuked-sc55 nuked-sc55-render)
+install(FILES data/back.data DESTINATION ${CMAKE_INSTALL_DATADIR}/nuked-sc55)

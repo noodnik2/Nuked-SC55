@@ -34,6 +34,7 @@
 #include "emu.h"
 #include "midi.h"
 #include "ringbuffer.h"
+#include "path_util.h"
 #include <SDL.h>
 
 struct fe_emu_instance_t {
@@ -492,14 +493,12 @@ int main(int argc, char *argv[])
         }
     }
 
-    std::filesystem::path base_path(argv[0]);
-    base_path = std::filesystem::absolute(base_path);
-    base_path = base_path.parent_path();
-
-    printf("Base path is: %s\n", base_path.generic_string().c_str());
+    std::filesystem::path base_path = P_GetProcessPath().parent_path();
 
     if (std::filesystem::exists(base_path / "../share/nuked-sc55"))
         base_path = base_path / "../share/nuked-sc55";
+
+    printf("Base path is: %s\n", base_path.generic_string().c_str());
 
     if (autodetect)
     {
