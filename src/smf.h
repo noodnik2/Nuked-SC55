@@ -35,6 +35,11 @@ struct SMF_Event
         return status & 0x0f;
     }
 
+    bool IsSystem() const
+    {
+        return status >= 0xf0;
+    }
+
     bool IsMetaEvent() const
     {
         return status == 0xff;
@@ -72,6 +77,7 @@ struct SMF_Data
 
 const size_t SMF_CHANNEL_COUNT = 16;
 
+void SMF_SetDeltasFromTimestamps(SMF_Track& track);
 SMF_Track SMF_MergeTracks(const SMF_Data& data);
 void SMF_PrintStats(const SMF_Data& data);
 SMF_Data SMF_LoadEvents(const char* filename);

@@ -5,6 +5,9 @@
 #include <string>
 #include <cstdio>
 #include <charconv>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 struct R_Parameters
 {
@@ -152,9 +155,15 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
 
 struct R_TrackRenderState
 {
+    emu_t emu;
     std::vector<AudioFrame> buffer;
-    size_t render_offset = 0;
     size_t us_simulated = 0;
+    const SMF_Track* track = nullptr;
+    std::thread thread;
+
+    // these fields are accessed from main thread during render process
+    std::atomic<size_t> events_processed = 0;
+    std::atomic<bool> done;
 
     void MixInto(std::vector<AudioFrame>& output)
     {
@@ -201,72 +210,156 @@ void R_PostEvent(emu_t& emu, const SMF_Data& data, const SMF_Event& ev)
     EMU_PostMIDI(emu, ev.GetData(data.bytes));
 }
 
+struct R_TrackList
+{
+    std::vector<SMF_Track> tracks;
+};
+
+// Splits a track into `n` tracks, each track can be processed by a single
+// emulator instance.
+R_TrackList R_SplitTrackModulo(const SMF_Track& merged_track, size_t n)
+{
+    R_TrackList result;
+    result.tracks.resize(n);
+
+    for (auto& event : merged_track.events)
+    {
+        // System events need to be processed by all emulators
+        if (event.IsSystem())
+        {
+            for (auto& dest : result.tracks)
+            {
+                dest.events.emplace_back(event);
+            }
+        }
+        else
+        {
+            auto& dest = result.tracks[event.GetChannel() % n];
+            dest.events.emplace_back(event);
+        }
+    }
+
+    for (auto& track : result.tracks)
+    {
+        SMF_SetDeltasFromTimestamps(track);
+    }
+
+    return result;
+}
+
+void R_RenderOne(const SMF_Data& data, R_TrackRenderState& state)
+{
+    uint64_t division = data.header.division;
+    uint64_t us_per_qn = 500000;
+
+    const SMF_Track& track = (const SMF_Track&)*state.track;
+
+    for (const SMF_Event& event : track.events)
+    {
+        const uint64_t this_event_time_us = state.us_simulated + SMF_TicksToUS(event.delta_time, us_per_qn, division);
+
+        // Simulate until this event fires. We step twice because each step is
+        // 12 cycles, and there are 24_000_000 cycles in a second.
+        // 24_000_000 / 1_000_000 = 24 cycles per microsecond.
+        while (state.us_simulated < this_event_time_us)
+        {
+            MCU_Step(*state.emu.mcu);
+            MCU_Step(*state.emu.mcu);
+            ++state.us_simulated;
+        }
+
+        if (event.IsTempo(data.bytes))
+        {
+            us_per_qn = event.GetTempoUS(data.bytes);
+        }
+
+        // Fire the event.
+        if (!event.IsMetaEvent())
+        {
+            R_PostEvent(state.emu, data, event);
+        }
+
+        ++state.events_processed;
+    }
+
+    state.done = true;
+}
+
+void R_CursorUpLines(int n)
+{
+    printf("\x1b[%dF", n);
+}
+
 bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
 {
     const size_t instances = params.instances;
 
+    // First combine all of the events so it's easier to process
+    const SMF_Track merged_track = SMF_MergeTracks(data);
+    // Then create a track specifically for each emulator instance
+    const R_TrackList split_tracks = R_SplitTrackModulo(merged_track, instances);
+
     Romset rs = EMU_DetectRomset(params.rom_directory);
     printf("Detected romset: %s\n", EMU_RomsetName(rs));
 
-    emu_t emus[SMF_CHANNEL_COUNT];
     R_TrackRenderState render_states[SMF_CHANNEL_COUNT];
     for (size_t i = 0; i < instances; ++i)
     {
-        EMU_Init(emus[i], EMU_Options {
+        EMU_Init(render_states[i].emu, EMU_Options {
             .want_lcd = false,
         });
 
-        if (!EMU_LoadRoms(emus[i], rs, params.rom_directory))
+        if (!EMU_LoadRoms(render_states[i].emu, rs, params.rom_directory))
         {
             return false;
         }
 
-        EMU_Reset(emus[i]);
+        EMU_Reset(render_states[i].emu);
 
         printf("Running system reset for #%02lld...\n", i);
-        R_RunReset(emus[i], params.reset);
+        R_RunReset(render_states[i].emu, params.reset);
 
-        EMU_SetSampleCallback(emus[i], R_ReceiveSample, &render_states[i]);
+        EMU_SetSampleCallback(render_states[i].emu, R_ReceiveSample, &render_states[i]);
+
+        render_states[i].track = &split_tracks.tracks[i];
+
+        render_states[i].thread = std::thread(R_RenderOne, std::cref(data), std::ref(render_states[i]));
     }
 
-    SMF_Track track = SMF_MergeTracks(data);
-
-    uint64_t division = data.header.division;
-    uint64_t us_per_qn = 500000;
-
-    for (size_t i = 0; i < track.events.size(); ++i)
+    // Now we wait.
+    bool all_done = false;
+    while (!all_done)
     {
-        for (size_t instance = 0; instance < instances; ++instance)
+        all_done = true;
+
+        for (size_t i = 0; i < instances; ++i)
         {
-            const uint64_t this_event_time_us = render_states[instance].us_simulated + SMF_TicksToUS(track.events[i].delta_time, us_per_qn, division);
-
-            printf("[%lld/%lld] #%02lld Event (%02x) at %lldus\r", i + 1, track.events.size(), instance, track.events[i].status, this_event_time_us);
-
-            // Simulate until this event fires. We step twice because each step is
-            // 12 cycles, and there are 24_000_000 cycles in a second.
-            // 24_000_000 / 1_000_000 = 24 cycles per microsecond.
-            while (render_states[instance].us_simulated < this_event_time_us)
+            if (!render_states[i].done)
             {
-                MCU_Step(*emus[instance].mcu);
-                MCU_Step(*emus[instance].mcu);
-                ++render_states[instance].us_simulated;
+                all_done = false;
             }
+
+            const size_t processed    = render_states[i].events_processed;
+            const size_t total        = render_states[i].track->events.size();
+            const float  percent_done = 100.f * (float)processed / (float)total;
+
+            printf("#%02lld %6.2f%% [%lld / %lld]\n", i, percent_done, processed, total);
         }
 
-        if (track.events[i].IsTempo(data.bytes))
+        if (!all_done)
         {
-            us_per_qn = track.events[i].GetTempoUS(data.bytes);
+            R_CursorUpLines(instances);
         }
 
-        // Map and fire the event.
-        size_t destination = track.events[i].GetChannel() % instances;
-        if (!track.events[i].IsMetaEvent())
-        {
-            R_PostEvent(emus[destination], data, track.events[i]);
-        }
+        std::this_thread::sleep_for(1000ms);
     }
 
-    printf("\n");
+    for (size_t i = 0; i < instances; ++i)
+    {
+        render_states[i].thread.join();
+    }
+
+    printf("Mixing final track and writing to disk...\n");
 
     WAV_Handle render_output;
     render_output.Open(params.output_filename);
@@ -282,7 +375,9 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
         render_output.WriteSample(sample.left, sample.right);
     }
 
-    render_output.Finish(MCU_GetOutputFrequency(*emus[0].mcu));
+    render_output.Finish(MCU_GetOutputFrequency(*render_states[0].emu.mcu));
+
+    printf("Done!\n");
 
     return true;
 }
