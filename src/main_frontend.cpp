@@ -35,7 +35,9 @@
 #include "midi.h"
 #include "ringbuffer.h"
 #include "path_util.h"
+#include "command_line.h"
 #include <SDL.h>
+#include <cinttypes>
 
 struct fe_emu_instance_t {
     emu_t        emu;
@@ -360,125 +362,79 @@ void FE_Quit(frontend_t& container)
     SDL_Quit();
 }
 
-int main(int argc, char *argv[])
+struct FE_Parameters
 {
-    (void)argc;
-
+    bool help = false;
     int port = 0;
-    int audioDeviceIndex = -1;
-    int pageSize = 512;
-    int pageNum = 32;
+    int audio_device_index = -1;
+    int page_size = 512;
+    int page_num = 32;
     bool autodetect = true;
-    EMU_SystemReset resetType = EMU_SystemReset::NONE;
-    int instance_count = 1;
-
+    EMU_SystemReset reset = EMU_SystemReset::NONE;
+    size_t instances = 1;
     Romset romset = Romset::MK2;
+};
 
-    frontend_t frontend;
+enum class FE_ParseError
+{
+    Success,
+    InstancesInvalid,
+    InstancesOutOfRange,
+    UnexpectedEnd,
+    PageSizeInvalid,
+    PageCountInvalid,
+    UnknownArgument,
+    PortInvalid,
+    AudioDeviceInvalid,
+};
 
+const char* FE_ParseErrorStr(FE_ParseError err)
+{
+    switch (err)
     {
-        for (int i = 1; i < argc; i++)
+        case FE_ParseError::Success:
+            return "Success";
+        case FE_ParseError::InstancesInvalid:
+            return "Instances couldn't be parsed (should be 1-16)";
+        case FE_ParseError::InstancesOutOfRange:
+            return "Instances out of range (should be 1-16)";
+        case FE_ParseError::UnexpectedEnd:
+            return "Expected another argument";
+        case FE_ParseError::PageSizeInvalid:
+            return "Page size invalid";
+        case FE_ParseError::PageCountInvalid:
+            return "Page count invalid";
+        case FE_ParseError::UnknownArgument:
+            return "Unknown argument";
+        case FE_ParseError::PortInvalid:
+            return "Port invalid";
+        case FE_ParseError::AudioDeviceInvalid:
+            return "Audio device invalid";
+    }
+    return "Unknown error";
+}
+
+FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
+{
+    CommandLineReader reader(argc, argv);
+
+    while (reader.Next())
+    {
+        if (reader.Any("-h", "--help", "-?"))
         {
-            if (!strncmp(argv[i], "-p:", 3))
+            result.help = true;
+            return FE_ParseError::Success;
+        }
+        else if (reader.Any("-p", "--port"))
+        {
+            if (!reader.Next())
             {
-                port = atoi(argv[i] + 3);
+                return FE_ParseError::UnexpectedEnd;
             }
-            else if (!strncmp(argv[i], "-a:", 3))
+
+            if (!reader.TryParse(result.port))
             {
-                audioDeviceIndex = atoi(argv[i] + 3);
-            }
-            else if (!strncmp(argv[i], "-ab:", 4))
-            {
-                char* pColon = argv[i] + 3;
-                
-                if (pColon[1] != 0)
-                {
-                    pageSize = atoi(++pColon);
-                    pColon = strchr(pColon, ':');
-                    if (pColon && pColon[1] != 0)
-                    {
-                        pageNum = atoi(++pColon);
-                    }
-                }
-                
-                // reset both if either is invalid
-                if (pageSize <= 0 || pageNum <= 0)
-                {
-                    pageSize = 512;
-                    pageNum = 32;
-                }
-            }
-            else if (!strncmp(argv[i], "-instances:", 11))
-            {
-                instance_count = atoi(argv[i] + 11);
-                instance_count = clamp<int>(instance_count, 1, FE_MAX_INSTANCES);
-            }
-            else if (!strcmp(argv[i], "-mk2"))
-            {
-                romset = Romset::MK2;
-                autodetect = false;
-            }
-            else if (!strcmp(argv[i], "-st"))
-            {
-                romset = Romset::ST;
-                autodetect = false;
-            }
-            else if (!strcmp(argv[i], "-mk1"))
-            {
-                romset = Romset::MK1;
-                autodetect = false;
-            }
-            else if (!strcmp(argv[i], "-cm300"))
-            {
-                romset = Romset::CM300;
-                autodetect = false;
-            }
-            else if (!strcmp(argv[i], "-jv880"))
-            {
-                romset = Romset::JV880;
-                autodetect = false;
-            }
-            else if (!strcmp(argv[i], "-scb55"))
-            {
-                romset = Romset::SCB55;
-                autodetect = false;
-            }
-            else if (!strcmp(argv[i], "-rlp3237"))
-            {
-                romset = Romset::RLP3237;
-                autodetect = false;
-            }
-            else if (!strcmp(argv[i], "-gs"))
-            {
-                resetType = EMU_SystemReset::GS_RESET;
-            }
-            else if (!strcmp(argv[i], "-gm"))
-            {
-                resetType = EMU_SystemReset::GM_RESET;
-            }
-            else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "-help") || !strcmp(argv[i], "--help"))
-            {
-                // TODO: Might want to try to find a way to print out the executable's actual name (without any full paths).
-                printf("Usage: nuked-sc55 [options]\n");
-                printf("Options:\n");
-                printf("  -h, -help, --help              Display this information.\n");
-                printf("\n");
-                printf("  -p:<port_number>               Set MIDI port.\n");
-                printf("  -a:<device_number>             Set Audio Device index.\n");
-                printf("  -ab:<page_size>:[page_count]   Set Audio Buffer size.\n");
-                printf("  -instances:<instance_count>    Set number of emulator instances.\n");
-                printf("\n");
-                printf("  -mk2                           Use SC-55mk2 ROM set.\n");
-                printf("  -st                            Use SC-55st ROM set.\n");
-                printf("  -mk1                           Use SC-55mk1 ROM set.\n");
-                printf("  -cm300                         Use CM-300/SCC-1 ROM set.\n");
-                printf("  -jv880                         Use JV-880 ROM set.\n");
-                printf("  -scb55                         Use SCB-55 ROM set.\n");
-                printf("  -rlp3237                       Use RLP-3237 ROM set.\n");
-                printf("\n");
-                printf("  -gs                            Reset system in GS mode.\n");
-                printf("  -gm                            Reset system in GM mode.\n");
-                return 0;
+                return FE_ParseError::PortInvalid;
             }
             else if (!strcmp(argv[i], "-sc155"))
             {
@@ -491,7 +447,168 @@ int main(int argc, char *argv[])
                 autodetect = false;
             }
         }
+        else if (reader.Any("-a", "--audio-device"))
+        {
+            if (!reader.Next())
+            {
+                return FE_ParseError::UnexpectedEnd;
+            }
+
+            if (!reader.TryParse(result.audio_device_index))
+            {
+                return FE_ParseError::AudioDeviceInvalid;
+            }
+        }
+        else if (reader.Any("-b", "--buffer-size"))
+        {
+            if (!reader.Next())
+            {
+                return FE_ParseError::UnexpectedEnd;
+            }
+
+            std::string_view arg = reader.Arg();
+            if (size_t colon = arg.find(':'); colon != std::string_view::npos)
+            {
+                auto page_size_sv = arg.substr(0, colon);
+                auto page_num_sv  = arg.substr(colon + 1);
+
+                if (!TryParse(page_size_sv, result.page_size))
+                {
+                    return FE_ParseError::PageSizeInvalid;
+                }
+
+                if (!TryParse(page_num_sv, result.page_num))
+                {
+                    return FE_ParseError::PageCountInvalid;
+                }
+            }
+            else if (!reader.TryParse(result.page_size))
+            {
+                return FE_ParseError::PageSizeInvalid;
+            }
+        }
+        else if (reader.Any("-r", "--reset"))
+        {
+            if (!reader.Next())
+            {
+                return FE_ParseError::UnexpectedEnd;
+            }
+
+            if (reader.Arg() == "gm")
+            {
+                result.reset = EMU_SystemReset::GM_RESET;
+            }
+            else if (reader.Arg() == "gs")
+            {
+                result.reset = EMU_SystemReset::GS_RESET;
+            }
+            else
+            {
+                result.reset = EMU_SystemReset::NONE;
+            }
+        }
+        else if (reader.Any("-n", "--instances"))
+        {
+            if (!reader.Next())
+            {
+                return FE_ParseError::UnexpectedEnd;
+            }
+
+            if (!reader.TryParse(result.instances))
+            {
+                return FE_ParseError::InstancesInvalid;
+            }
+
+            if (result.instances < 1 || result.instances > 16)
+            {
+                return FE_ParseError::InstancesOutOfRange;
+            }
+        }
+        else if (reader.Any("--mk2"))
+        {
+            result.romset = Romset::MK2;
+            result.autodetect = false;
+        }
+        else if (reader.Any("--st"))
+        {
+            result.romset = Romset::ST;
+            result.autodetect = false;
+        }
+        else if (reader.Any("--mk1"))
+        {
+            result.romset = Romset::MK1;
+            result.autodetect = false;
+        }
+        else if (reader.Any("--cm300"))
+        {
+            result.romset = Romset::CM300;
+            result.autodetect = false;
+        }
+        else if (reader.Any("--jv880"))
+        {
+            result.romset = Romset::JV880;
+            result.autodetect = false;
+        }
+        else if (reader.Any("--scb55"))
+        {
+            result.romset = Romset::SCB55;
+            result.autodetect = false;
+        }
+        else if (reader.Any("--rlp3237"))
+        {
+            result.romset = Romset::RLP3237;
+            result.autodetect = false;
+        }
+        else
+        {
+            return FE_ParseError::UnknownArgument;
+        }
     }
+
+    return FE_ParseError::Success;
+}
+
+void FE_Usage()
+{
+    std::string name = P_GetProcessPath().stem().generic_string();
+
+    printf("Usage: %s [options]\n", name.c_str());
+    printf("Options:\n");
+    printf("  -h, --help, -?                               Display this information.\n");
+    printf("\n");
+    printf("  -p, --port         <port_number>             Set MIDI port.\n");
+    printf("  -a, --audio-device <device_number>           Set Audio Device index.\n");
+    printf("  -b, --buffer-size  <page_size>:[page_count]  Set Audio Buffer size.\n");
+    printf("  -n, --instances    <count>                   Set number of emulator instances.\n");
+    printf("\n");
+    printf("  --mk2                                        Use SC-55mk2 ROM set.\n");
+    printf("  --st                                         Use SC-55st ROM set.\n");
+    printf("  --mk1                                        Use SC-55mk1 ROM set.\n");
+    printf("  --cm300                                      Use CM-300/SCC-1 ROM set.\n");
+    printf("  --jv880                                      Use JV-880 ROM set.\n");
+    printf("  --scb55                                      Use SCB-55 ROM set.\n");
+    printf("  --rlp3237                                    Use RLP-3237 ROM set.\n");
+    printf("\n");
+    printf("  -r, --reset        gs|gm                     Reset system in GS or GM mode.\n");
+}
+
+int main(int argc, char *argv[])
+{
+    FE_Parameters params;
+    FE_ParseError result = FE_ParseCommandLine(argc, argv, params);
+    if (result != FE_ParseError::Success)
+    {
+        printf("error: %s\n", FE_ParseErrorStr(result));
+        return 1;
+    }
+
+    if (params.help)
+    {
+        FE_Usage();
+        return 0;
+    }
+
+    frontend_t frontend;
 
     std::filesystem::path base_path = P_GetProcessPath().parent_path();
 
@@ -500,10 +617,10 @@ int main(int argc, char *argv[])
 
     printf("Base path is: %s\n", base_path.generic_string().c_str());
 
-    if (autodetect)
+    if (params.autodetect)
     {
-        romset = EMU_DetectRomset(base_path);
-        printf("ROM set autodetect: %s\n", EMU_RomsetName(romset));
+        params.romset = EMU_DetectRomset(base_path);
+        printf("ROM set autodetect: %s\n", EMU_RomsetName(params.romset));
     }
 
     if (!FE_Init())
@@ -512,16 +629,16 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    for (int i = 0; i < instance_count; ++i)
+    for (size_t i = 0; i < params.instances; ++i)
     {
-        if (!FE_CreateInstance(frontend, base_path, romset))
+        if (!FE_CreateInstance(frontend, base_path, params.romset))
         {
-            fprintf(stderr, "FATAL ERROR: Failed to create instance %d\n", i);
+            fprintf(stderr, "FATAL ERROR: Failed to create instance %" PRIu64 "\n", i);
             return 1;
         }
     }
 
-    if (!FE_OpenAudio(frontend, audioDeviceIndex, pageSize, pageNum))
+    if (!FE_OpenAudio(frontend, params.audio_device_index, params.page_size, params.page_num))
     {
         fprintf(stderr, "FATAL ERROR: Failed to open the audio stream.\n");
         fflush(stderr);
@@ -534,7 +651,7 @@ int main(int argc, char *argv[])
         fe.sample_buffer = Ringbuffer(frontend.audio_buffer_size / 2);
     }
 
-    if (!MIDI_Init(frontend, port))
+    if (!MIDI_Init(frontend, params.port))
     {
         fprintf(stderr, "ERROR: Failed to initialize the MIDI Input.\nWARNING: Continuing without MIDI Input...\n");
         fflush(stderr);
@@ -542,7 +659,7 @@ int main(int argc, char *argv[])
 
     for (size_t i = 0; i < frontend.instances_in_use; ++i)
     {
-        EMU_PostSystemReset(frontend.instances[i].emu, resetType);
+        EMU_PostSystemReset(frontend.instances[i].emu, params.reset);
     }
 
     FE_Run(frontend);
