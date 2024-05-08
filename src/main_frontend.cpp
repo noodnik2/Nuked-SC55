@@ -38,6 +38,7 @@
 #include "command_line.h"
 #include <SDL.h>
 #include <cinttypes>
+#include <optional>
 
 struct fe_emu_instance_t {
     emu_t        emu;
@@ -56,6 +57,20 @@ struct frontend_t {
     int audio_page_size = 0;
 
     SDL_AudioDeviceID sdl_audio = 0;
+};
+
+struct FE_Parameters
+{
+    bool help = false;
+    int port = 0;
+    int audio_device_index = -1;
+    int page_size = 512;
+    int page_num = 32;
+    bool autodetect = true;
+    EMU_SystemReset reset = EMU_SystemReset::NONE;
+    size_t instances = 1;
+    Romset romset = Romset::MK2;
+    std::optional<std::filesystem::path> rom_directory;
 };
 
 bool FE_AllocateInstance(frontend_t& container, fe_emu_instance_t** result)
@@ -307,7 +322,7 @@ bool FE_Init()
     return true;
 }
 
-bool FE_CreateInstance(frontend_t& container, const std::filesystem::path& basePath, Romset romset)
+bool FE_CreateInstance(frontend_t& container, const std::filesystem::path& base_path, const FE_Parameters& params)
 {
     fe_emu_instance_t* fe = nullptr;
 
@@ -325,9 +340,9 @@ bool FE_CreateInstance(frontend_t& container, const std::filesystem::path& baseP
 
     EMU_SetSampleCallback(fe->emu, FE_ReceiveSample, fe);
 
-    LCD_LoadBack(*fe->emu.lcd, basePath / "back.data");
+    LCD_LoadBack(*fe->emu.lcd, base_path / "back.data");
 
-    if (!EMU_LoadRoms(fe->emu, romset, basePath))
+    if (!EMU_LoadRoms(fe->emu, params.romset, *params.rom_directory))
     {
         fprintf(stderr, "ERROR: Failed to load roms.\n");
         return false;
@@ -362,19 +377,6 @@ void FE_Quit(frontend_t& container)
     SDL_Quit();
 }
 
-struct FE_Parameters
-{
-    bool help = false;
-    int port = 0;
-    int audio_device_index = -1;
-    int page_size = 512;
-    int page_num = 32;
-    bool autodetect = true;
-    EMU_SystemReset reset = EMU_SystemReset::NONE;
-    size_t instances = 1;
-    Romset romset = Romset::MK2;
-};
-
 enum class FE_ParseError
 {
     Success,
@@ -386,6 +388,7 @@ enum class FE_ParseError
     UnknownArgument,
     PortInvalid,
     AudioDeviceInvalid,
+    RomDirectoryNotFound,
 };
 
 const char* FE_ParseErrorStr(FE_ParseError err)
@@ -410,6 +413,8 @@ const char* FE_ParseErrorStr(FE_ParseError err)
             return "Port invalid";
         case FE_ParseError::AudioDeviceInvalid:
             return "Audio device invalid";
+        case FE_ParseError::RomDirectoryNotFound:
+            return "Rom directory doesn't exist";
     }
     return "Unknown error";
 }
@@ -524,6 +529,20 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
                 return FE_ParseError::InstancesOutOfRange;
             }
         }
+        else if (reader.Any("-d", "--rom-directory"))
+        {
+            if (!reader.Next())
+            {
+                return FE_ParseError::UnexpectedEnd;
+            }
+
+            result.rom_directory = reader.Arg();
+
+            if (!std::filesystem::exists(*result.rom_directory))
+            {
+                return FE_ParseError::RomDirectoryNotFound;
+            }
+        }
         else if (reader.Any("--mk2"))
         {
             result.romset = Romset::MK2;
@@ -574,22 +593,23 @@ void FE_Usage()
 
     printf("Usage: %s [options]\n", name.c_str());
     printf("Options:\n");
-    printf("  -h, --help, -?                               Display this information.\n");
+    printf("  -h, --help, -?                                Display this information.\n");
     printf("\n");
-    printf("  -p, --port         <port_number>             Set MIDI port.\n");
-    printf("  -a, --audio-device <device_number>           Set Audio Device index.\n");
-    printf("  -b, --buffer-size  <page_size>:[page_count]  Set Audio Buffer size.\n");
-    printf("  -n, --instances    <count>                   Set number of emulator instances.\n");
+    printf("  -p, --port          <port_number>             Set MIDI port.\n");
+    printf("  -a, --audio-device  <device_number>           Set Audio Device index.\n");
+    printf("  -b, --buffer-size   <page_size>:[page_count]  Set Audio Buffer size.\n");
+    printf("  -n, --instances     <count>                   Set number of emulator instances.\n");
     printf("\n");
-    printf("  --mk2                                        Use SC-55mk2 ROM set.\n");
-    printf("  --st                                         Use SC-55st ROM set.\n");
-    printf("  --mk1                                        Use SC-55mk1 ROM set.\n");
-    printf("  --cm300                                      Use CM-300/SCC-1 ROM set.\n");
-    printf("  --jv880                                      Use JV-880 ROM set.\n");
-    printf("  --scb55                                      Use SCB-55 ROM set.\n");
-    printf("  --rlp3237                                    Use RLP-3237 ROM set.\n");
+    printf("  -d, --rom-directory <dir>                     Set directory to look for ROMs in.\n");
+    printf("  --mk2                                         Use SC-55mk2 ROM set.\n");
+    printf("  --st                                          Use SC-55st ROM set.\n");
+    printf("  --mk1                                         Use SC-55mk1 ROM set.\n");
+    printf("  --cm300                                       Use CM-300/SCC-1 ROM set.\n");
+    printf("  --jv880                                       Use JV-880 ROM set.\n");
+    printf("  --scb55                                       Use SCB-55 ROM set.\n");
+    printf("  --rlp3237                                     Use RLP-3237 ROM set.\n");
     printf("\n");
-    printf("  -r, --reset        gs|gm                     Reset system in GS or GM mode.\n");
+    printf("  -r, --reset        gs|gm                      Reset system in GS or GM mode.\n");
 }
 
 int main(int argc, char *argv[])
@@ -617,9 +637,16 @@ int main(int argc, char *argv[])
 
     printf("Base path is: %s\n", base_path.generic_string().c_str());
 
+    if (!params.rom_directory)
+    {
+        params.rom_directory = base_path;
+    }
+
+    printf("ROM directory is: %s\n", params.rom_directory->generic_string().c_str());
+
     if (params.autodetect)
     {
-        params.romset = EMU_DetectRomset(base_path);
+        params.romset = EMU_DetectRomset(*params.rom_directory);
         printf("ROM set autodetect: %s\n", EMU_RomsetName(params.romset));
     }
 
@@ -631,7 +658,7 @@ int main(int argc, char *argv[])
 
     for (size_t i = 0; i < params.instances; ++i)
     {
-        if (!FE_CreateInstance(frontend, base_path, params.romset))
+        if (!FE_CreateInstance(frontend, base_path, params))
         {
             fprintf(stderr, "FATAL ERROR: Failed to create instance %" PRIu64 "\n", i);
             return 1;
