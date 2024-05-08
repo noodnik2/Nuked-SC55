@@ -41,7 +41,7 @@
 #include <optional>
 
 struct fe_emu_instance_t {
-    emu_t        emu;
+    Emulator     emu;
     Ringbuffer   sample_buffer;
     std::thread  thread;
     bool         running;
@@ -94,7 +94,7 @@ bool FE_AllocateInstance(frontend_t& container, fe_emu_instance_t** result)
 
 void FE_SendMIDI(frontend_t& fe, size_t n, uint8_t* first, uint8_t* last)
 {
-    EMU_PostMIDI(fe.instances[n].emu, std::span(first, last));
+    fe.instances[n].emu.PostMIDI(std::span(first, last));
 }
 
 void FE_BroadcastMIDI(frontend_t& fe, uint8_t* first, uint8_t* last)
@@ -200,7 +200,7 @@ bool FE_OpenAudio(frontend_t& fe, int deviceIndex, int pageSize, int pageNum)
     // TODO: we just assume the first instance has the correct mcu type for
     // all instances, which is PROBABLY correct but maybe we want to do some
     // crazy stuff like running different mcu types concurrently in the future?
-    const mcu_t& mcu = *fe.instances[0].emu.mcu;
+    const mcu_t& mcu = fe.instances[0].emu.GetMCU();
     
     spec.format = AUDIO_S16SYS;
     spec.freq = MCU_GetOutputFrequency(mcu);
@@ -252,23 +252,23 @@ bool FE_OpenAudio(frontend_t& fe, int deviceIndex, int pageSize, int pageNum)
 
 void FE_RunInstance(fe_emu_instance_t& instance)
 {
-    MCU_WorkThread_Lock(*instance.emu.mcu);
+    MCU_WorkThread_Lock(instance.emu.GetMCU());
     while (instance.running)
     {
-        instance.sample_buffer.SetOversamplingEnabled(instance.emu.pcm->config_reg_3c & 0x40);
+        instance.sample_buffer.SetOversamplingEnabled(instance.emu.GetPCM().config_reg_3c & 0x40);
         if (instance.sample_buffer.IsFull())
         {
-            MCU_WorkThread_Unlock(*instance.emu.mcu);
+            MCU_WorkThread_Unlock(instance.emu.GetMCU());
             while (instance.sample_buffer.IsFull())
             {
                 SDL_Delay(1);
             }
-            MCU_WorkThread_Lock(*instance.emu.mcu);
+            MCU_WorkThread_Lock(instance.emu.GetMCU());
         }
 
-        MCU_Step(*instance.emu.mcu);
+        MCU_Step(instance.emu.GetMCU());
     }
-    MCU_WorkThread_Unlock(*instance.emu.mcu);
+    MCU_WorkThread_Unlock(instance.emu.GetMCU());
 }
 
 void FE_Run(frontend_t& fe)
@@ -285,10 +285,10 @@ void FE_Run(frontend_t& fe)
     {
         for (size_t i = 0; i < fe.instances_in_use; ++i)
         {
-            if (LCD_QuitRequested(*fe.instances[i].emu.lcd))
+            if (LCD_QuitRequested(fe.instances[i].emu.GetLCD()))
                 working = false;
 
-            LCD_Update(*fe.instances[i].emu.lcd);
+            LCD_Update(fe.instances[i].emu.GetLCD());
         }
 
         SDL_Event sdl_event;
@@ -296,7 +296,7 @@ void FE_Run(frontend_t& fe)
         {
             for (size_t i = 0; i < fe.instances_in_use; ++i)
             {
-                LCD_HandleEvent(*fe.instances[i].emu.lcd, sdl_event);
+                LCD_HandleEvent(fe.instances[i].emu.GetLCD(), sdl_event);
             }
         }
 
@@ -332,24 +332,24 @@ bool FE_CreateInstance(frontend_t& container, const std::filesystem::path& base_
         return false;
     }
 
-    if (!EMU_Init(fe->emu))
+    if (!fe->emu.Init(EMU_Options { .enable_lcd = true }))
     {
         fprintf(stderr, "ERROR: Failed to init emulator.\n");
         return false;
     }
 
-    EMU_SetSampleCallback(fe->emu, FE_ReceiveSample, fe);
+    fe->emu.SetSampleCallback(FE_ReceiveSample, fe);
 
-    LCD_LoadBack(*fe->emu.lcd, base_path / "back.data");
+    LCD_LoadBack(fe->emu.GetLCD(), base_path / "back.data");
 
-    if (!EMU_LoadRoms(fe->emu, params.romset, *params.rom_directory))
+    if (!fe->emu.LoadRoms(params.romset, *params.rom_directory))
     {
         fprintf(stderr, "ERROR: Failed to load roms.\n");
         return false;
     }
-    EMU_Reset(fe->emu);
+    fe->emu.Reset();
 
-    if (!LCD_CreateWindow(*fe->emu.lcd))
+    if (!LCD_CreateWindow(fe->emu.GetLCD()))
     {
         fprintf(stderr, "ERROR: Failed to create window.\n");
         return false;
@@ -440,16 +440,6 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
             if (!reader.TryParse(result.port))
             {
                 return FE_ParseError::PortInvalid;
-            }
-            else if (!strcmp(argv[i], "-sc155"))
-            {
-                romset = Romset::SC155;
-                autodetect = false;
-            }
-            else if (!strcmp(argv[i], "-sc155mk2"))
-            {
-                romset = Romset::SC155MK2;
-                autodetect = false;
             }
         }
         else if (reader.Any("-a", "--audio-device"))
@@ -578,6 +568,16 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
             result.romset = Romset::RLP3237;
             result.autodetect = false;
         }
+        else if (reader.Any("-sc155"))
+        {
+            result.romset = Romset::SC155;
+            result.autodetect = false;
+        }
+        else if (!reader.Any("-sc155mk2"))
+        {
+            result.romset = Romset::SC155MK2;
+            result.autodetect = false;
+        }
         else
         {
             return FE_ParseError::UnknownArgument;
@@ -686,7 +686,7 @@ int main(int argc, char *argv[])
 
     for (size_t i = 0; i < frontend.instances_in_use; ++i)
     {
-        EMU_PostSystemReset(frontend.instances[i].emu, params.reset);
+        frontend.instances[i].emu.PostSystemReset(params.reset);
     }
 
     FE_Run(frontend);

@@ -42,45 +42,40 @@
 #include <span>
 #include <vector>
 
-bool EMU_Init(emu_t& emu)
+bool Emulator::Init(const EMU_Options& options)
 {
-    return EMU_Init(emu, EMU_Options {
-        .want_lcd = true,
-    });
-}
+    (void)options;
 
-bool EMU_Init(emu_t& emu, const EMU_Options& options)
-{
-    emu.mcu   = std::make_unique<mcu_t>();
-    emu.sm    = std::make_unique<submcu_t>();
-    emu.timer = std::make_unique<mcu_timer_t>();
-    emu.lcd   = std::make_unique<lcd_t>();
-    emu.pcm   = std::make_unique<pcm_t>();
+    m_mcu   = std::make_unique<mcu_t>();
+    m_sm    = std::make_unique<submcu_t>();
+    m_timer = std::make_unique<mcu_timer_t>();
+    m_lcd   = std::make_unique<lcd_t>();
+    m_pcm   = std::make_unique<pcm_t>();
 
-    if (!MCU_Init(*emu.mcu, *emu.sm, *emu.pcm, *emu.timer, *emu.lcd))
+    if (!MCU_Init(*m_mcu, *m_sm, *m_pcm, *m_timer, *m_lcd))
     {
         return false;
     }
 
-    SM_Init(*emu.sm, *emu.mcu);
-    PCM_Init(*emu.pcm, *emu.mcu);
-    TIMER_Init(*emu.timer, *emu.mcu);
-    LCD_Init(*emu.lcd, *emu.mcu);
+    SM_Init(*m_sm, *m_mcu);
+    PCM_Init(*m_pcm, *m_mcu);
+    TIMER_Init(*m_timer, *m_mcu);
+    LCD_Init(*m_lcd, *m_mcu);
 
     return true;
 }
 
-void EMU_Reset(emu_t& emu)
+void Emulator::Reset()
 {
-    MCU_PatchROM(*emu.mcu);
-    MCU_Reset(*emu.mcu);
-    SM_Reset(*emu.sm);
+    MCU_PatchROM(*m_mcu);
+    MCU_Reset(*m_mcu);
+    SM_Reset(*m_sm);
 }
 
-void EMU_SetSampleCallback(emu_t& emu, mcu_sample_callback callback, void* userdata)
+void Emulator::SetSampleCallback(mcu_sample_callback callback, void* userdata)
 {
-    emu.mcu->callback_userdata = userdata;
-    emu.mcu->sample_callback = callback;
+    m_mcu->callback_userdata = userdata;
+    m_mcu->sample_callback = callback;
 }
 
 const char* rs_name[(size_t)ROMSET_COUNT] = {
@@ -243,48 +238,48 @@ std::streamsize EMU_ReadStreamUpTo(std::ifstream& s, void* into, std::streamsize
     return 0;
 }
 
-bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_path)
+bool Emulator::LoadRoms(Romset romset, const std::filesystem::path& base_path)
 {
     std::vector<uint8_t> tempbuf(0x800000);
 
     const size_t rf_num = 5;
     std::ifstream s_rf[rf_num];
 
-    emu.mcu->romset = romset;
-    emu.mcu->mcu_mk1 = false;
-    emu.mcu->mcu_cm300 = false;
-    emu.mcu->mcu_st = false;
-    emu.mcu->mcu_jv880 = false;
-    emu.mcu->mcu_scb55 = false;
-    emu.mcu->mcu_sc155 = false;
+    m_mcu->romset = romset;
+    m_mcu->mcu_mk1 = false;
+    m_mcu->mcu_cm300 = false;
+    m_mcu->mcu_st = false;
+    m_mcu->mcu_jv880 = false;
+    m_mcu->mcu_scb55 = false;
+    m_mcu->mcu_sc155 = false;
     switch (romset)
     {
         case Romset::MK2:
         case Romset::SC155MK2:
             if (romset == Romset::SC155MK2)
-                emu.mcu->mcu_sc155 = true;
+                m_mcu->mcu_sc155 = true;
             break;
         case Romset::ST:
-            emu.mcu->mcu_st = true;
+            m_mcu->mcu_st = true;
             break;
         case Romset::MK1:
         case Romset::SC155:
-            emu.mcu->mcu_mk1 = true;
-            emu.mcu->mcu_st = false;
+            m_mcu->mcu_mk1 = true;
+            m_mcu->mcu_st = false;
             if (romset == Romset::SC155)
-                emu.mcu->mcu_sc155 = true;
+                m_mcu->mcu_sc155 = true;
             break;
         case Romset::CM300:
-            emu.mcu->mcu_mk1 = true;
-            emu.mcu->mcu_cm300 = true;
+            m_mcu->mcu_mk1 = true;
+            m_mcu->mcu_cm300 = true;
             break;
         case Romset::JV880:
-            emu.mcu->mcu_jv880 = true;
-            emu.mcu->rom2_mask /= 2; // rom is half the size
+            m_mcu->mcu_jv880 = true;
+            m_mcu->rom2_mask /= 2; // rom is half the size
             break;
         case Romset::SCB55:
         case Romset::RLP3237:
-            emu.mcu->mcu_scb55 = true;
+            m_mcu->mcu_scb55 = true;
             break;
     }
 
@@ -301,7 +296,7 @@ bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_p
         }
         rpaths[i] = base_path / roms[(size_t)romset][i];
         s_rf[i] = std::ifstream(rpaths[i].c_str(), std::ios::binary);
-        bool optional = emu.mcu->mcu_jv880 && i == 4;
+        bool optional = m_mcu->mcu_jv880 && i == 4;
         r_ok &= optional || s_rf[i];
         if (!s_rf[i])
         {
@@ -319,18 +314,18 @@ bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_p
         return false;
     }
 
-    if (!EMU_ReadStreamExact(s_rf[0], emu.mcu->rom1, ROM1_SIZE))
+    if (!EMU_ReadStreamExact(s_rf[0], m_mcu->rom1, ROM1_SIZE))
     {
         fprintf(stderr, "FATAL ERROR: Failed to read the mcu ROM1.\n");
         fflush(stderr);
         return false;
     }
 
-    std::streamsize rom2_read = EMU_ReadStreamUpTo(s_rf[1], emu.mcu->rom2, ROM2_SIZE);
+    std::streamsize rom2_read = EMU_ReadStreamUpTo(s_rf[1], m_mcu->rom2, ROM2_SIZE);
 
     if (rom2_read == ROM2_SIZE || rom2_read == ROM2_SIZE / 2)
     {
-        emu.mcu->rom2_mask = rom2_read - 1;
+        m_mcu->rom2_mask = rom2_read - 1;
     }
     else
     {
@@ -339,7 +334,7 @@ bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_p
         return false;
     }
 
-    if (emu.mcu->mcu_mk1)
+    if (m_mcu->mcu_mk1)
     {
         if (!EMU_ReadStreamExact(s_rf[2], tempbuf, 0x100000))
         {
@@ -348,7 +343,7 @@ bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_p
             return false;
         }
 
-        unscramble(tempbuf.data(), emu.pcm->waverom1, 0x100000);
+        unscramble(tempbuf.data(), m_pcm->waverom1, 0x100000);
 
         if (!EMU_ReadStreamExact(s_rf[3], tempbuf, 0x100000))
         {
@@ -357,7 +352,7 @@ bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_p
             return false;
         }
 
-        unscramble(tempbuf.data(), emu.pcm->waverom2, 0x100000);
+        unscramble(tempbuf.data(), m_pcm->waverom2, 0x100000);
 
         if (!EMU_ReadStreamExact(s_rf[4], tempbuf, 0x100000))
         {
@@ -366,9 +361,9 @@ bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_p
             return false;
         }
 
-        unscramble(tempbuf.data(), emu.pcm->waverom3, 0x100000);
+        unscramble(tempbuf.data(), m_pcm->waverom3, 0x100000);
     }
-    else if (emu.mcu->mcu_jv880)
+    else if (m_mcu->mcu_jv880)
     {
         if (!EMU_ReadStreamExact(s_rf[2], tempbuf, 0x200000))
         {
@@ -377,7 +372,7 @@ bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_p
             return false;
         }
 
-        unscramble(tempbuf.data(), emu.pcm->waverom1, 0x200000);
+        unscramble(tempbuf.data(), m_pcm->waverom1, 0x200000);
 
         if (!EMU_ReadStreamExact(s_rf[3], tempbuf, 0x200000))
         {
@@ -386,10 +381,10 @@ bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_p
             return false;
         }
 
-        unscramble(tempbuf.data(), emu.pcm->waverom2, 0x200000);
+        unscramble(tempbuf.data(), m_pcm->waverom2, 0x200000);
 
         if (s_rf[4] && EMU_ReadStreamExact(s_rf[4], tempbuf, 0x800000))
-            unscramble(tempbuf.data(), emu.pcm->waverom_exp, 0x800000);
+            unscramble(tempbuf.data(), m_pcm->waverom_exp, 0x800000);
         else
             printf("WaveRom EXP not found, skipping it.\n");
     }
@@ -402,7 +397,7 @@ bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_p
             return false;
         }
 
-        unscramble(tempbuf.data(), emu.pcm->waverom1, 0x200000);
+        unscramble(tempbuf.data(), m_pcm->waverom1, 0x200000);
 
         if (s_rf[3])
         {
@@ -413,10 +408,10 @@ bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_p
                 return false;
             }
 
-            unscramble(tempbuf.data(), emu.mcu->mcu_scb55 ? emu.pcm->waverom3 : emu.pcm->waverom2, 0x100000);
+            unscramble(tempbuf.data(), m_mcu->mcu_scb55 ? m_pcm->waverom3 : m_pcm->waverom2, 0x100000);
         }
 
-        if (s_rf[4] && !EMU_ReadStreamExact(s_rf[4], emu.sm->sm_rom, ROMSM_SIZE))
+        if (s_rf[4] && !EMU_ReadStreamExact(s_rf[4], m_sm->sm_rom, ROMSM_SIZE))
         {
             fprintf(stderr, "FATAL ERROR: Failed to read the sub mcu ROM.\n");
             fflush(stderr);
@@ -432,23 +427,23 @@ const char* EMU_RomsetName(Romset romset)
     return rs_name[(size_t)romset];
 }
 
-void EMU_PostMIDI(emu_t& emu, uint8_t byte)
+void Emulator::PostMIDI(uint8_t byte)
 {
-    MCU_PostUART(*emu.mcu, byte);
+    MCU_PostUART(*m_mcu, byte);
 }
 
-void EMU_PostMIDI(emu_t& emu, std::span<const uint8_t> data)
+void Emulator::PostMIDI(std::span<const uint8_t> data)
 {
     for (uint8_t byte : data)
     {
-        EMU_PostMIDI(emu, byte);
+        PostMIDI(byte);
     }
 }
 
 constexpr uint8_t GM_RESET_SEQ[] = { 0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7 };
 constexpr uint8_t GS_RESET_SEQ[] = { 0xF0, 0x41, 0x10, 0x42, 0x12, 0x40, 0x00, 0x7F, 0x00, 0x41, 0xF7 };
 
-void EMU_PostSystemReset(emu_t& emu, EMU_SystemReset reset)
+void Emulator::PostSystemReset(EMU_SystemReset reset)
 {
     switch (reset)
     {
@@ -456,10 +451,10 @@ void EMU_PostSystemReset(emu_t& emu, EMU_SystemReset reset)
             // explicitly do nothing
             break;
         case EMU_SystemReset::GS_RESET:
-            EMU_PostMIDI(emu, GS_RESET_SEQ);
+            PostMIDI(GS_RESET_SEQ);
             break;
         case EMU_SystemReset::GM_RESET:
-            EMU_PostMIDI(emu, GM_RESET_SEQ);
+            PostMIDI(GM_RESET_SEQ);
             break;
     }
 }

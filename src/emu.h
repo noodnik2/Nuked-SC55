@@ -44,31 +44,8 @@
 
 struct EMU_Options
 {
-    bool want_lcd;
+    bool enable_lcd;
 };
-
-struct emu_t {
-    std::unique_ptr<mcu_t>       mcu;
-    std::unique_ptr<submcu_t>    sm;
-    std::unique_ptr<mcu_timer_t> timer;
-    std::unique_ptr<lcd_t>       lcd;
-    std::unique_ptr<pcm_t>       pcm;
-};
-
-bool EMU_Init(emu_t& emu);
-bool EMU_Init(emu_t& emu, const EMU_Options& options);
-
-// Should be called after loading roms
-void EMU_Reset(emu_t& emu);
-
-void EMU_SetSampleCallback(emu_t& emu, mcu_sample_callback callback, void* userdata);
-
-Romset EMU_DetectRomset(const std::filesystem::path& base_path);
-bool EMU_LoadRoms(emu_t& emu, Romset romset, const std::filesystem::path& base_path);
-const char* EMU_RomsetName(Romset romset);
-
-void EMU_PostMIDI(emu_t& emu, uint8_t data_byte);
-void EMU_PostMIDI(emu_t& emu, std::span<const uint8_t> data);
 
 enum class EMU_SystemReset {
     NONE,
@@ -76,4 +53,36 @@ enum class EMU_SystemReset {
     GM_RESET,
 };
 
-void EMU_PostSystemReset(emu_t& emu, EMU_SystemReset reset);
+struct Emulator {
+public:
+    Emulator() = default;
+
+    bool Init(const EMU_Options& options);
+
+    // Should be called after loading roms
+    void Reset();
+
+    void SetSampleCallback(mcu_sample_callback callback, void* userdata);
+
+    bool LoadRoms(Romset romset, const std::filesystem::path& base_path);
+
+    void PostMIDI(uint8_t data_byte);
+    void PostMIDI(std::span<const uint8_t> data);
+
+    void PostSystemReset(EMU_SystemReset reset);
+
+    mcu_t& GetMCU() { return *m_mcu; }
+    pcm_t& GetPCM() { return *m_pcm; }
+    lcd_t& GetLCD() { return *m_lcd; }
+
+private:
+    std::unique_ptr<mcu_t>       m_mcu;
+    std::unique_ptr<submcu_t>    m_sm;
+    std::unique_ptr<mcu_timer_t> m_timer;
+    std::unique_ptr<lcd_t>       m_lcd;
+    std::unique_ptr<pcm_t>       m_pcm;
+};
+
+Romset EMU_DetectRomset(const std::filesystem::path& base_path);
+const char* EMU_RomsetName(Romset romset);
+

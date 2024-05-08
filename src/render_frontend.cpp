@@ -152,7 +152,7 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
 
 struct R_TrackRenderState
 {
-    emu_t emu;
+    Emulator emu;
     std::vector<AudioFrame> buffer;
     size_t us_simulated = 0;
     const SMF_Track* track = nullptr;
@@ -186,25 +186,25 @@ void R_ReceiveSample(void* userdata, int* sample)
     state->buffer.push_back(frame);
 }
 
-void R_RunReset(emu_t& emu, EMU_SystemReset reset)
+void R_RunReset(Emulator& emu, EMU_SystemReset reset)
 {
     if (reset == EMU_SystemReset::NONE)
     {
         return;
     }
 
-    EMU_PostSystemReset(emu, reset);
+    emu.PostSystemReset(reset);
 
     for (size_t i = 0; i < 24'000'000; ++i)
     {
-        MCU_Step(*emu.mcu);
+        MCU_Step(emu.GetMCU());
     }
 }
 
-void R_PostEvent(emu_t& emu, const SMF_Data& data, const SMF_Event& ev)
+void R_PostEvent(Emulator& emu, const SMF_Data& data, const SMF_Event& ev)
 {
-    EMU_PostMIDI(emu, ev.status);
-    EMU_PostMIDI(emu, ev.GetData(data.bytes));
+    emu.PostMIDI(ev.status);
+    emu.PostMIDI(ev.GetData(data.bytes));
 }
 
 struct R_TrackList
@@ -260,8 +260,8 @@ void R_RenderOne(const SMF_Data& data, R_TrackRenderState& state)
         // 24_000_000 / 1_000_000 = 24 cycles per microsecond.
         while (state.us_simulated < this_event_time_us)
         {
-            MCU_Step(*state.emu.mcu);
-            MCU_Step(*state.emu.mcu);
+            MCU_Step(state.emu.GetMCU());
+            MCU_Step(state.emu.GetMCU());
             ++state.us_simulated;
         }
 
@@ -302,21 +302,21 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     R_TrackRenderState render_states[SMF_CHANNEL_COUNT];
     for (size_t i = 0; i < instances; ++i)
     {
-        EMU_Init(render_states[i].emu, EMU_Options {
-            .want_lcd = false,
+        render_states[i].emu.Init(EMU_Options {
+            .enable_lcd = false,
         });
 
-        if (!EMU_LoadRoms(render_states[i].emu, rs, params.rom_directory))
+        if (!render_states[i].emu.LoadRoms(rs, params.rom_directory))
         {
             return false;
         }
 
-        EMU_Reset(render_states[i].emu);
+        render_states[i].emu.Reset();
 
         printf("Running system reset for #%02" PRIu64 "...\n", i);
         R_RunReset(render_states[i].emu, params.reset);
 
-        EMU_SetSampleCallback(render_states[i].emu, R_ReceiveSample, &render_states[i]);
+        render_states[i].emu.SetSampleCallback(R_ReceiveSample, &render_states[i]);
 
         render_states[i].track = &split_tracks.tracks[i];
 
@@ -372,7 +372,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
         render_output.WriteSample(sample.left, sample.right);
     }
 
-    render_output.Finish(MCU_GetOutputFrequency(*render_states[0].emu.mcu));
+    render_output.Finish(MCU_GetOutputFrequency(render_states[0].emu.GetMCU()));
 
     printf("Done!\n");
 
