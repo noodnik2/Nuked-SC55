@@ -36,6 +36,7 @@
 #include <cstdint>
 #include <atomic>
 #include <thread>
+#include <mutex>
 #include "mcu_interrupt.h"
 
 struct submcu_t;

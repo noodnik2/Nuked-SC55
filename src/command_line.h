@@ -6,7 +6,7 @@
 template <typename T>
 bool TryParse(std::string_view s, T& n)
 {
-    std::from_chars_result r = std::from_chars(s.begin(), s.end(), n);
+    std::from_chars_result r = std::from_chars(s.data(), s.data() + s.size(), n);
     if (r.ec != std::errc{})
     {
         return false;
