@@ -71,7 +71,7 @@ struct fe_emu_instance_t {
         }
         else
         {
-            static_assert("No valid case for SampleT");
+            static_assert(false, "No valid case for SampleT");
         }
     }
 };
@@ -788,10 +788,10 @@ int main(int argc, char *argv[])
         switch (fe.format)
         {
             case FE_OutputFormat::S16:
-                fe.sample_buffer_s16 = Ringbuffer<int16_t>(rb_size);
+                fe.sample_buffer_s16 = Ringbuffer_S16(rb_size);
                 break;
             case FE_OutputFormat::F32:
-                fe.sample_buffer_f32 = Ringbuffer<float>(rb_size);
+                fe.sample_buffer_f32 = Ringbuffer_F32(rb_size);
                 break;
             default:
                 fprintf(stderr, "ERROR: Instance has an invalid output format.\n");
