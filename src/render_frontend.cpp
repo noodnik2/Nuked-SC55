@@ -153,7 +153,7 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
 struct R_TrackRenderState
 {
     Emulator emu;
-    std::vector<AudioFrame> buffer;
+    std::vector<AudioFrame<int16_t>> buffer;
     size_t us_simulated = 0;
     const SMF_Track* track = nullptr;
     std::thread thread;
@@ -162,11 +162,11 @@ struct R_TrackRenderState
     std::atomic<size_t> events_processed = 0;
     std::atomic<bool> done;
 
-    void MixInto(std::vector<AudioFrame>& output)
+    void MixInto(std::vector<AudioFrame<int16_t>>& output)
     {
         if (output.size() < buffer.size())
         {
-            output.resize(buffer.size(), AudioFrame{});
+            output.resize(buffer.size(), AudioFrame<int16_t>{});
         }
         horizontal_sat_add_i16((int16_t*)output.data(), (int16_t*)buffer.data(), (int16_t*)(buffer.data() + buffer.size()));
     }
@@ -176,7 +176,7 @@ void R_ReceiveSample(void* userdata, int32_t left, int32_t right)
 {
     R_TrackRenderState* state = (R_TrackRenderState*)userdata;
 
-    AudioFrame frame;
+    AudioFrame<int16_t> frame;
     frame.left = (int16_t)clamp<int32_t>(left >> 15, INT16_MIN, INT16_MAX);
     frame.right = (int16_t)clamp<int32_t>(right >> 15, INT16_MIN, INT16_MAX);
 
@@ -358,7 +358,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     WAV_Handle render_output;
     render_output.Open(params.output_filename);
 
-    std::vector<AudioFrame> rendered_track;
+    std::vector<AudioFrame<int16_t>> rendered_track;
     for (size_t instance = 0; instance < instances; ++instance)
     {
         render_states[instance].MixInto(rendered_track);

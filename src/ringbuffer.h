@@ -36,13 +36,17 @@
 #include <vector>
 #include "math_util.h"
 
+template <typename T>
 struct AudioFrame {
-    int16_t left;
-    int16_t right;
+    T left;
+    T right;
 };
 
+template <typename T>
 class Ringbuffer {
 public:
+    using AudioFrameType = AudioFrame<T>;
+
     Ringbuffer() = default;
 
     Ringbuffer(size_t frame_count)
@@ -71,7 +75,7 @@ public:
         }
     }
 
-    void Write(const AudioFrame& frame)
+    void Write(const AudioFrameType& frame)
     {
         m_frames[m_write_head] = frame;
         m_write_head = (m_write_head + 1) % m_frames.size();
@@ -91,7 +95,7 @@ public:
 
     // Reads up to `frame_count` frames and returns the number of frames
     // actually read.
-    size_t Read(AudioFrame* dest, size_t frame_count)
+    size_t Read(AudioFrameType* dest, size_t frame_count)
     {
         const size_t have_count = ReadableFrameCount();
         const size_t read_count = min(have_count, frame_count);
@@ -109,7 +113,7 @@ public:
 
     // Reads up to `frame_count` frames and returns the number of frames
     // actually read. Mixes samples into dest by adding and clipping.
-    size_t ReadMix(AudioFrame* dest, size_t frame_count)
+    size_t ReadMix(AudioFrameType* dest, size_t frame_count)
     {
         const size_t have_count = ReadableFrameCount();
         const size_t read_count = min(have_count, frame_count);
@@ -125,7 +129,7 @@ public:
     }
 
 private:
-    std::vector<AudioFrame> m_frames;
+    std::vector<AudioFrameType> m_frames;
     size_t m_read_head = 0;
     size_t m_write_head = 0;
     bool m_oversampling = false;

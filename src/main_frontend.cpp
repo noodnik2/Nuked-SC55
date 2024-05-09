@@ -40,11 +40,13 @@
 #include <cinttypes>
 #include <optional>
 
+using Ringbuffer_S16 = Ringbuffer<int16_t>;
+
 struct fe_emu_instance_t {
-    Emulator     emu;
-    Ringbuffer   sample_buffer;
-    std::thread  thread;
-    bool         running;
+    Emulator       emu;
+    Ringbuffer_S16 sample_buffer;
+    std::thread    thread;
+    bool           running;
 };
 
 const size_t FE_MAX_INSTANCES = 16;
@@ -130,7 +132,7 @@ void FE_ReceiveSample(void* userdata, int32_t left, int32_t right)
 {
     fe_emu_instance_t& fe = *(fe_emu_instance_t*)userdata;
 
-    AudioFrame frame;
+    AudioFrame<int16_t> frame;
     frame.left = (int16_t)clamp<int32_t>(left >> 15, INT16_MIN, INT16_MAX);
     frame.right = (int16_t)clamp<int32_t>(right >> 15, INT16_MIN, INT16_MAX);
 
@@ -141,7 +143,7 @@ void FE_AudioCallback(void* userdata, Uint8* stream, int len)
 {
     frontend_t& frontend = *(frontend_t*)userdata;
 
-    const size_t num_frames = len / sizeof(AudioFrame);
+    const size_t num_frames = len / sizeof(AudioFrame<int16_t>);
     memset(stream, 0, len);
 
     size_t renderable_count = num_frames;
@@ -155,7 +157,7 @@ void FE_AudioCallback(void* userdata, Uint8* stream, int len)
 
     for (size_t i = 0; i < frontend.instances_in_use; ++i)
     {
-        frontend.instances[i].sample_buffer.ReadMix((AudioFrame*)stream, renderable_count);
+        frontend.instances[i].sample_buffer.ReadMix((AudioFrame<int16_t>*)stream, renderable_count);
     }
 }
 
@@ -673,7 +675,7 @@ int main(int argc, char *argv[])
     for (size_t i = 0; i < frontend.instances_in_use; ++i)
     {
         fe_emu_instance_t& fe = frontend.instances[i];
-        fe.sample_buffer = Ringbuffer(frontend.audio_buffer_size / 2);
+        fe.sample_buffer = Ringbuffer<int16_t>(frontend.audio_buffer_size / 2);
     }
 
     if (!MIDI_Init(frontend, params.port))
