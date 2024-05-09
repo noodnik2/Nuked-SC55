@@ -41,12 +41,39 @@
 #include <optional>
 
 using Ringbuffer_S16 = Ringbuffer<int16_t>;
+using Ringbuffer_F32 = Ringbuffer<float>;
+
+enum class FE_OutputFormat
+{
+    S16,
+    F32,
+};
 
 struct fe_emu_instance_t {
-    Emulator       emu;
-    Ringbuffer_S16 sample_buffer;
-    std::thread    thread;
-    bool           running;
+    Emulator        emu;
+    Ringbuffer_S16  sample_buffer_s16;
+    Ringbuffer_F32  sample_buffer_f32;
+    std::thread     thread;
+    bool            running;
+    FE_OutputFormat format;
+
+    // Statically selects the correct ringbuffer field into based on SampleT.
+    template <typename SampleT>
+    Ringbuffer<SampleT>& StaticSelectBuffer()
+    {
+        if constexpr (std::is_same_v<SampleT, int16_t>)
+        {
+            return sample_buffer_s16;
+        }
+        else if constexpr (std::is_same_v<SampleT, float>)
+        {
+            return sample_buffer_f32;
+        }
+        else
+        {
+            static_assert("No valid case for SampleT");
+        }
+    }
 };
 
 const size_t FE_MAX_INSTANCES = 16;
@@ -73,6 +100,7 @@ struct FE_Parameters
     size_t instances = 1;
     Romset romset = Romset::MK2;
     std::optional<std::filesystem::path> rom_directory;
+    FE_OutputFormat output_format = FE_OutputFormat::S16;
 };
 
 bool FE_AllocateInstance(frontend_t& container, fe_emu_instance_t** result)
@@ -128,7 +156,7 @@ void FE_RouteMIDI(frontend_t& fe, uint8_t* first, uint8_t* last)
     }
 }
 
-void FE_ReceiveSample(void* userdata, int32_t left, int32_t right)
+void FE_ReceiveSample_S16(void* userdata, int32_t left, int32_t right)
 {
     fe_emu_instance_t& fe = *(fe_emu_instance_t*)userdata;
 
@@ -136,14 +164,28 @@ void FE_ReceiveSample(void* userdata, int32_t left, int32_t right)
     frame.left = (int16_t)clamp<int32_t>(left >> 15, INT16_MIN, INT16_MAX);
     frame.right = (int16_t)clamp<int32_t>(right >> 15, INT16_MIN, INT16_MAX);
 
-    fe.sample_buffer.Write(frame);
+    fe.sample_buffer_s16.Write(frame);
 }
 
+void FE_ReceiveSample_F32(void* userdata, int32_t left, int32_t right)
+{
+    constexpr float DIV_REC = 1.0f / 536870912.0f;
+
+    fe_emu_instance_t& fe = *(fe_emu_instance_t*)userdata;
+
+    AudioFrame<float> frame;
+    frame.left = (float)left * DIV_REC;
+    frame.right = (float)right * DIV_REC;
+
+    fe.sample_buffer_f32.Write(frame);
+}
+
+template <typename SampleT>
 void FE_AudioCallback(void* userdata, Uint8* stream, int len)
 {
     frontend_t& frontend = *(frontend_t*)userdata;
 
-    const size_t num_frames = len / sizeof(AudioFrame<int16_t>);
+    const size_t num_frames = len / sizeof(AudioFrame<SampleT>);
     memset(stream, 0, len);
 
     size_t renderable_count = num_frames;
@@ -151,13 +193,13 @@ void FE_AudioCallback(void* userdata, Uint8* stream, int len)
     {
         renderable_count = min(
             renderable_count,
-            frontend.instances[i].sample_buffer.ReadableFrameCount()
+            frontend.instances[i].StaticSelectBuffer<SampleT>().ReadableFrameCount()
         );
     }
 
     for (size_t i = 0; i < frontend.instances_in_use; ++i)
     {
-        frontend.instances[i].sample_buffer.ReadMix((AudioFrame<int16_t>*)stream, renderable_count);
+        frontend.instances[i].StaticSelectBuffer<SampleT>().ReadMix((AudioFrame<SampleT>*)stream, renderable_count);
     }
 }
 
@@ -189,42 +231,55 @@ static const char* audio_format_to_str(int format)
     return "UNK";
 }
 
-bool FE_OpenAudio(frontend_t& fe, int deviceIndex, int pageSize, int pageNum)
+bool FE_OpenAudio(frontend_t& fe, const FE_Parameters& params)
 {
     SDL_AudioSpec spec = {};
     SDL_AudioSpec spec_actual = {};
 
-    fe.audio_page_size = (pageSize/2)*2; // must be even
-    fe.audio_buffer_size = fe.audio_page_size*pageNum;
+    fe.audio_page_size = (params.page_size / 2) * 2; // must be even
+    fe.audio_buffer_size = fe.audio_page_size * params.page_num;
 
     // TODO: we just assume the first instance has the correct mcu type for
     // all instances, which is PROBABLY correct but maybe we want to do some
     // crazy stuff like running different mcu types concurrently in the future?
     const mcu_t& mcu = fe.instances[0].emu.GetMCU();
-    
-    spec.format = AUDIO_S16SYS;
+
+    switch (params.output_format)
+    {
+        case FE_OutputFormat::S16:
+            spec.format = AUDIO_S16SYS;
+            spec.callback = FE_AudioCallback<int16_t>;
+            break;
+        case FE_OutputFormat::F32:
+            spec.format = AUDIO_F32SYS;
+            spec.callback = FE_AudioCallback<float>;
+            break;
+        default:
+            printf("Invalid output format\n");
+            return false;
+    }
     spec.freq = MCU_GetOutputFrequency(mcu);
     spec.channels = 2;
-    spec.callback = FE_AudioCallback;
     spec.userdata = &fe;
     spec.samples = fe.audio_page_size / 4;
-    
+
     int num = SDL_GetNumAudioDevices(0);
     if (num == 0)
     {
         printf("No audio output device found.\n");
         return false;
     }
-    
-    if (deviceIndex < -1 || deviceIndex >= num)
+
+    int device_index = params.audio_device_index;
+    if (device_index < -1 || device_index >= num)
     {
         printf("Out of range audio device index is requested. Default audio output device is selected.\n");
-        deviceIndex = -1;
+        device_index = -1;
     }
-    
-    const char* audioDevicename = deviceIndex == -1 ? "Default device" : SDL_GetAudioDeviceName(deviceIndex, 0);
-    
-    fe.sdl_audio = SDL_OpenAudioDevice(deviceIndex == -1 ? NULL : audioDevicename, 0, &spec, &spec_actual, 0);
+
+    const char* audioDevicename = device_index == -1 ? "Default device" : SDL_GetAudioDeviceName(device_index, 0);
+
+    fe.sdl_audio = SDL_OpenAudioDevice(device_index == -1 ? NULL : audioDevicename, 0, &spec, &spec_actual, 0);
     if (!fe.sdl_audio)
     {
         return false;
@@ -250,16 +305,22 @@ bool FE_OpenAudio(frontend_t& fe, int deviceIndex, int pageSize, int pageNum)
     return true;
 }
 
+template <typename SampleT>
 void FE_RunInstance(fe_emu_instance_t& instance)
 {
     MCU_WorkThread_Lock(instance.emu.GetMCU());
     while (instance.running)
     {
-        instance.sample_buffer.SetOversamplingEnabled(instance.emu.GetPCM().config_reg_3c & 0x40);
-        if (instance.sample_buffer.IsFull())
+        auto& sample_buffer = instance.StaticSelectBuffer<SampleT>();
+        // TODO: this could probably be cleaned up, oversampling being a
+        // property of the ringbuffer is kind of gross. It's really a property
+        // of the read/write heads.
+        sample_buffer.SetOversamplingEnabled(instance.emu.GetPCM().config_reg_3c & 0x40);
+
+        if (sample_buffer.IsFull())
         {
             MCU_WorkThread_Unlock(instance.emu.GetMCU());
-            while (instance.sample_buffer.IsFull())
+            while (sample_buffer.IsFull())
             {
                 SDL_Delay(1);
             }
@@ -278,7 +339,18 @@ void FE_Run(frontend_t& fe)
     for (size_t i = 0; i < fe.instances_in_use; ++i)
     {
         fe.instances[i].running = true;
-        fe.instances[i].thread = std::thread(FE_RunInstance, std::ref(fe.instances[i]));
+        switch (fe.instances[i].format)
+        {
+            case FE_OutputFormat::S16:
+                fe.instances[i].thread = std::thread(FE_RunInstance<int16_t>, std::ref(fe.instances[i]));
+                break;
+            case FE_OutputFormat::F32:
+                fe.instances[i].thread = std::thread(FE_RunInstance<float>, std::ref(fe.instances[i]));
+                break;
+            default:
+                fprintf(stderr, "warning: instance %" PRIu64 " has an invalid output format; it will not run\n", i);
+                break;
+        }
     }
 
     while (working)
@@ -332,13 +404,26 @@ bool FE_CreateInstance(frontend_t& container, const std::filesystem::path& base_
         return false;
     }
 
+    fe->format = params.output_format;
+
     if (!fe->emu.Init(EMU_Options { .enable_lcd = true }))
     {
         fprintf(stderr, "ERROR: Failed to init emulator.\n");
         return false;
     }
 
-    fe->emu.SetSampleCallback(FE_ReceiveSample, fe);
+    switch (fe->format)
+    {
+        case FE_OutputFormat::S16:
+            fe->emu.SetSampleCallback(FE_ReceiveSample_S16, fe);
+            break;
+        case FE_OutputFormat::F32:
+            fe->emu.SetSampleCallback(FE_ReceiveSample_F32, fe);
+            break;
+        default:
+            fprintf(stderr, "ERROR: Instance has an invalid output format.\n");
+            return false;
+    }
 
     LCD_LoadBack(fe->emu.GetLCD(), base_path / "back.data");
 
@@ -389,6 +474,7 @@ enum class FE_ParseError
     PortInvalid,
     AudioDeviceInvalid,
     RomDirectoryNotFound,
+    FormatInvalid,
 };
 
 const char* FE_ParseErrorStr(FE_ParseError err)
@@ -415,6 +501,8 @@ const char* FE_ParseErrorStr(FE_ParseError err)
             return "Audio device invalid";
         case FE_ParseError::RomDirectoryNotFound:
             return "Rom directory doesn't exist";
+        case FE_ParseError::FormatInvalid:
+            return "Output format invalid";
     }
     return "Unknown error";
 }
@@ -452,6 +540,26 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
             if (!reader.TryParse(result.audio_device_index))
             {
                 return FE_ParseError::AudioDeviceInvalid;
+            }
+        }
+        else if (reader.Any("-f", "--format"))
+        {
+            if (!reader.Next())
+            {
+                return FE_ParseError::UnexpectedEnd;
+            }
+
+            if (reader.Arg() == "s16")
+            {
+                result.output_format = FE_OutputFormat::S16;
+            }
+            else if (reader.Arg() == "f32")
+            {
+                result.output_format = FE_OutputFormat::F32;
+            }
+            else
+            {
+                return FE_ParseError::FormatInvalid;
             }
         }
         else if (reader.Any("-b", "--buffer-size"))
@@ -598,6 +706,7 @@ void FE_Usage()
     printf("  -p, --port          <port_number>             Set MIDI port.\n");
     printf("  -a, --audio-device  <device_number>           Set Audio Device index.\n");
     printf("  -b, --buffer-size   <page_size>:[page_count]  Set Audio Buffer size.\n");
+    printf("  -f, --format        s16|f32                   Set output format.\n");
     printf("  -n, --instances     <count>                   Set number of emulator instances.\n");
     printf("\n");
     printf("  -d, --rom-directory <dir>                     Set directory to look for ROMs in.\n");
@@ -665,7 +774,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (!FE_OpenAudio(frontend, params.audio_device_index, params.page_size, params.page_num))
+    if (!FE_OpenAudio(frontend, params))
     {
         fprintf(stderr, "FATAL ERROR: Failed to open the audio stream.\n");
         fflush(stderr);
@@ -675,7 +784,19 @@ int main(int argc, char *argv[])
     for (size_t i = 0; i < frontend.instances_in_use; ++i)
     {
         fe_emu_instance_t& fe = frontend.instances[i];
-        fe.sample_buffer = Ringbuffer<int16_t>(frontend.audio_buffer_size / 2);
+        const size_t rb_size = frontend.audio_buffer_size / 2;
+        switch (fe.format)
+        {
+            case FE_OutputFormat::S16:
+                fe.sample_buffer_s16 = Ringbuffer<int16_t>(rb_size);
+                break;
+            case FE_OutputFormat::F32:
+                fe.sample_buffer_f32 = Ringbuffer<float>(rb_size);
+                break;
+            default:
+                fprintf(stderr, "ERROR: Instance has an invalid output format.\n");
+                return 1;
+        }
     }
 
     if (!MIDI_Init(frontend, params.port))
