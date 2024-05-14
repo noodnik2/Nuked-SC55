@@ -86,6 +86,8 @@ struct frontend_t {
     int audio_page_size = 0;
 
     SDL_AudioDeviceID sdl_audio = 0;
+
+    bool running = false;
 };
 
 struct FE_Parameters
@@ -101,6 +103,7 @@ struct FE_Parameters
     Romset romset = Romset::MK2;
     std::optional<std::filesystem::path> rom_directory;
     FE_OutputFormat output_format = FE_OutputFormat::S16;
+    bool no_lcd = false;
 };
 
 bool FE_AllocateInstance(frontend_t& container, fe_emu_instance_t** result)
@@ -332,9 +335,61 @@ void FE_RunInstance(fe_emu_instance_t& instance)
     MCU_WorkThread_Unlock(instance.emu.GetMCU());
 }
 
+bool FE_HandleGlobalEvent(frontend_t& fe, const SDL_Event& ev)
+{
+    switch (ev.type)
+    {
+        case SDL_QUIT:
+            fe.running = false;
+            return true;
+        default:
+            return false;
+    }
+}
+
+void FE_EventLoop(frontend_t& fe)
+{
+    while (fe.running)
+    {
+        for (size_t i = 0; i < fe.instances_in_use; ++i)
+        {
+            if (fe.instances[i].emu.IsLCDEnabled())
+            {
+                if (LCD_QuitRequested(fe.instances[i].emu.GetLCD()))
+                {
+                    fe.running = false;
+                }
+
+                LCD_Update(fe.instances[i].emu.GetLCD());
+            }
+        }
+
+        SDL_Event ev;
+        while (SDL_PollEvent(&ev))
+        {
+            if (FE_HandleGlobalEvent(fe, ev))
+            {
+                // not directed at any particular window; don't let LCDs
+                // handle this one
+                continue;
+            }
+
+            for (size_t i = 0; i < fe.instances_in_use; ++i)
+            {
+                if (fe.instances[i].emu.IsLCDEnabled())
+                {
+                    LCD_HandleEvent(fe.instances[i].emu.GetLCD(), ev);
+                }
+            }
+        }
+
+        SDL_Delay(15);
+    }
+}
+
 void FE_Run(frontend_t& fe)
 {
-    bool working = true;
+    fe.running = true;
 
     for (size_t i = 0; i < fe.instances_in_use; ++i)
     {
@@ -353,27 +408,7 @@ void FE_Run(frontend_t& fe)
         }
     }
 
-    while (working)
-    {
-        for (size_t i = 0; i < fe.instances_in_use; ++i)
-        {
-            if (LCD_QuitRequested(fe.instances[i].emu.GetLCD()))
-                working = false;
-
-            LCD_Update(fe.instances[i].emu.GetLCD());
-        }
-
-        SDL_Event sdl_event;
-        while (SDL_PollEvent(&sdl_event))
-        {
-            for (size_t i = 0; i < fe.instances_in_use; ++i)
-            {
-                LCD_HandleEvent(fe.instances[i].emu.GetLCD(), sdl_event);
-            }
-        }
-
-        SDL_Delay(15);
-    }
+    FE_EventLoop(fe);
 
     for (size_t i = 0; i < fe.instances_in_use; ++i)
     {
@@ -406,7 +441,7 @@ bool FE_CreateInstance(frontend_t& container, const std::filesystem::path& base_
 
     fe->format = params.output_format;
 
-    if (!fe->emu.Init(EMU_Options { .enable_lcd = true }))
+    if (!fe->emu.Init(EMU_Options { .enable_lcd = !params.no_lcd }))
     {
         fprintf(stderr, "ERROR: Failed to init emulator.\n");
         return false;
@@ -434,7 +469,7 @@ bool FE_CreateInstance(frontend_t& container, const std::filesystem::path& base_
     }
     fe->emu.Reset();
 
-    if (!LCD_CreateWindow(fe->emu.GetLCD()))
+    if (!params.no_lcd && !LCD_CreateWindow(fe->emu.GetLCD()))
     {
         fprintf(stderr, "ERROR: Failed to create window.\n");
         return false;
@@ -627,6 +662,10 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
                 return FE_ParseError::InstancesOutOfRange;
             }
         }
+        else if (reader.Any("--no-lcd"))
+        {
+            result.no_lcd = true;
+        }
         else if (reader.Any("-d", "--rom-directory"))
         {
             if (!reader.Next())
@@ -708,6 +747,7 @@ void FE_Usage()
     printf("  -b, --buffer-size   <page_size>:[page_count]  Set Audio Buffer size.\n");
     printf("  -f, --format        s16|f32                   Set output format.\n");
     printf("  -n, --instances     <count>                   Set number of emulator instances.\n");
+    printf("  --no-lcd                                      Run without LCDs.\n");
     printf("\n");
     printf("  -d, --rom-directory <dir>                     Set directory to look for ROMs in.\n");
     printf("  --mk2                                         Use SC-55mk2 ROM set.\n");

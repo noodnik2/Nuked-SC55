@@ -44,7 +44,7 @@
 
 bool Emulator::Init(const EMU_Options& options)
 {
-    (void)options;
+    m_options = options;
 
     m_mcu   = std::make_unique<mcu_t>();
     m_sm    = std::make_unique<submcu_t>();

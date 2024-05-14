@@ -75,12 +75,15 @@ public:
     pcm_t& GetPCM() { return *m_pcm; }
     lcd_t& GetLCD() { return *m_lcd; }
 
+    bool IsLCDEnabled() const { return m_options.enable_lcd; }
+
 private:
     std::unique_ptr<mcu_t>       m_mcu;
     std::unique_ptr<submcu_t>    m_sm;
     std::unique_ptr<mcu_timer_t> m_timer;
     std::unique_ptr<lcd_t>       m_lcd;
     std::unique_ptr<pcm_t>       m_pcm;
+    EMU_Options                  m_options;
 };
 
 Romset EMU_DetectRomset(const std::filesystem::path& base_path);

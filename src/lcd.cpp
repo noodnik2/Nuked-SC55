@@ -544,10 +544,6 @@ void LCD_HandleEvent(lcd_t& lcd, const SDL_Event& sdl_event)
 
     switch (sdl_event.type)
     {
-        case SDL_QUIT:
-            lcd.lcd_quit_requested = true;
-            break;
-
         case SDL_WINDOWEVENT:
             if (sdl_event.window.event == SDL_WINDOWEVENT_CLOSE)
             {
