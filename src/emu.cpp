@@ -231,11 +231,8 @@ bool EMU_ReadStreamExact(std::ifstream& s, std::span<uint8_t> into, std::streams
 
 std::streamsize EMU_ReadStreamUpTo(std::ifstream& s, void* into, std::streamsize byte_count)
 {
-    if (s.read((char*)into, byte_count))
-    {
-        return s.gcount();
-    }
-    return 0;
+    s.read((char*)into, byte_count);
+    return s.gcount();
 }
 
 bool Emulator::LoadRoms(Romset romset, const std::filesystem::path& base_path)
