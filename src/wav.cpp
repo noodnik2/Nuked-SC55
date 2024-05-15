@@ -106,7 +106,7 @@ void WAV_Handle::Finish(uint32_t sample_rate)
         // fact
         WAV_WriteCString(m_output, "fact");
         WAV_WriteU32LE(m_output, 4);
-        WAV_WriteU32LE(m_output, 4);
+        WAV_WriteU32LE(m_output, m_frames_written);
         // data
         WAV_WriteCString(m_output, "data");
         WAV_WriteU32LE(m_output, m_frames_written * sizeof(AudioFrame<float>));
