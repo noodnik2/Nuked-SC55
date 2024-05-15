@@ -6,6 +6,7 @@
 #include <fstream>
 #include <cstdint>
 #include <filesystem>
+#include "audio.h"
 
 class WAV_Handle
 {
@@ -19,14 +20,16 @@ public:
     WAV_Handle(const WAV_Handle&) = delete;
     WAV_Handle& operator=(const WAV_Handle&) = delete;
 
-    void Open(const char* filename);
-    void Open(const std::filesystem::path& filename);
+    void Open(const char* filename, AudioFormat format);
+    void Open(const std::filesystem::path& filename, AudioFormat format);
     void Close();
-    void WriteSample(int16_t left, int16_t right);
+    void Write(const AudioFrame<int16_t>& frame);
+    void Write(const AudioFrame<float>& frame);
     void Finish(uint32_t sample_rate);
 
 private:
-    std::ofstream output;
-    uint64_t samples_written = 0;
+    std::ofstream m_output;
+    uint64_t      m_frames_written = 0;
+    AudioFormat   m_format;
 };
 

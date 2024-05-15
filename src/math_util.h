@@ -65,3 +65,13 @@ inline void horizontal_sat_add_i16(int16_t* dest, int16_t* src_first, int16_t* s
         ++dest;
     }
 }
+
+inline void horizontal_add_f32(float* dest, float* src_first, float* src_last)
+{
+    while (src_first != src_last)
+    {
+        *dest = *dest + *src_first;
+        ++src_first;
+        ++dest;
+    }
+}

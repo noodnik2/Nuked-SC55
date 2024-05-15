@@ -36,6 +36,7 @@
 #include "ringbuffer.h"
 #include "path_util.h"
 #include "command_line.h"
+#include "audio.h"
 #include <SDL.h>
 #include <cinttypes>
 #include <optional>
@@ -43,19 +44,13 @@
 using Ringbuffer_S16 = Ringbuffer<int16_t>;
 using Ringbuffer_F32 = Ringbuffer<float>;
 
-enum class FE_OutputFormat
-{
-    S16,
-    F32,
-};
-
 struct fe_emu_instance_t {
     Emulator        emu;
     Ringbuffer_S16  sample_buffer_s16;
     Ringbuffer_F32  sample_buffer_f32;
     std::thread     thread;
     bool            running;
-    FE_OutputFormat format;
+    AudioFormat     format;
 
     // Statically selects the correct ringbuffer field into based on SampleT.
     template <typename SampleT>
@@ -102,7 +97,7 @@ struct FE_Parameters
     size_t instances = 1;
     Romset romset = Romset::MK2;
     std::optional<std::filesystem::path> rom_directory;
-    FE_OutputFormat output_format = FE_OutputFormat::S16;
+    AudioFormat output_format = AudioFormat::S16;
     bool no_lcd = false;
 };
 
@@ -249,11 +244,11 @@ bool FE_OpenAudio(frontend_t& fe, const FE_Parameters& params)
 
     switch (params.output_format)
     {
-        case FE_OutputFormat::S16:
+        case AudioFormat::S16:
             spec.format = AUDIO_S16SYS;
             spec.callback = FE_AudioCallback<int16_t>;
             break;
-        case FE_OutputFormat::F32:
+        case AudioFormat::F32:
             spec.format = AUDIO_F32SYS;
             spec.callback = FE_AudioCallback<float>;
             break;
@@ -396,10 +391,10 @@ void FE_Run(frontend_t& fe)
         fe.instances[i].running = true;
         switch (fe.instances[i].format)
         {
-            case FE_OutputFormat::S16:
+            case AudioFormat::S16:
                 fe.instances[i].thread = std::thread(FE_RunInstance<int16_t>, std::ref(fe.instances[i]));
                 break;
-            case FE_OutputFormat::F32:
+            case AudioFormat::F32:
                 fe.instances[i].thread = std::thread(FE_RunInstance<float>, std::ref(fe.instances[i]));
                 break;
             default:
@@ -449,10 +444,10 @@ bool FE_CreateInstance(frontend_t& container, const std::filesystem::path& base_
 
     switch (fe->format)
     {
-        case FE_OutputFormat::S16:
+        case AudioFormat::S16:
             fe->emu.SetSampleCallback(FE_ReceiveSample_S16, fe);
             break;
-        case FE_OutputFormat::F32:
+        case AudioFormat::F32:
             fe->emu.SetSampleCallback(FE_ReceiveSample_F32, fe);
             break;
         default:
@@ -586,11 +581,11 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
 
             if (reader.Arg() == "s16")
             {
-                result.output_format = FE_OutputFormat::S16;
+                result.output_format = AudioFormat::S16;
             }
             else if (reader.Arg() == "f32")
             {
-                result.output_format = FE_OutputFormat::F32;
+                result.output_format = AudioFormat::F32;
             }
             else
             {
@@ -827,10 +822,10 @@ int main(int argc, char *argv[])
         const size_t rb_size = frontend.audio_buffer_size / 2;
         switch (fe.format)
         {
-            case FE_OutputFormat::S16:
+            case AudioFormat::S16:
                 fe.sample_buffer_s16 = Ringbuffer_S16(rb_size);
                 break;
-            case FE_OutputFormat::F32:
+            case AudioFormat::F32:
                 fe.sample_buffer_f32 = Ringbuffer_F32(rb_size);
                 break;
             default:

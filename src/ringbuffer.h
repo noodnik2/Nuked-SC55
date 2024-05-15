@@ -35,12 +35,7 @@
 
 #include <vector>
 #include "math_util.h"
-
-template <typename T>
-struct AudioFrame {
-    T left;
-    T right;
-};
+#include "audio.h"
 
 template <typename T>
 class Ringbuffer {

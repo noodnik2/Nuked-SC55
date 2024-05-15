@@ -3,6 +3,7 @@
 #include "wav.h"
 #include "ringbuffer.h"
 #include "command_line.h"
+#include "audio.h"
 #include <string>
 #include <cstdio>
 #include <charconv>
@@ -19,6 +20,7 @@ struct R_Parameters
     size_t instances = 1;
     EMU_SystemReset reset = EMU_SystemReset::NONE;
     std::filesystem::path rom_directory;
+    AudioFormat output_format = AudioFormat::S16;
 };
 
 enum class R_ParseError
@@ -31,6 +33,7 @@ enum class R_ParseError
     InstancesOutOfRange,
     UnexpectedEnd,
     RomDirectoryNotFound,
+    FormatInvalid,
 };
 
 const char* R_ParseErrorStr(R_ParseError err)
@@ -53,6 +56,8 @@ const char* R_ParseErrorStr(R_ParseError err)
             return "Expected another argument";
         case R_ParseError::RomDirectoryNotFound:
             return "Rom directory doesn't exist";
+        case R_ParseError::FormatInvalid:
+            return "Output format invalid";
     }
     return "Unknown error";
 }
@@ -127,6 +132,26 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
                 return R_ParseError::RomDirectoryNotFound;
             }
         }
+        else if (reader.Any("-f", "--format"))
+        {
+            if (!reader.Next())
+            {
+                return R_ParseError::UnexpectedEnd;
+            }
+
+            if (reader.Arg() == "s16")
+            {
+                result.output_format = AudioFormat::S16;
+            }
+            else if (reader.Arg() == "f32")
+            {
+                result.output_format = AudioFormat::F32;
+            }
+            else
+            {
+                return R_ParseError::FormatInvalid;
+            }
+        }
         else
         {
             if (result.input_filename.size())
@@ -153,7 +178,8 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
 struct R_TrackRenderState
 {
     Emulator emu;
-    std::vector<AudioFrame<int16_t>> buffer;
+    std::vector<AudioFrame<int16_t>> buffer_s16;
+    std::vector<AudioFrame<float>> buffer_f32;
     size_t us_simulated = 0;
     const SMF_Track* track = nullptr;
     std::thread thread;
@@ -164,15 +190,25 @@ struct R_TrackRenderState
 
     void MixInto(std::vector<AudioFrame<int16_t>>& output)
     {
-        if (output.size() < buffer.size())
+        if (output.size() < buffer_s16.size())
         {
-            output.resize(buffer.size(), AudioFrame<int16_t>{});
+            output.resize(buffer_s16.size(), AudioFrame<int16_t>{});
         }
-        horizontal_sat_add_i16((int16_t*)output.data(), (int16_t*)buffer.data(), (int16_t*)(buffer.data() + buffer.size()));
+        horizontal_sat_add_i16((int16_t*)output.data(), (int16_t*)buffer_s16.data(), (int16_t*)(buffer_s16.data() + buffer_s16.size()));
     }
+
+    void MixInto(std::vector<AudioFrame<float>>& output)
+    {
+        if (output.size() < buffer_f32.size())
+        {
+            output.resize(buffer_f32.size(), AudioFrame<float>{});
+        }
+        horizontal_add_f32((float*)output.data(), (float*)buffer_f32.data(), (float*)(buffer_f32.data() + buffer_f32.size()));
+    }
+
 };
 
-void R_ReceiveSample(void* userdata, int32_t left, int32_t right)
+void R_ReceiveSample_S16(void* userdata, int32_t left, int32_t right)
 {
     R_TrackRenderState* state = (R_TrackRenderState*)userdata;
 
@@ -180,7 +216,20 @@ void R_ReceiveSample(void* userdata, int32_t left, int32_t right)
     frame.left = (int16_t)clamp<int32_t>(left >> 15, INT16_MIN, INT16_MAX);
     frame.right = (int16_t)clamp<int32_t>(right >> 15, INT16_MIN, INT16_MAX);
 
-    state->buffer.push_back(frame);
+    state->buffer_s16.push_back(frame);
+}
+
+void R_ReceiveSample_F32(void* userdata, int32_t left, int32_t right)
+{
+    constexpr float DIV_REC = 1.0f / 536870912.0f;
+
+    R_TrackRenderState* state = (R_TrackRenderState*)userdata;
+
+    AudioFrame<float> frame;
+    frame.left = (float)left * DIV_REC;
+    frame.right = (float)right * DIV_REC;
+
+    state->buffer_f32.push_back(frame);
 }
 
 void R_RunReset(Emulator& emu, EMU_SystemReset reset)
@@ -313,7 +362,18 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
         printf("Running system reset for #%02" PRIu64 "...\n", i);
         R_RunReset(render_states[i].emu, params.reset);
 
-        render_states[i].emu.SetSampleCallback(R_ReceiveSample, &render_states[i]);
+        switch (params.output_format)
+        {
+            case AudioFormat::S16:
+                render_states[i].emu.SetSampleCallback(R_ReceiveSample_S16, &render_states[i]);
+                break;
+            case AudioFormat::F32:
+                render_states[i].emu.SetSampleCallback(R_ReceiveSample_F32, &render_states[i]);
+                break;
+            default:
+                printf("Invalid audio format\n");
+                return false;
+        }
 
         render_states[i].track = &split_tracks.tracks[i];
 
@@ -356,17 +416,39 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     printf("Mixing final track and writing to disk...\n");
 
     WAV_Handle render_output;
-    render_output.Open(params.output_filename);
+    render_output.Open(params.output_filename, params.output_format);
 
-    std::vector<AudioFrame<int16_t>> rendered_track;
-    for (size_t instance = 0; instance < instances; ++instance)
+    switch (params.output_format)
     {
-        render_states[instance].MixInto(rendered_track);
-    }
-
-    for (const auto& sample : rendered_track)
-    {
-        render_output.WriteSample(sample.left, sample.right);
+        case AudioFormat::S16:
+            {
+                std::vector<AudioFrame<int16_t>> rendered_track;
+                for (size_t instance = 0; instance < instances; ++instance)
+                {
+                    render_states[instance].MixInto(rendered_track);
+                }
+                for (const auto& frame : rendered_track)
+                {
+                    render_output.Write(frame);
+                }
+                break;
+            }
+        case AudioFormat::F32:
+            {
+                std::vector<AudioFrame<float>> rendered_track;
+                for (size_t instance = 0; instance < instances; ++instance)
+                {
+                    render_states[instance].MixInto(rendered_track);
+                }
+                for (const auto& frame : rendered_track)
+                {
+                    render_output.Write(frame);
+                }
+                break;
+            }
+        default:
+            printf("Invalid audio format\n");
+            return false;
     }
 
     render_output.Finish(MCU_GetOutputFrequency(render_states[0].emu.GetMCU()));
@@ -385,6 +467,7 @@ void R_Usage(const char* prog_name)
     printf("  -n, --instances <instances>    Number of emulators to use (increases effective polyphony, longer to render)\n");
     printf("  -r, --reset gs|gm              Send GS or GM reset before rendering.\n");
     printf("  -d, --rom-directory <dir>      Sets the directory to load roms from.\n");
+    printf("  -f, --format s16|f32           Set output format.\n");
     printf("\n");
 }
 
