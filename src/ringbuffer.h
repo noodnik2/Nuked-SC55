@@ -106,6 +106,20 @@ public:
         return read_count;
     }
 
+    void ReadMixOne(AudioFrameType& dest, const AudioFrameType& src)
+        requires std::is_same_v<T, int16_t>
+    {
+        dest.left = saturating_add(dest.left, src.left);
+        dest.right = saturating_add(dest.right, src.right);
+    }
+
+    void ReadMixOne(AudioFrameType& dest, const AudioFrameType& src)
+        requires std::is_same_v<T, float>
+    {
+        dest.left += src.left;
+        dest.right += src.right;
+    }
+
     // Reads up to `frame_count` frames and returns the number of frames
     // actually read. Mixes samples into dest by adding and clipping.
     size_t ReadMix(AudioFrameType* dest, size_t frame_count)
@@ -115,21 +129,7 @@ public:
         size_t working_read_head = m_read_head;
         for (size_t i = 0; i < read_count; ++i)
         {
-            // TODO: extract implementation selection
-            if constexpr (std::is_same_v<T, int16_t>)
-            {
-                dest[i].left = saturating_add(dest[i].left, m_frames[working_read_head].left);
-                dest[i].right = saturating_add(dest[i].right, m_frames[working_read_head].right);
-            }
-            else if constexpr (std::is_same_v<T, float>)
-            {
-                dest[i].left = dest[i].left + m_frames[working_read_head].left;
-                dest[i].right = dest[i].right + m_frames[working_read_head].right;
-            }
-            else
-            {
-                static_assert(false, "No implementation for T in Ringbuffer::ReadMix");
-            }
+            ReadMixOne(dest[i], m_frames[working_read_head]);
             working_read_head = (working_read_head + 1) % m_frames.size();
         }
         m_read_head = working_read_head;

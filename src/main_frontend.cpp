@@ -44,6 +44,11 @@
 using Ringbuffer_S16 = Ringbuffer<int16_t>;
 using Ringbuffer_F32 = Ringbuffer<float>;
 
+// Workaround until all compilers implement CWG 2518 (at time of writing, MSVC
+// doesn't accept a static_assert(false) in a constexpr conditional branch)
+template <typename>
+constexpr bool DependentFalse = false;
+
 struct fe_emu_instance_t {
     Emulator        emu;
     Ringbuffer_S16  sample_buffer_s16;
@@ -66,7 +71,7 @@ struct fe_emu_instance_t {
         }
         else
         {
-            static_assert(false, "No valid case for SampleT");
+            static_assert(DependentFalse<SampleT>, "No valid case for SampleT");
         }
     }
 };
