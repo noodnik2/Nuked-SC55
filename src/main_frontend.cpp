@@ -745,7 +745,7 @@ void FE_Usage()
     printf("\n");
     printf("  -p, --port          <port_number>             Set MIDI port.\n");
     printf("  -a, --audio-device  <device_number>           Set Audio Device index.\n");
-    printf("  -b, --buffer-size   <page_size>:[page_count]  Set Audio Buffer size.\n");
+    printf("  -b, --buffer-size   <page_size>[:page_count]  Set Audio Buffer size.\n");
     printf("  -f, --format        s16|f32                   Set output format.\n");
     printf("  -n, --instances     <count>                   Set number of emulator instances.\n");
     printf("  --no-lcd                                      Run without LCDs.\n");
