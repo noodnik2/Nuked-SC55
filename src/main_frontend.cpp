@@ -37,6 +37,7 @@
 #include "path_util.h"
 #include "command_line.h"
 #include "audio.h"
+#include "cast.h"
 #include <SDL.h>
 #include <cinttypes>
 #include <optional>
@@ -82,8 +83,8 @@ struct frontend_t {
     fe_emu_instance_t instances[FE_MAX_INSTANCES];
     size_t instances_in_use = 0;
 
-    int audio_buffer_size = 0;
-    int audio_page_size = 0;
+    uint32_t audio_buffer_size = 0;
+    uint32_t audio_page_size = 0;
 
     SDL_AudioDeviceID sdl_audio = 0;
 
@@ -95,8 +96,8 @@ struct FE_Parameters
     bool help = false;
     int port = 0;
     int audio_device_index = -1;
-    int page_size = 512;
-    int page_num = 32;
+    uint32_t page_size = 512;
+    uint32_t page_num = 32;
     bool autodetect = true;
     EMU_SystemReset reset = EMU_SystemReset::NONE;
     size_t instances = 1;
@@ -188,8 +189,8 @@ void FE_AudioCallback(void* userdata, Uint8* stream, int len)
 {
     frontend_t& frontend = *(frontend_t*)userdata;
 
-    const size_t num_frames = len / sizeof(AudioFrame<SampleT>);
-    memset(stream, 0, len);
+    const size_t num_frames = (size_t)len / sizeof(AudioFrame<SampleT>);
+    memset(stream, 0, (size_t)len);
 
     size_t renderable_count = num_frames;
     for (size_t i = 0; i < frontend.instances_in_use; ++i)
@@ -261,10 +262,10 @@ bool FE_OpenAudio(frontend_t& fe, const FE_Parameters& params)
             printf("Invalid output format\n");
             return false;
     }
-    spec.freq = MCU_GetOutputFrequency(mcu);
+    spec.freq = RangeCast<int>(MCU_GetOutputFrequency(mcu));
     spec.channels = 2;
     spec.userdata = &fe;
-    spec.samples = fe.audio_page_size / 4;
+    spec.samples = RangeCast<Uint16>(fe.audio_page_size / 4);
 
     int num = SDL_GetNumAudioDevices(0);
     if (num == 0)

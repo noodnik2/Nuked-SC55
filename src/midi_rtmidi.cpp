@@ -2,6 +2,7 @@
 #include "mcu.h"
 #include "emu.h"
 #include "midi.h"
+#include "cast.h"
 #include <RtMidi.h>
 
 static RtMidiIn *s_midi_in = nullptr;
@@ -54,7 +55,7 @@ bool MIDI_Init(frontend_t& frontend, int port)
         port = 0;
     }
 
-    s_midi_in->openPort(port, "Nuked SC55");
+    s_midi_in->openPort(RangeCast<unsigned int>(port), "Nuked SC55");
 
     return true;
 }

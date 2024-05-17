@@ -975,7 +975,7 @@ void MCU_EncoderTrigger(mcu_t& mcu, int dir)
     MCU_GA_SetGAInt(mcu, dir == 0 ? 3 : 4, 1);
 }
 
-int MCU_GetOutputFrequency(const mcu_t& mcu)
+uint32_t MCU_GetOutputFrequency(const mcu_t& mcu)
 {
     return (mcu.mcu_mk1 || mcu.mcu_jv880) ? 64000 : 66207;
 }

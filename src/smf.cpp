@@ -1,4 +1,5 @@
 #include "smf.h"
+#include "cast.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -12,7 +13,7 @@
 [[nodiscard]]
 inline uint16_t UncheckedLoadU16BE(const uint8_t* ptr)
 {
-    return ((uint16_t)(*ptr) << 8) | ((uint16_t)(*(ptr + 1)));
+    return (uint16_t)((uint16_t)(*ptr) << 8) | (uint16_t)(*(ptr + 1));
 }
 
 // security: do not call without verifying [ptr,ptr+3] is a readable range
@@ -170,7 +171,9 @@ void SMF_SetDeltasFromTimestamps(SMF_Track& track)
 {
     for (size_t i = 1; i < track.events.size(); ++i)
     {
-        track.events[i].delta_time = track.events[i].timestamp - track.events[i - 1].timestamp;
+        track.events[i].delta_time = RangeCast<uint32_t>(
+            track.events[i].timestamp - track.events[i - 1].timestamp
+        );
     }
 }
 
@@ -312,12 +315,12 @@ bool SMF_ReadAllBytes(const std::filesystem::path& filename, std::vector<uint8_t
     }
 
     input.seekg(0, std::ios::end);
-    size_t byte_count = input.tellg();
+    std::streamoff byte_count = input.tellg();
     input.seekg(0, std::ios::beg);
 
-    buffer.resize(byte_count);
+    buffer.resize(RangeCast<size_t>(byte_count));
 
-    input.read((char*)buffer.data(), byte_count);
+    input.read((char*)buffer.data(), RangeCast<std::streamsize>(byte_count));
 
     return input.good();
 }

@@ -38,6 +38,7 @@
 #include <thread>
 #include <mutex>
 #include "mcu_interrupt.h"
+#include "cast.h"
 
 struct submcu_t;
 struct pcm_t;
@@ -302,7 +303,7 @@ void MCU_Write(mcu_t& mcu, uint32_t address, uint8_t value);
 void MCU_Write16(mcu_t& mcu, uint32_t address, uint16_t value);
 
 inline uint32_t MCU_GetAddress(uint8_t page, uint16_t address) {
-    return (page << 16) + address;
+    return ((uint32_t)page << 16) + address;
 }
 
 inline uint8_t MCU_ReadCode(mcu_t& mcu) {
@@ -340,20 +341,20 @@ inline void MCU_ControlRegisterWrite(mcu_t& mcu, uint32_t reg, uint32_t siz, uin
     {
         if (reg == 0)
         {
-            mcu.sr = data;
+            mcu.sr = (uint16_t)data;
             mcu.sr &= sr_mask;
         }
         else if (reg == 5) // FIXME: undocumented
         {
-            mcu.dp = data & 0xff;
+            mcu.dp = (uint8_t)(data & 0xff);
         }
         else if (reg == 4) // FIXME: undocumented
         {
-            mcu.ep = data & 0xff;
+            mcu.ep = (uint8_t)(data & 0xff);
         }
         else if (reg == 3) // FIXME: undocumented
         {
-            mcu.br = data & 0xff;
+            mcu.br = (uint8_t)(data & 0xff);
         }
         else
         {
@@ -370,19 +371,19 @@ inline void MCU_ControlRegisterWrite(mcu_t& mcu, uint32_t reg, uint32_t siz, uin
         }
         else if (reg == 3)
         {
-            mcu.br = data;
+            mcu.br = (uint8_t)data;
         }
         else if (reg == 4)
         {
-            mcu.ep = data;
+            mcu.ep = (uint8_t)data;
         }
         else if (reg == 5)
         {
-            mcu.dp = data;
+            mcu.dp = (uint8_t)data;
         }
         else if (reg == 7)
         {
-            mcu.tp = data;
+            mcu.tp = (uint8_t)data;
         }
         else
         {
@@ -402,15 +403,15 @@ inline uint32_t MCU_ControlRegisterRead(mcu_t& mcu, uint32_t reg, uint32_t siz)
         }
         else if (reg == 5) // FIXME: undocumented
         {
-            ret = mcu.dp | (mcu.dp << 8);
+            ret = (uint32_t)mcu.dp | ((uint32_t)mcu.dp << 8);
         }
         else if (reg == 4) // FIXME: undocumented
         {
-            ret = mcu.ep | (mcu.ep << 8);
+            ret = (uint32_t)mcu.ep | ((uint32_t)mcu.ep << 8);
         }
         else if (reg == 3) // FIXME: undocumented
         {
-            ret = mcu.br | (mcu.br << 8);;
+            ret = (uint32_t)mcu.br | ((uint32_t)mcu.br << 8);;
         }
         else
         {
@@ -452,9 +453,9 @@ inline uint32_t MCU_ControlRegisterRead(mcu_t& mcu, uint32_t reg, uint32_t siz)
 inline void MCU_SetStatus(mcu_t& mcu, uint32_t condition, uint32_t mask)
 {
     if (condition)
-        mcu.sr |= mask;
+        mcu.sr |= (uint16_t)mask;
     else
-        mcu.sr &= ~mask;
+        mcu.sr &= (uint16_t)(~mask);
 }
 
 inline void MCU_PushStack(mcu_t& mcu, uint16_t data)
@@ -546,4 +547,4 @@ void MCU_PostUART(mcu_t& mcu, uint8_t data);
 void MCU_WorkThread_Lock(mcu_t& mcu);
 void MCU_WorkThread_Unlock(mcu_t& mcu);
 
-int MCU_GetOutputFrequency(const mcu_t& mcu);
+uint32_t MCU_GetOutputFrequency(const mcu_t& mcu);

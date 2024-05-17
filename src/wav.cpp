@@ -1,11 +1,12 @@
 #include "wav.h"
+#include "cast.h"
 
 #include <cassert>
 #include <cstring>
 
 void WAV_WriteBytes(std::ofstream& output, const char* bytes, size_t len)
 {
-    output.write(bytes, len);
+    output.write(bytes, RangeCast<std::streamsize>(len));
 }
 
 void WAV_WriteCString(std::ofstream& output, const char* s)
@@ -64,7 +65,7 @@ void WAV_Handle::Finish(uint32_t sample_rate)
 
     if (m_format == AudioFormat::S16)
     {
-        const uint32_t data_size = m_frames_written * sizeof(AudioFrame<int16_t>);
+        const uint32_t data_size = RangeCast<uint32_t>(m_frames_written * sizeof(AudioFrame<int16_t>));
 
         // RIFF header
         WAV_WriteCString(m_output, "RIFF");
@@ -81,13 +82,13 @@ void WAV_Handle::Finish(uint32_t sample_rate)
         WAV_WriteU16LE(m_output, 16);
         // data
         WAV_WriteCString(m_output, "data");
-        WAV_WriteU32LE(m_output, m_frames_written * sizeof(AudioFrame<int16_t>));
+        WAV_WriteU32LE(m_output, data_size);
 
         assert(m_output.tellp() == 44);
     }
     else
     {
-        const uint32_t data_size = m_frames_written * sizeof(AudioFrame<float>);
+        const uint32_t data_size = RangeCast<uint32_t>(m_frames_written * sizeof(AudioFrame<float>));
 
         // RIFF header
         WAV_WriteCString(m_output, "RIFF");
@@ -106,10 +107,10 @@ void WAV_Handle::Finish(uint32_t sample_rate)
         // fact
         WAV_WriteCString(m_output, "fact");
         WAV_WriteU32LE(m_output, 4);
-        WAV_WriteU32LE(m_output, m_frames_written);
+        WAV_WriteU32LE(m_output, RangeCast<uint32_t>(m_frames_written));
         // data
         WAV_WriteCString(m_output, "data");
-        WAV_WriteU32LE(m_output, m_frames_written * sizeof(AudioFrame<float>));
+        WAV_WriteU32LE(m_output, data_size);
 
         assert(m_output.tellp() == 58);
     }

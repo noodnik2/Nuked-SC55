@@ -54,7 +54,7 @@ public:
         m_oversampling = enabled;
         if (m_oversampling)
         {
-            m_write_head &= ~1;
+            m_write_head &= ~1ull;
         }
     }
 

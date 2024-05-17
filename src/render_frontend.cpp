@@ -4,6 +4,7 @@
 #include "ringbuffer.h"
 #include "command_line.h"
 #include "audio.h"
+#include "cast.h"
 #include <string>
 #include <cstdio>
 #include <charconv>
@@ -402,7 +403,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
 
         if (!all_done)
         {
-            R_CursorUpLines(instances);
+            R_CursorUpLines(RangeCast<int>(instances));
         }
 
         std::this_thread::sleep_for(1000ms);

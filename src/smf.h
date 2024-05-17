@@ -29,7 +29,7 @@ struct SMF_Event
     // MIDI message type.
     uint8_t status;
     // Offset to raw data bytes for this message within an SMF_ByteSpan.
-    uint32_t data_first, data_last;
+    size_t data_first, data_last;
 
     uint8_t GetChannel() const
     {
