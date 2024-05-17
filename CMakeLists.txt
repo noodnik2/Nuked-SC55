@@ -45,6 +45,7 @@ target_sources(nuked-sc55-backend
     src/math_util.h
     src/path_util.cpp src/path_util.h
     src/command_line.h
+    src/cast.h
 )
 target_link_libraries(nuked-sc55-backend PRIVATE SDL2::SDL2)
 target_compile_features(nuked-sc55-backend PRIVATE cxx_std_23)
