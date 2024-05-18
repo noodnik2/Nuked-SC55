@@ -1,7 +1,19 @@
-cmake_minimum_required (VERSION 3.15)
+cmake_minimum_required (VERSION 3.19)
 project (NukedSC55 VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
+#==============================================================================
+# Tests
+#==============================================================================
+option(NUKED_ENABLE_TESTS "Enable tests" OFF)
+set(NUKED_TEST_ROMDIR "" CACHE PATH
+    "Directory the test runner should look for roms in")
+
+if(NUKED_ENABLE_TESTS)
+    enable_testing()
+    add_subdirectory("test")
+endif()
 
 #==============================================================================
 # Dependencies
