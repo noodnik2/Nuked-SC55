@@ -1,6 +1,7 @@
 #include "emu.h"
 #include "smf.h"
 #include "wav.h"
+#include "path_util.h"
 #include "ringbuffer.h"
 #include "command_line.h"
 #include "audio.h"
@@ -459,16 +460,27 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     return true;
 }
 
-void R_Usage(const char* prog_name)
+void R_Usage()
 {
-    printf("Usage: %s <input>\n", prog_name);
-    printf("Options:\n");
-    printf("  -h, --help                     Print this message\n");
-    printf("  -o <filename>                  Render to filename\n");
-    printf("  -n, --instances <instances>    Number of emulators to use (increases effective polyphony, longer to render)\n");
-    printf("  -r, --reset gs|gm              Send GS or GM reset before rendering.\n");
-    printf("  -d, --rom-directory <dir>      Sets the directory to load roms from.\n");
+    std::string name = P_GetProcessPath().stem().generic_string();
+
+    printf("Renders a standard MIDI file to a WAVE file using nuked-sc55.\n");
+    printf("\n");
+    printf("Usage: %s [options] -o <output> <input>\n", name.c_str());
+    printf("\n");
+    printf("General options:\n");
+    printf("  -?, -h, --help                 Display this information.\n");
+    printf("  -o <filename>                  (required) Render WAVE file to filename.\n");
+    printf("\n");
+    printf("Audio options:\n");
     printf("  -f, --format s16|f32           Set output format.\n");
+    printf("\n");
+    printf("Emulator options:\n");
+    printf("  -r, --reset     gs|gm          Send GS or GM reset before rendering.\n");
+    printf("  -n, --instances <count>        Number of emulators to use (increases effective polyphony, longer to render)\n");
+    printf("\n");
+    printf("ROM management options:\n");
+    printf("  -d, --rom-directory <dir>      Sets the directory to load roms from. Romset will be detected.\n");
     printf("\n");
 }
 
@@ -480,13 +492,13 @@ int main(int argc, char* argv[])
     if (result != R_ParseError::Success)
     {
         printf("error: %s\n", R_ParseErrorStr(result));
-        R_Usage(argv[0]);
+        R_Usage();
         return 1;
     }
 
     if (params.help)
     {
-        R_Usage(argv[0]);
+        R_Usage();
         return 0;
     }
 

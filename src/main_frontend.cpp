@@ -740,17 +740,23 @@ void FE_Usage()
     std::string name = P_GetProcessPath().stem().generic_string();
 
     printf("Usage: %s [options]\n", name.c_str());
-    printf("Options:\n");
-    printf("  -h, --help, -?                                Display this information.\n");
     printf("\n");
-    printf("  -p, --port          <port_number>             Set MIDI port.\n");
-    printf("  -a, --audio-device  <device_number>           Set Audio Device index.\n");
-    printf("  -b, --buffer-size   <page_size>[:page_count]  Set Audio Buffer size.\n");
-    printf("  -f, --format        s16|f32                   Set output format.\n");
-    printf("  -n, --instances     <count>                   Set number of emulator instances.\n");
+    printf("General options:\n");
+    printf("  -?, -h, --help                                Display this information.\n");
+    printf("\n");
+    printf("Audio options:\n");
+    printf("  -p, --port         <port_number>              Set MIDI input port.\n");
+    printf("  -a, --audio-device <device_number>            Set Audio Device index.\n");
+    printf("  -b, --buffer-size  <page_size>[:page_count]   Set Audio Buffer size.\n");
+    printf("  -f, --format       s16|f32                    Set output format.\n");
+    printf("\n");
+    printf("Emulator options:\n");
+    printf("  -r, --reset     gs|gm                         Reset system in GS or GM mode.\n");
+    printf("  -n, --instances <count>                       Set number of emulator instances.\n");
     printf("  --no-lcd                                      Run without LCDs.\n");
     printf("\n");
-    printf("  -d, --rom-directory <dir>                     Set directory to look for ROMs in.\n");
+    printf("ROM management options:\n");
+    printf("  -d, --rom-directory <dir>                     Sets the directory to load roms from.\n");
     printf("  --mk2                                         Use SC-55mk2 ROM set.\n");
     printf("  --st                                          Use SC-55st ROM set.\n");
     printf("  --mk1                                         Use SC-55mk1 ROM set.\n");
@@ -759,7 +765,6 @@ void FE_Usage()
     printf("  --scb55                                       Use SCB-55 ROM set.\n");
     printf("  --rlp3237                                     Use RLP-3237 ROM set.\n");
     printf("\n");
-    printf("  -r, --reset        gs|gm                      Reset system in GS or GM mode.\n");
 }
 
 int main(int argc, char *argv[])
