@@ -34,6 +34,7 @@
 #pragma once
 
 #include <vector>
+#include <span>
 #include "math_util.h"
 #include "audio.h"
 
@@ -120,6 +121,12 @@ public:
         dest.right += src.right;
     }
 
+    void UncheckedReadOne(AudioFrameType& dest)
+    {
+        dest = m_frames[m_read_head];
+        m_read_head = (m_read_head + 1) % m_frames.size();
+    }
+
     // Reads up to `frame_count` frames and returns the number of frames
     // actually read. Mixes samples into dest by adding and clipping.
     size_t ReadMix(AudioFrameType* dest, size_t frame_count)
@@ -134,6 +141,16 @@ public:
         }
         m_read_head = working_read_head;
         return read_count;
+    }
+
+    static size_t MinReadableFrameCount(std::span<const Ringbuffer> buffers)
+    {
+        size_t result = (size_t)-1;
+        for (const Ringbuffer& buffer : buffers)
+        {
+            result = min(result, buffer.ReadableFrameCount());
+        }
+        return result;
     }
 
 private:

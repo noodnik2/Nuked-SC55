@@ -20,16 +20,18 @@ public:
     WAV_Handle(const WAV_Handle&) = delete;
     WAV_Handle& operator=(const WAV_Handle&) = delete;
 
+    void SetSampleRate(uint32_t sample_rate);
+
     void Open(const char* filename, AudioFormat format);
     void Open(const std::filesystem::path& filename, AudioFormat format);
     void Close();
     void Write(const AudioFrame<int16_t>& frame);
     void Write(const AudioFrame<float>& frame);
-    void Finish(uint32_t sample_rate);
+    void Finish();
 
 private:
     std::ofstream m_output;
     uint64_t      m_frames_written = 0;
     AudioFormat   m_format;
+    uint32_t      m_sample_rate;
 };
-

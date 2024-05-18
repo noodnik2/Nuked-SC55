@@ -47,6 +47,11 @@ void WAV_WriteF32LE(std::ofstream& output, float value)
     WAV_WriteU32LE(output, std::bit_cast<uint32_t>(value));
 }
 
+void WAV_Handle::SetSampleRate(uint32_t sample_rate)
+{
+    m_sample_rate = sample_rate;
+}
+
 void WAV_Handle::Open(const char* filename, AudioFormat format)
 {
     Open(std::filesystem::path(filename), format);
@@ -79,7 +84,7 @@ void WAV_Handle::Write(const AudioFrame<float>& frame)
     ++m_frames_written;
 }
 
-void WAV_Handle::Finish(uint32_t sample_rate)
+void WAV_Handle::Finish()
 {
     // go back and fill in the header
     m_output.seekp(0);
@@ -98,8 +103,8 @@ void WAV_Handle::Finish(uint32_t sample_rate)
         WAV_WriteU32LE(m_output, 16);
         WAV_WriteU16LE(m_output, (uint16_t)WaveFormat::PCM);
         WAV_WriteU16LE(m_output, AudioFrame<int16_t>::channel_count);
-        WAV_WriteU32LE(m_output, sample_rate);
-        WAV_WriteU32LE(m_output, sample_rate * sizeof(AudioFrame<int16_t>));
+        WAV_WriteU32LE(m_output, m_sample_rate);
+        WAV_WriteU32LE(m_output, m_sample_rate * sizeof(AudioFrame<int16_t>));
         WAV_WriteU16LE(m_output, sizeof(AudioFrame<int16_t>));
         WAV_WriteU16LE(m_output, 8 * sizeof(int16_t));
         // data
@@ -122,8 +127,8 @@ void WAV_Handle::Finish(uint32_t sample_rate)
         WAV_WriteU32LE(m_output, 18);
         WAV_WriteU16LE(m_output, (uint16_t)WaveFormat::IEEE_FLOAT);
         WAV_WriteU16LE(m_output, AudioFrame<float>::channel_count);
-        WAV_WriteU32LE(m_output, sample_rate);
-        WAV_WriteU32LE(m_output, sample_rate * sizeof(AudioFrame<float>));
+        WAV_WriteU32LE(m_output, m_sample_rate);
+        WAV_WriteU32LE(m_output, m_sample_rate * sizeof(AudioFrame<float>));
         WAV_WriteU16LE(m_output, sizeof(AudioFrame<float>));
         WAV_WriteU16LE(m_output, 8 * sizeof(float));
         WAV_WriteU16LE(m_output, 0);
