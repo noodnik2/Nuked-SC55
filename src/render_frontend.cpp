@@ -185,7 +185,7 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
         return R_ParseError::NoInput;
     }
 
-    if (result.output_filename.size() == 0)
+    if (result.output_filename.size() == 0 && !result.output_stdout)
     {
         return R_ParseError::NoOutput;
     }
