@@ -18,6 +18,11 @@
 #include <thread>
 #include <condition_variable>
 
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
+
 using namespace std::chrono_literals;
 
 struct R_Parameters
@@ -29,6 +34,7 @@ struct R_Parameters
     EMU_SystemReset reset = EMU_SystemReset::NONE;
     std::filesystem::path rom_directory;
     AudioFormat output_format = AudioFormat::S16;
+    bool output_stdout = false;
 };
 
 enum class R_ParseError
@@ -159,6 +165,10 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
             {
                 return R_ParseError::FormatInvalid;
             }
+        }
+        else if (reader.Any("--stdout"))
+        {
+            result.output_stdout = true;
         }
         else
         {
@@ -876,7 +886,18 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     }
 
     WAV_Handle render_output;
-    render_output.Open(params.output_filename, params.output_format);
+    if (params.output_stdout)
+    {
+#ifdef _WIN32
+        // On Windows, stdout is opened in text mode, which causes newline translation to occur.
+        _setmode(_fileno(stdout), O_BINARY);
+#endif
+        render_output.OpenStdout(params.output_format);
+    }
+    else
+    {
+        render_output.Open(params.output_filename, params.output_format);
+    }
     render_output.SetSampleRate(MCU_GetOutputFrequency(render_states[0].emu.GetMCU()));
 
     R_MixOutState mix_out_state;
@@ -949,7 +970,8 @@ void R_Usage()
     printf("\n");
     printf("General options:\n");
     printf("  -?, -h, --help                 Display this information.\n");
-    printf("  -o <filename>                  (required) Render WAVE file to filename.\n");
+    printf("  -o <filename>                  Render WAVE file to filename.\n");
+    printf("  --stdout                       Render raw sample data to stdout. No header will be written.\n");
     printf("\n");
     printf("Audio options:\n");
     printf("  -f, --format s16|f32           Set output format.\n");
