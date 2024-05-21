@@ -123,7 +123,7 @@ void CALLBACK MIDI_Callback(
             break;
         }
         default:
-            printf("hmm");
+            fprintf(stderr, "hmm");
             break;
     }
 }
@@ -136,13 +136,13 @@ bool MIDI_Init(frontend_t& frontend, int port)
 
     if (num == 0)
     {
-        printf("No midi input\n");
+        fprintf(stderr, "No midi input\n");
         return 0;
     }
 
     if (port < 0 || port >= num)
     {
-        printf("Out of range midi port is requested. Defaulting to port 0\n");
+        fprintf(stderr, "Out of range midi port is requested. Defaulting to port 0\n");
         port = 0;
     }
 
@@ -152,18 +152,18 @@ bool MIDI_Init(frontend_t& frontend, int port)
     result = midiInGetDevCapsA(port, &caps, sizeof(MIDIINCAPSA));
     if (result != MMSYSERR_NOERROR)
     {
-        printf("midiInGetDevCapsA failed\n");
+        fprintf(stderr, "midiInGetDevCapsA failed\n");
         return false;
     }
 
     result = midiInOpen(&midi_handle, port, (DWORD_PTR)MIDI_Callback, 0, CALLBACK_FUNCTION);
     if (result != MMSYSERR_NOERROR)
     {
-        printf("midiInOpen failed\n");
+        fprintf(stderr, "midiInOpen failed\n");
         return false;
     }
 
-    printf("Opened midi port: %s\n", caps.szPname);
+    fprintf(stderr, "Opened midi port: %s\n", caps.szPname);
 
     midi_buffer.lpData = midi_in_buffer;
     midi_buffer.dwBufferLength = sizeof(midi_in_buffer);
@@ -171,21 +171,21 @@ bool MIDI_Init(frontend_t& frontend, int port)
     result = midiInPrepareHeader(midi_handle, &midi_buffer, sizeof(MIDIHDR));
     if (result != MMSYSERR_NOERROR)
     {
-        printf("midiInPrepareHeader failed\n");
+        fprintf(stderr, "midiInPrepareHeader failed\n");
         return false;
     }
 
     result = midiInAddBuffer(midi_handle, &midi_buffer, sizeof(MIDIHDR));
     if (result != MMSYSERR_NOERROR)
     {
-        printf("midiInAddBuffer failed\n");
+        fprintf(stderr, "midiInAddBuffer failed\n");
         return false;
     }
 
     result = midiInStart(midi_handle);
     if (result != MMSYSERR_NOERROR)
     {
-        printf("midiInStart failed\n");
+        fprintf(stderr, "midiInStart failed\n");
         return false;
     }
 

@@ -773,7 +773,7 @@ void R_RenderOne(const SMF_Data& data, R_TrackRenderState& state)
 
 void R_CursorUpLines(int n)
 {
-    printf("\x1b[%dF", n);
+    fprintf(stderr, "\x1b[%dF", n);
 }
 
 struct R_MixOutState
@@ -832,7 +832,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     const R_TrackList split_tracks = R_SplitTrackModulo(merged_track, instances);
 
     Romset rs = EMU_DetectRomset(params.rom_directory);
-    printf("Detected romset: %s\n", EMU_RomsetName(rs));
+    fprintf(stderr, "Detected romset: %s\n", EMU_RomsetName(rs));
 
     R_Mixer mixer;
     switch (params.output_format)
@@ -844,7 +844,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
         mixer.SetQueueCount<float>(instances);
         break;
     default:
-        printf("Invalid audio format\n");
+        fprintf(stderr, "Invalid audio format\n");
         return false;
     }
 
@@ -862,7 +862,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
 
         render_states[i].emu.Reset();
 
-        printf("Running system reset for #%02" PRIu64 "...\n", i);
+        fprintf(stderr, "Running system reset for #%02" PRIu64 "...\n", i);
         R_RunReset(render_states[i].emu, params.reset);
 
         switch (params.output_format)
@@ -874,7 +874,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
             render_states[i].emu.SetSampleCallback(R_ReceiveSample_F32, &render_states[i]);
             break;
         default:
-            printf("Invalid audio format\n");
+            fprintf(stderr, "Invalid audio format\n");
             return false;
         }
 
@@ -914,7 +914,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
         mix_out_thread = std::thread(R_MixOut<float>, std::ref(mix_out_state));
         break;
     default:
-        printf("Invalid audio format\n");
+        fprintf(stderr, "Invalid audio format\n");
         return false;
     }
 
@@ -924,7 +924,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     {
         all_done = true;
 
-        printf("Rendered %" PRIu64 " frames\n", mix_out_state.frames_mixed.load());
+        fprintf(stderr, "Rendered %" PRIu64 " frames\n", mix_out_state.frames_mixed.load());
 
         for (size_t i = 0; i < instances; ++i)
         {
@@ -937,7 +937,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
             const size_t total        = render_states[i].track->events.size();
             const float  percent_done = 100.f * (float)processed / (float)total;
 
-            printf("#%02" PRIu64 " %6.2f%% [%" PRIu64 " / %" PRIu64 "]\n", i, percent_done, processed, total);
+            fprintf(stderr, "#%02" PRIu64 " %6.2f%% [%" PRIu64 " / %" PRIu64 "]\n", i, percent_done, processed, total);
         }
 
         if (!all_done)
@@ -955,34 +955,36 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
 
     mix_out_thread.join();
 
-    printf("Done!\n");
+    fprintf(stderr, "Done!\n");
 
     return true;
 }
 
 void R_Usage()
 {
-    std::string name = P_GetProcessPath().stem().generic_string();
+    constexpr const char* USAGE_STR = R"(Renders a standard MIDI file to a WAVE file using nuked-sc55.
 
-    printf("Renders a standard MIDI file to a WAVE file using nuked-sc55.\n");
-    printf("\n");
-    printf("Usage: %s [options] -o <output> <input>\n", name.c_str());
-    printf("\n");
-    printf("General options:\n");
-    printf("  -?, -h, --help                 Display this information.\n");
-    printf("  -o <filename>                  Render WAVE file to filename.\n");
-    printf("  --stdout                       Render raw sample data to stdout. No header will be written.\n");
-    printf("\n");
-    printf("Audio options:\n");
-    printf("  -f, --format s16|f32           Set output format.\n");
-    printf("\n");
-    printf("Emulator options:\n");
-    printf("  -r, --reset     gs|gm          Send GS or GM reset before rendering.\n");
-    printf("  -n, --instances <count>        Number of emulators to use (increases effective polyphony, longer to render)\n");
-    printf("\n");
-    printf("ROM management options:\n");
-    printf("  -d, --rom-directory <dir>      Sets the directory to load roms from. Romset will be detected.\n");
-    printf("\n");
+Usage: %s [options] -o <output> <input>
+
+General options:
+  -? -h, --help                Display this information.
+  -o <filename>                Render WAVE file to filename.
+  --stdout                     Render raw sample data to stdout. No header
+
+Audio options:
+  -f, --format s16|f32         Set output format.
+
+Emulator options:
+  -r, --reset     gs|gm        Send GS or GM reset before rendering.
+  -n, --instances <count>      Number of emulators to use (increases effective polyphony, but
+                               takes longer to render)
+
+ROM management options:
+  -d, --rom-directory <dir>    Sets the directory to load roms from. Romset will be detected.
+)";
+
+    std::string name = P_GetProcessPath().stem().generic_string();
+    fprintf(stderr, USAGE_STR, name.c_str());
 }
 
 int main(int argc, char* argv[])
@@ -992,7 +994,7 @@ int main(int argc, char* argv[])
 
     if (result != R_ParseError::Success)
     {
-        printf("error: %s\n", R_ParseErrorStr(result));
+        fprintf(stderr, "error: %s\n", R_ParseErrorStr(result));
         R_Usage();
         return 1;
     }
@@ -1008,7 +1010,7 @@ int main(int argc, char* argv[])
 
     if (!R_RenderTrack(data, params))
     {
-        printf("Failed to render track\n");
+        fprintf(stderr, "Failed to render track\n");
         return 1;
     }
 

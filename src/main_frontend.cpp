@@ -143,7 +143,7 @@ void FE_RouteMIDI(frontend_t& fe, uint8_t* first, uint8_t* last)
 {
     if (*first < 0x80)
     {
-        printf("FE_RouteMIDI received data byte %02x\n", *first);
+        fprintf(stderr, "FE_RouteMIDI received data byte %02x\n", *first);
         return;
     }
 
@@ -259,7 +259,7 @@ bool FE_OpenAudio(frontend_t& fe, const FE_Parameters& params)
             spec.callback = FE_AudioCallback<float>;
             break;
         default:
-            printf("Invalid output format\n");
+            fprintf(stderr, "Invalid output format\n");
             return false;
     }
     spec.freq = RangeCast<int>(MCU_GetOutputFrequency(mcu));
@@ -270,14 +270,14 @@ bool FE_OpenAudio(frontend_t& fe, const FE_Parameters& params)
     int num = SDL_GetNumAudioDevices(0);
     if (num == 0)
     {
-        printf("No audio output device found.\n");
+        fprintf(stderr, "No audio output device found.\n");
         return false;
     }
 
     int device_index = params.audio_device_index;
     if (device_index < -1 || device_index >= num)
     {
-        printf("Out of range audio device index is requested. Default audio output device is selected.\n");
+        fprintf(stderr, "Out of range audio device index is requested. Default audio output device is selected.\n");
         device_index = -1;
     }
 
@@ -289,15 +289,15 @@ bool FE_OpenAudio(frontend_t& fe, const FE_Parameters& params)
         return false;
     }
 
-    printf("Audio device: %s\n", audioDevicename);
+    fprintf(stderr, "Audio device: %s\n", audioDevicename);
 
-    printf("Audio Requested: F=%s, C=%d, R=%d, B=%d\n",
+    fprintf(stderr, "Audio Requested: F=%s, C=%d, R=%d, B=%d\n",
            audio_format_to_str(spec.format),
            spec.channels,
            spec.freq,
            spec.samples);
 
-    printf("Audio Actual: F=%s, C=%d, R=%d, B=%d\n",
+    fprintf(stderr, "Audio Actual: F=%s, C=%d, R=%d, B=%d\n",
            audio_format_to_str(spec_actual.format),
            spec_actual.channels,
            spec_actual.freq,
@@ -737,34 +737,35 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
 
 void FE_Usage()
 {
-    std::string name = P_GetProcessPath().stem().generic_string();
+    constexpr const char* USAGE_STR = R"(Usage: %s [options]
 
-    printf("Usage: %s [options]\n", name.c_str());
-    printf("\n");
-    printf("General options:\n");
-    printf("  -?, -h, --help                                Display this information.\n");
-    printf("\n");
-    printf("Audio options:\n");
-    printf("  -p, --port         <port_number>              Set MIDI input port.\n");
-    printf("  -a, --audio-device <device_number>            Set Audio Device index.\n");
-    printf("  -b, --buffer-size  <page_size>[:page_count]   Set Audio Buffer size.\n");
-    printf("  -f, --format       s16|f32                    Set output format.\n");
-    printf("\n");
-    printf("Emulator options:\n");
-    printf("  -r, --reset     gs|gm                         Reset system in GS or GM mode.\n");
-    printf("  -n, --instances <count>                       Set number of emulator instances.\n");
-    printf("  --no-lcd                                      Run without LCDs.\n");
-    printf("\n");
-    printf("ROM management options:\n");
-    printf("  -d, --rom-directory <dir>                     Sets the directory to load roms from.\n");
-    printf("  --mk2                                         Use SC-55mk2 ROM set.\n");
-    printf("  --st                                          Use SC-55st ROM set.\n");
-    printf("  --mk1                                         Use SC-55mk1 ROM set.\n");
-    printf("  --cm300                                       Use CM-300/SCC-1 ROM set.\n");
-    printf("  --jv880                                       Use JV-880 ROM set.\n");
-    printf("  --scb55                                       Use SCB-55 ROM set.\n");
-    printf("  --rlp3237                                     Use RLP-3237 ROM set.\n");
-    printf("\n");
+General options:
+  -?, -h, --help                                Display this information.
+
+Audio options:
+  -p, --port         <port_number>              Set MIDI input port.
+  -a, --audio-device <device_number>            Set Audio Device index.
+  -b, --buffer-size  <page_size>[:page_count]   Set Audio Buffer size.
+  -f, --format       s16|f32                    Set output format.
+
+Emulator options:
+  -r, --reset     gs|gm                         Reset system in GS or GM mode.
+  -n, --instances <count>                       Set number of emulator instances.
+  --no-lcd                                      Run without LCDs.
+
+ROM management options:
+  -d, --rom-directory <dir>                     Sets the directory to load roms from.
+  --mk2                                         Use SC-55mk2 ROM set.
+  --st                                          Use SC-55st ROM set.
+  --mk1                                         Use SC-55mk1 ROM set.
+  --cm300                                       Use CM-300/SCC-1 ROM set.
+  --jv880                                       Use JV-880 ROM set.
+  --scb55                                       Use SCB-55 ROM set.
+  --rlp3237                                     Use RLP-3237 ROM set.
+)";
+
+    std::string name = P_GetProcessPath().stem().generic_string();
+    fprintf(stderr, USAGE_STR, name.c_str());
 }
 
 int main(int argc, char *argv[])
@@ -773,7 +774,7 @@ int main(int argc, char *argv[])
     FE_ParseError result = FE_ParseCommandLine(argc, argv, params);
     if (result != FE_ParseError::Success)
     {
-        printf("error: %s\n", FE_ParseErrorStr(result));
+        fprintf(stderr, "error: %s\n", FE_ParseErrorStr(result));
         return 1;
     }
 
@@ -790,19 +791,19 @@ int main(int argc, char *argv[])
     if (std::filesystem::exists(base_path / "../share/nuked-sc55"))
         base_path = base_path / "../share/nuked-sc55";
 
-    printf("Base path is: %s\n", base_path.generic_string().c_str());
+    fprintf(stderr, "Base path is: %s\n", base_path.generic_string().c_str());
 
     if (!params.rom_directory)
     {
         params.rom_directory = base_path;
     }
 
-    printf("ROM directory is: %s\n", params.rom_directory->generic_string().c_str());
+    fprintf(stderr, "ROM directory is: %s\n", params.rom_directory->generic_string().c_str());
 
     if (params.autodetect)
     {
         params.romset = EMU_DetectRomset(*params.rom_directory);
-        printf("ROM set autodetect: %s\n", EMU_RomsetName(params.romset));
+        fprintf(stderr, "ROM set autodetect: %s\n", EMU_RomsetName(params.romset));
     }
 
     if (!FE_Init())

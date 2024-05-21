@@ -383,7 +383,7 @@ bool Emulator::LoadRoms(Romset romset, const std::filesystem::path& base_path)
         if (s_rf[4] && EMU_ReadStreamExact(s_rf[4], tempbuf, 0x800000))
             unscramble(tempbuf.data(), m_pcm->waverom_exp, 0x800000);
         else
-            printf("WaveRom EXP not found, skipping it.\n");
+            fprintf(stderr, "WaveRom EXP not found, skipping it.\n");
     }
     else
     {

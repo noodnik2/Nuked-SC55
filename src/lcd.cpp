@@ -146,11 +146,11 @@ void LCD_Write(lcd_t& lcd, uint32_t address, uint8_t data)
             lcd.LCD_DD_RAM &= 0x7f;
         }
     }
-    //printf("%i %.2x ", address, data);
+    //fprintf(stderr, "%i %.2x ", address, data);
     // if (data >= 0x20 && data <= 'z')
-    //     printf("%c\n", data);
+    //     fprintf(stderr, "%c\n", data);
     //else
-    //    printf("\n");
+    //    fprintf(stderr, "\n");
 }
 
 const int button_map_sc55[][2] =
