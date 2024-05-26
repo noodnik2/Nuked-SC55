@@ -1,3 +1,7 @@
+# This branch moved to the [default branch](https://github.com/jcmoyer/Nuked-SC55/)
+
+No new commits will be made on this branch.
+
 # Nuked SC-55
 
 Fork of [nukeykt/Nuked-SC55](https://github.com/nukeykt/Nuked-SC55) with the
