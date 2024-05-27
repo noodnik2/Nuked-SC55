@@ -649,28 +649,28 @@ struct R_TrackRenderState
     std::atomic<bool> done;
 };
 
-void R_ReceiveSample_S16(void* userdata, int32_t left, int32_t right)
+void R_ReceiveSample_S16(void* userdata, const AudioFrame<int32_t>& in)
 {
     R_TrackRenderState* state = (R_TrackRenderState*)userdata;
 
-    AudioFrame<int16_t> frame;
-    frame.left = (int16_t)clamp<int32_t>(left >> 15, INT16_MIN, INT16_MAX);
-    frame.right = (int16_t)clamp<int32_t>(right >> 15, INT16_MIN, INT16_MAX);
+    AudioFrame<int16_t> out;
+    out.left  = (int16_t)clamp<int32_t>(in.left >> 15, INT16_MIN, INT16_MAX);
+    out.right = (int16_t)clamp<int32_t>(in.right >> 15, INT16_MIN, INT16_MAX);
 
-    state->mixer->SubmitFrame(state->queue_id, frame);
+    state->mixer->SubmitFrame(state->queue_id, out);
 }
 
-void R_ReceiveSample_F32(void* userdata, int32_t left, int32_t right)
+void R_ReceiveSample_F32(void* userdata, const AudioFrame<int32_t>& in)
 {
     constexpr float DIV_REC = 1.0f / 536870912.0f;
 
     R_TrackRenderState* state = (R_TrackRenderState*)userdata;
 
-    AudioFrame<float> frame;
-    frame.left = (float)left * DIV_REC;
-    frame.right = (float)right * DIV_REC;
+    AudioFrame<float> out;
+    out.left  = (float)in.left * DIV_REC;
+    out.right = (float)in.right * DIV_REC;
 
-    state->mixer->SubmitFrame(state->queue_id, frame);
+    state->mixer->SubmitFrame(state->queue_id, out);
 }
 
 void R_RunReset(Emulator& emu, EMU_SystemReset reset)

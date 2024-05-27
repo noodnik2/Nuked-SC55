@@ -95,7 +95,7 @@ void WAV_Handle::Open(const std::filesystem::path& filename, AudioFormat format)
 {
     m_format = format;
     m_output = fopen(filename.generic_string().c_str(), "wb");
-    fseek(m_output, format == AudioFormat::S16 ? 44 : 58, SEEK_SET);
+    fseek(m_output, format == AudioFormat::F32 ? 58 : 44, SEEK_SET);
 }
 
 void WAV_Handle::Close()
@@ -111,6 +111,13 @@ void WAV_Handle::Write(const AudioFrame<int16_t>& frame)
 {
     WAV_WriteU16LE(m_output, std::bit_cast<uint16_t>(frame.left));
     WAV_WriteU16LE(m_output, std::bit_cast<uint16_t>(frame.right));
+    ++m_frames_written;
+}
+
+void WAV_Handle::Write(const AudioFrame<int32_t>& frame)
+{
+    WAV_WriteU32LE(m_output, std::bit_cast<uint32_t>(frame.left));
+    WAV_WriteU32LE(m_output, std::bit_cast<uint32_t>(frame.right));
     ++m_frames_written;
 }
 
@@ -150,6 +157,30 @@ void WAV_Handle::Finish()
         WAV_WriteU32LE(m_output, m_sample_rate * sizeof(AudioFrame<int16_t>));
         WAV_WriteU16LE(m_output, sizeof(AudioFrame<int16_t>));
         WAV_WriteU16LE(m_output, 8 * sizeof(int16_t));
+        // data
+        WAV_WriteCString(m_output, "data");
+        WAV_WriteU32LE(m_output, data_size);
+
+        assert(ftell(m_output) == 44);
+
+        break;
+    }
+    case AudioFormat::S32: {
+        const uint32_t data_size = RangeCast<uint32_t>(m_frames_written * sizeof(AudioFrame<int32_t>));
+
+        // RIFF header
+        WAV_WriteCString(m_output, "RIFF");
+        WAV_WriteU32LE(m_output, 36 + data_size);
+        WAV_WriteCString(m_output, "WAVE");
+        // fmt
+        WAV_WriteCString(m_output, "fmt ");
+        WAV_WriteU32LE(m_output, 16);
+        WAV_WriteU16LE(m_output, (uint16_t)WaveFormat::PCM);
+        WAV_WriteU16LE(m_output, AudioFrame<int32_t>::channel_count);
+        WAV_WriteU32LE(m_output, m_sample_rate);
+        WAV_WriteU32LE(m_output, m_sample_rate * sizeof(AudioFrame<int32_t>));
+        WAV_WriteU16LE(m_output, sizeof(AudioFrame<int32_t>));
+        WAV_WriteU16LE(m_output, 8 * sizeof(int32_t));
         // data
         WAV_WriteCString(m_output, "data");
         WAV_WriteU32LE(m_output, data_size);

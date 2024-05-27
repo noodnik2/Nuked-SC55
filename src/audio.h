@@ -1,8 +1,11 @@
 #pragma once
 
+#include <cstddef>
+
 enum class AudioFormat
 {
     S16,
+    S32,
     F32,
 };
 

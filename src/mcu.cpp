@@ -757,11 +757,10 @@ void MCU_ReadInstruction(mcu_t& mcu)
     }
 }
 
-void MCU_DefaultSampleCallback(void* userdata, int32_t left, int32_t right)
+void MCU_DefaultSampleCallback(void* userdata, const AudioFrame<int32_t>& frame)
 {
     (void)userdata;
-    (void)left;
-    (void)right;
+    (void)frame;
 }
 
 bool MCU_Init(mcu_t& mcu, submcu_t& sm, pcm_t& pcm, mcu_timer_t& timer, lcd_t& lcd)
@@ -950,9 +949,9 @@ void MCU_WriteP1(mcu_t& mcu, uint8_t data)
     mcu.mcu_p1_data = data;
 }
 
-void MCU_PostSample(mcu_t& mcu, int32_t left, int32_t right)
+void MCU_PostSample(mcu_t& mcu, const AudioFrame<int32_t>& frame)
 {
-    mcu.sample_callback(mcu.callback_userdata, left, right);
+    mcu.sample_callback(mcu.callback_userdata, frame);
 }
 
 void MCU_GA_SetGAInt(mcu_t& mcu, int line, int value)

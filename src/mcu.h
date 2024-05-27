@@ -39,6 +39,7 @@
 #include <mutex>
 #include "mcu_interrupt.h"
 #include "cast.h"
+#include "audio.h"
 
 struct submcu_t;
 struct pcm_t;
@@ -204,9 +205,9 @@ enum class Romset {
 
 constexpr size_t ROMSET_COUNT = 9;
 
-typedef void(*mcu_sample_callback)(void* userdata, int32_t left, int32_t right);
+typedef void(*mcu_sample_callback)(void* userdata, const AudioFrame<int32_t>& frame);
 
-void MCU_DefaultSampleCallback(void* userdata, int32_t left, int32_t right);
+void MCU_DefaultSampleCallback(void* userdata, const AudioFrame<int32_t>& frame);
 
 struct mcu_t {
     uint16_t r[8]{};
@@ -541,7 +542,7 @@ void MCU_GA_SetGAInt(mcu_t& mcu, int line, int value);
 
 void MCU_EncoderTrigger(mcu_t& mcu, int dir);
 
-void MCU_PostSample(mcu_t& mcu, int32_t left, int32_t right);
+void MCU_PostSample(mcu_t& mcu, const AudioFrame<int32_t>& frame);
 void MCU_PostUART(mcu_t& mcu, uint8_t data);
 
 void MCU_WorkThread_Lock(mcu_t& mcu);

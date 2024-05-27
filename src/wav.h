@@ -27,6 +27,7 @@ public:
     void Open(const std::filesystem::path& filename, AudioFormat format);
     void Close();
     void Write(const AudioFrame<int16_t>& frame);
+    void Write(const AudioFrame<int32_t>& frame);
     void Write(const AudioFrame<float>& frame);
     void Finish();
 

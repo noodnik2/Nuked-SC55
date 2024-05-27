@@ -167,28 +167,28 @@ void FE_RouteMIDI(FE_Application& fe, std::span<const uint8_t> bytes)
     }
 }
 
-void FE_ReceiveSample_S16(void* userdata, int32_t left, int32_t right)
+void FE_ReceiveSample_S16(void* userdata, const AudioFrame<int32_t>& in)
 {
     FE_Instance& fe = *(FE_Instance*)userdata;
 
-    AudioFrame<int16_t> frame;
-    frame.left = (int16_t)clamp<int32_t>(left >> 15, INT16_MIN, INT16_MAX);
-    frame.right = (int16_t)clamp<int32_t>(right >> 15, INT16_MIN, INT16_MAX);
+    AudioFrame<int16_t> out;
+    out.left  = (int16_t)clamp<int32_t>(in.left >> 15, INT16_MIN, INT16_MAX);
+    out.right = (int16_t)clamp<int32_t>(in.right >> 15, INT16_MIN, INT16_MAX);
 
-    fe.sample_buffer_s16.Write(frame);
+    fe.sample_buffer_s16.Write(out);
 }
 
-void FE_ReceiveSample_F32(void* userdata, int32_t left, int32_t right)
+void FE_ReceiveSample_F32(void* userdata, const AudioFrame<int32_t>& in)
 {
     constexpr float DIV_REC = 1.0f / 536870912.0f;
 
     FE_Instance& fe = *(FE_Instance*)userdata;
 
-    AudioFrame<float> frame;
-    frame.left = (float)left * DIV_REC;
-    frame.right = (float)right * DIV_REC;
+    AudioFrame<float> out;
+    out.left  = (float)in.left * DIV_REC;
+    out.right = (float)in.right * DIV_REC;
 
-    fe.sample_buffer_f32.Write(frame);
+    fe.sample_buffer_f32.Write(out);
 }
 
 template <typename SampleT>
