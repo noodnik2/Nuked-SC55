@@ -126,37 +126,44 @@ bool FE_AllocateInstance(FE_Application& container, FE_Instance** result)
     return true;
 }
 
-void FE_SendMIDI(FE_Application& fe, size_t n, uint8_t* first, uint8_t* last)
+void FE_SendMIDI(FE_Application& fe, size_t n, std::span<const uint8_t> bytes)
 {
-    fe.instances[n].emu.PostMIDI(std::span(first, last));
+    fe.instances[n].emu.PostMIDI(bytes);
 }
 
-void FE_BroadcastMIDI(FE_Application& fe, uint8_t* first, uint8_t* last)
+void FE_BroadcastMIDI(FE_Application& fe, std::span<const uint8_t> bytes)
 {
     for (size_t i = 0; i < fe.instances_in_use; ++i)
     {
-        FE_SendMIDI(fe, i, first, last);
+        FE_SendMIDI(fe, i, bytes);
     }
 }
 
-void FE_RouteMIDI(FE_Application& fe, uint8_t* first, uint8_t* last)
+void FE_RouteMIDI(FE_Application& fe, std::span<const uint8_t> bytes)
 {
-    if (*first < 0x80)
+    if (bytes.size() == 0)
     {
-        fprintf(stderr, "FE_RouteMIDI received data byte %02x\n", *first);
         return;
     }
 
-    const bool is_sysex = *first == 0xF0;
-    const uint8_t channel = *first & 0x0F;
+    uint8_t first = bytes[0];
+
+    if (first < 0x80)
+    {
+        fprintf(stderr, "FE_RouteMIDI received data byte %02x\n", first);
+        return;
+    }
+
+    const bool is_sysex = first == 0xF0;
+    const uint8_t channel = first & 0x0F;
 
     if (is_sysex)
     {
-        FE_BroadcastMIDI(fe, first, last);
+        FE_BroadcastMIDI(fe, bytes);
     }
     else
     {
-        FE_SendMIDI(fe, channel % fe.instances_in_use, first, last);
+        FE_SendMIDI(fe, channel % fe.instances_in_use, bytes);
     }
 }
 

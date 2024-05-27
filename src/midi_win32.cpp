@@ -35,17 +35,18 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <mmsystem.h>
+#include <span>
 #include "mcu.h"
 #include "midi.h"
 
 static HMIDIIN midi_handle;
 static MIDIHDR midi_buffer;
 
-static char midi_in_buffer[1024];
+static uint8_t midi_in_buffer[1024];
 
 static FE_Application* midi_frontend = nullptr;
 
-void FE_RouteMIDI(FE_Application& fe, uint8_t* first, uint8_t* last);
+void FE_RouteMIDI(FE_Application& fe, std::span<const uint8_t> bytes);
 
 void CALLBACK MIDI_Callback(
     HMIDIIN   hMidiIn,
@@ -79,7 +80,7 @@ void CALLBACK MIDI_Callback(
                             (uint8_t)((dwParam1 >> 8) & 0xff),
                             (uint8_t)((dwParam1 >> 16) & 0xff),
                         };
-                        FE_RouteMIDI(*midi_frontend, (uint8_t*)buf, (uint8_t*)buf + sizeof(buf));
+                        FE_RouteMIDI(*midi_frontend, buf);
                     }
                     break;
                 case 0xc0:
@@ -89,7 +90,7 @@ void CALLBACK MIDI_Callback(
                             (uint8_t)b1,
                             (uint8_t)((dwParam1 >> 8) & 0xff),
                         };
-                        FE_RouteMIDI(*midi_frontend, (uint8_t*)buf, (uint8_t*)buf + sizeof(buf));
+                        FE_RouteMIDI(*midi_frontend, buf);
                     }
                     break;
             }
@@ -110,11 +111,7 @@ void CALLBACK MIDI_Callback(
 
             if (wMsg == MIM_LONGDATA)
             {
-                FE_RouteMIDI(
-                    *midi_frontend,
-                    (uint8_t*)midi_in_buffer,
-                    (uint8_t*)midi_in_buffer + midi_buffer.dwBytesRecorded
-                );
+                FE_RouteMIDI(*midi_frontend, std::span(midi_in_buffer, midi_buffer.dwBytesRecorded));
             }
 
             midiInPrepareHeader(midi_handle, &midi_buffer, sizeof(MIDIHDR));
@@ -165,7 +162,7 @@ bool MIDI_Init(FE_Application& frontend, unsigned int port)
 
     fprintf(stderr, "Opened midi port: %s\n", caps.szPname);
 
-    midi_buffer.lpData = midi_in_buffer;
+    midi_buffer.lpData = (LPSTR)midi_in_buffer;
     midi_buffer.dwBufferLength = sizeof(midi_in_buffer);
 
     result = midiInPrepareHeader(midi_handle, &midi_buffer, sizeof(MIDIHDR));

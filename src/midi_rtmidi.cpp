@@ -9,13 +9,11 @@ static RtMidiIn *s_midi_in = nullptr;
 
 static FE_Application* midi_frontend = nullptr;
 
-void FE_RouteMIDI(FE_Application& fe, uint8_t* first, uint8_t* last);
+void FE_RouteMIDI(FE_Application& fe, std::span<const uint8_t> bytes);
 
 static void MidiOnReceive(double, std::vector<uint8_t> *message, void *)
 {
-    uint8_t *beg = message->data();
-    uint8_t *end = message->data() + message->size();
-    FE_RouteMIDI(*midi_frontend, beg, end);
+    FE_RouteMIDI(*midi_frontend, *message);
 }
 
 static void MidiOnError(RtMidiError::Type, const std::string &errorText, void *)
