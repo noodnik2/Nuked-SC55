@@ -214,7 +214,7 @@ void FE_AudioCallback(void* userdata, Uint8* stream, int len)
     }
 }
 
-static const char* audio_format_to_str(int format)
+static const char* FE_AudioFormatStr(SDL_AudioFormat format)
 {
     switch(format)
     {
@@ -299,13 +299,13 @@ bool FE_OpenAudio(FE_Application& fe, const FE_Parameters& params)
     fprintf(stderr, "Audio device: %s\n", audioDevicename);
 
     fprintf(stderr, "Audio Requested: F=%s, C=%d, R=%d, B=%d\n",
-           audio_format_to_str(spec.format),
+           FE_AudioFormatStr(spec.format),
            spec.channels,
            spec.freq,
            spec.samples);
 
     fprintf(stderr, "Audio Actual: F=%s, C=%d, R=%d, B=%d\n",
-           audio_format_to_str(spec_actual.format),
+           FE_AudioFormatStr(spec_actual.format),
            spec_actual.channels,
            spec_actual.freq,
            spec_actual.samples);
