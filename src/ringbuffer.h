@@ -33,51 +33,107 @@
  */
 #pragma once
 
-#include <vector>
-#include <span>
-#include "math_util.h"
 #include "audio.h"
+#include "math_util.h"
+#include <memory>
 
-template <typename T>
-class Ringbuffer {
+// This type has reference semantics.
+class GenericBuffer
+{
 public:
-    using AudioFrameType = AudioFrame<T>;
+    GenericBuffer() = default;
 
-    Ringbuffer() = default;
-
-    Ringbuffer(size_t frame_count)
-        : m_frames(frame_count)
+    ~GenericBuffer()
     {
+        Free();
     }
 
-    void SetOversamplingEnabled(bool enabled)
+    GenericBuffer(const GenericBuffer&)            = delete;
+    GenericBuffer& operator=(const GenericBuffer&) = delete;
+
+    GenericBuffer(GenericBuffer&&)            = delete;
+    GenericBuffer& operator=(GenericBuffer&&) = delete;
+
+    bool Init(size_t size_bytes)
     {
-        m_oversampling = enabled;
-        if (m_oversampling)
+        size_t alloc_size = 64 + size_bytes;
+
+        m_alloc_base = malloc(alloc_size);
+        if (!m_alloc_base)
         {
-            m_write_head &= ~1ull;
+            return false;
         }
-    }
 
-    bool IsFull() const
-    {
-        if (m_oversampling)
+        m_buffer      = m_alloc_base;
+        m_buffer_size = size_bytes;
+        if (!std::align(64, size_bytes, m_buffer, alloc_size))
         {
-            return ((m_write_head + 2) % m_frames.size()) == m_read_head;
+            Free();
+            return false;
         }
-        else
-        {
-            return ((m_write_head + 1) % m_frames.size()) == m_read_head;
-        }
+
+        return true;
     }
 
-    void Write(const AudioFrameType& frame)
+    void Free()
     {
-        m_frames[m_write_head] = frame;
-        m_write_head = (m_write_head + 1) % m_frames.size();
+        if (m_alloc_base)
+        {
+            free(m_alloc_base);
+        }
+        m_buffer      = nullptr;
+        m_buffer_size = 0;
+        m_alloc_base  = nullptr;
     }
 
-    size_t ReadableFrameCount() const
+    void* DataFirst()
+    {
+        return std::assume_aligned<64>(m_buffer);
+    }
+
+    void* DataLast()
+    {
+        return (uint8_t*)DataFirst() + m_buffer_size;
+    }
+
+    size_t GetByteLength() const
+    {
+        return m_buffer_size;
+    }
+
+private:
+    void*  m_buffer      = nullptr;
+    size_t m_buffer_size = 0;
+    void*  m_alloc_base  = nullptr;
+};
+
+template <typename ElemT>
+class RingbufferView
+{
+public:
+    RingbufferView() = default;
+
+    explicit RingbufferView(GenericBuffer& buffer)
+    {
+        m_buffer     = &buffer;
+        m_read_head  = 0;
+        m_write_head = 0;
+        m_elem_count = buffer.GetByteLength() / sizeof(ElemT);
+    }
+
+    void UncheckedWriteOne(const ElemT& value)
+    {
+        *GetWritePtr() = value;
+        m_write_head   = (m_write_head + 1) % m_elem_count;
+    }
+
+    void UncheckedReadOne(ElemT& dest)
+    {
+        dest        = *GetReadPtr();
+        m_read_head = (m_read_head + 1) % m_elem_count;
+    }
+
+    size_t GetReadableCount() const
     {
         if (m_read_head <= m_write_head)
         {
@@ -85,77 +141,70 @@ public:
         }
         else
         {
-            return m_frames.size() - (m_read_head - m_write_head);
+            return m_elem_count - (m_read_head - m_write_head);
         }
     }
 
-    // Reads up to `frame_count` frames and returns the number of frames
-    // actually read.
-    size_t Read(AudioFrameType* dest, size_t frame_count)
+    size_t GetWritableCount() const
     {
-        const size_t have_count = ReadableFrameCount();
-        const size_t read_count = min(have_count, frame_count);
-        size_t working_read_head = m_read_head;
-        // TODO make this one or two memcpys
-        for (size_t i = 0; i < read_count; ++i)
+        if (m_read_head <= m_write_head)
         {
-            *dest = m_frames[working_read_head];
-            ++dest;
-            working_read_head = (working_read_head + 1) % m_frames.size();
+            return m_elem_count - (m_write_head - m_read_head);
         }
-        m_read_head = working_read_head;
-        return read_count;
-    }
-
-    void ReadMixOne(AudioFrameType& dest, const AudioFrameType& src)
-        requires std::is_same_v<T, int16_t>
-    {
-        dest.left = saturating_add(dest.left, src.left);
-        dest.right = saturating_add(dest.right, src.right);
-    }
-
-    void ReadMixOne(AudioFrameType& dest, const AudioFrameType& src)
-        requires std::is_same_v<T, float>
-    {
-        dest.left += src.left;
-        dest.right += src.right;
-    }
-
-    void UncheckedReadOne(AudioFrameType& dest)
-    {
-        dest = m_frames[m_read_head];
-        m_read_head = (m_read_head + 1) % m_frames.size();
-    }
-
-    // Reads up to `frame_count` frames and returns the number of frames
-    // actually read. Mixes samples into dest by adding and clipping.
-    size_t ReadMix(AudioFrameType* dest, size_t frame_count)
-    {
-        const size_t have_count = ReadableFrameCount();
-        const size_t read_count = min(have_count, frame_count);
-        size_t working_read_head = m_read_head;
-        for (size_t i = 0; i < read_count; ++i)
+        else
         {
-            ReadMixOne(dest[i], m_frames[working_read_head]);
-            working_read_head = (working_read_head + 1) % m_frames.size();
+            return m_read_head - m_write_head;
         }
-        m_read_head = working_read_head;
-        return read_count;
-    }
-
-    static size_t MinReadableFrameCount(std::span<const Ringbuffer> buffers)
-    {
-        size_t result = (size_t)-1;
-        for (const Ringbuffer& buffer : buffers)
-        {
-            result = min(result, buffer.ReadableFrameCount());
-        }
-        return result;
     }
 
 private:
-    std::vector<AudioFrameType> m_frames;
-    size_t m_read_head = 0;
-    size_t m_write_head = 0;
-    bool m_oversampling = false;
+    ElemT* GetWritePtr()
+    {
+        return (ElemT*)m_buffer->DataFirst() + m_write_head;
+    }
+
+    const ElemT* GetReadPtr() const
+    {
+        return (ElemT*)m_buffer->DataFirst() + m_read_head;
+    }
+
+private:
+    GenericBuffer* m_buffer     = nullptr;
+    size_t         m_read_head  = 0;
+    size_t         m_write_head = 0;
+    size_t         m_elem_count = 0;
 };
+
+inline void MixFrame(AudioFrame<int16_t>& dest, const AudioFrame<int16_t>& src)
+{
+    dest.left  = saturating_add(dest.left, src.left);
+    dest.right = saturating_add(dest.right, src.right);
+}
+
+inline void MixFrame(AudioFrame<int32_t>& dest, const AudioFrame<int32_t>& src)
+{
+    dest.left  = saturating_add(dest.left, src.left);
+    dest.right = saturating_add(dest.right, src.right);
+}
+
+inline void MixFrame(AudioFrame<float>& dest, const AudioFrame<float>& src)
+{
+    dest.left  += src.left;
+    dest.right += src.right;
+}
+
+// Reads up to `frame_count` frames and returns the number of frames
+// actually read. Mixes samples into dest by adding and clipping.
+template <typename SampleT>
+size_t ReadMix(RingbufferView<AudioFrame<SampleT>>& rb, AudioFrame<SampleT>* dest, size_t frame_count)
+{
+    const size_t have_count = rb.GetReadableCount();
+    const size_t read_count = min(have_count, frame_count);
+    for (size_t i = 0; i < read_count; ++i)
+    {
+        AudioFrame<SampleT> src;
+        rb.UncheckedReadOne(src);
+        MixFrame(dest[i], src);
+    }
+    return read_count;
+}

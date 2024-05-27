@@ -55,6 +55,12 @@ inline int16_t saturating_add(int16_t a, int16_t b)
     return (int16_t)clamp<int32_t>(result, INT16_MIN, INT16_MAX);
 }
 
+inline int32_t saturating_add(int32_t a, int32_t b)
+{
+    int64_t result = (int64_t)a + (int64_t)b;
+    return (int32_t)clamp<int64_t>(result, INT32_MIN, INT32_MAX);
+}
+
 // Auto vectorizes in clang at -O2, gcc at -O3
 inline void horizontal_sat_add_i16(int16_t* dest, int16_t* src_first, int16_t* src_last)
 {

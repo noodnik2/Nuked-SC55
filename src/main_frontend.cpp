@@ -42,33 +42,40 @@
 #include <cinttypes>
 #include <optional>
 
-using Ringbuffer_S16 = Ringbuffer<int16_t>;
-using Ringbuffer_F32 = Ringbuffer<float>;
-
 // Workaround until all compilers implement CWG 2518 (at time of writing, MSVC
 // doesn't accept a static_assert(false) in a constexpr conditional branch)
 template <typename>
 constexpr bool DependentFalse = false;
 
-struct FE_Instance {
-    Emulator        emu;
-    Ringbuffer_S16  sample_buffer_s16;
-    Ringbuffer_F32  sample_buffer_f32;
-    std::thread     thread;
-    bool            running;
-    AudioFormat     format;
+struct FE_Instance
+{
+    Emulator emu;
+
+    GenericBuffer sample_buffer;
+
+    RingbufferView<AudioFrame<int16_t>> view_s16;
+    RingbufferView<AudioFrame<int32_t>> view_s32;
+    RingbufferView<AudioFrame<float>>   view_f32;
+
+    std::thread thread;
+    bool        running;
+    AudioFormat format;
 
     // Statically selects the correct ringbuffer field into based on SampleT.
     template <typename SampleT>
-    Ringbuffer<SampleT>& StaticSelectBuffer()
+    RingbufferView<AudioFrame<SampleT>>& StaticSelectBuffer()
     {
         if constexpr (std::is_same_v<SampleT, int16_t>)
         {
-            return sample_buffer_s16;
+            return view_s16;
+        }
+        else if constexpr (std::is_same_v<SampleT, int32_t>)
+        {
+            return view_s32;
         }
         else if constexpr (std::is_same_v<SampleT, float>)
         {
-            return sample_buffer_f32;
+            return view_f32;
         }
         else
         {
@@ -115,7 +122,6 @@ bool FE_AllocateInstance(FE_Application& container, FE_Instance** result)
     }
 
     FE_Instance& fe = container.instances[container.instances_in_use];
-    fe = FE_Instance();
     ++container.instances_in_use;
 
     if (result)
@@ -175,7 +181,14 @@ void FE_ReceiveSample_S16(void* userdata, const AudioFrame<int32_t>& in)
     out.left  = (int16_t)clamp<int32_t>(in.left >> 15, INT16_MIN, INT16_MAX);
     out.right = (int16_t)clamp<int32_t>(in.right >> 15, INT16_MIN, INT16_MAX);
 
-    fe.sample_buffer_s16.Write(out);
+    fe.view_s16.UncheckedWriteOne(out);
+}
+
+void FE_ReceiveSample_S32(void* userdata, const AudioFrame<int32_t>& in)
+{
+    FE_Instance& fe = *(FE_Instance*)userdata;
+
+    fe.view_s32.UncheckedWriteOne(in);
 }
 
 void FE_ReceiveSample_F32(void* userdata, const AudioFrame<int32_t>& in)
@@ -188,7 +201,7 @@ void FE_ReceiveSample_F32(void* userdata, const AudioFrame<int32_t>& in)
     out.left  = (float)in.left * DIV_REC;
     out.right = (float)in.right * DIV_REC;
 
-    fe.sample_buffer_f32.Write(out);
+    fe.view_f32.UncheckedWriteOne(out);
 }
 
 template <typename SampleT>
@@ -204,13 +217,13 @@ void FE_AudioCallback(void* userdata, Uint8* stream, int len)
     {
         renderable_count = min(
             renderable_count,
-            frontend.instances[i].StaticSelectBuffer<SampleT>().ReadableFrameCount()
+            frontend.instances[i].StaticSelectBuffer<SampleT>().GetReadableCount()
         );
     }
 
     for (size_t i = 0; i < frontend.instances_in_use; ++i)
     {
-        frontend.instances[i].StaticSelectBuffer<SampleT>().ReadMix((AudioFrame<SampleT>*)stream, renderable_count);
+        ReadMix<SampleT>(frontend.instances[i].StaticSelectBuffer<SampleT>(), (AudioFrame<SampleT>*)stream, renderable_count);
     }
 }
 
@@ -261,13 +274,14 @@ bool FE_OpenAudio(FE_Application& fe, const FE_Parameters& params)
             spec.format = AUDIO_S16SYS;
             spec.callback = FE_AudioCallback<int16_t>;
             break;
+        case AudioFormat::S32:
+            spec.format = AUDIO_S32SYS;
+            spec.callback = FE_AudioCallback<int32_t>;
+            break;
         case AudioFormat::F32:
             spec.format = AUDIO_F32SYS;
             spec.callback = FE_AudioCallback<float>;
             break;
-        default:
-            fprintf(stderr, "Invalid output format\n");
-            return false;
     }
     spec.freq = RangeCast<int>(MCU_GetOutputFrequency(mcu));
     spec.channels = 2;
@@ -317,21 +331,23 @@ bool FE_OpenAudio(FE_Application& fe, const FE_Parameters& params)
 }
 
 template <typename SampleT>
+bool FE_IsBufferFull(FE_Instance& instance)
+{
+    // MCU_Step will always produce 1 or 2 samples. It's simplest to always leave enough space for oversampling because
+    // then we don't need to re-align the write head every time.
+    return instance.StaticSelectBuffer<SampleT>().GetWritableCount() <= 2;
+}
+
+template <typename SampleT>
 void FE_RunInstance(FE_Instance& instance)
 {
     MCU_WorkThread_Lock(instance.emu.GetMCU());
     while (instance.running)
     {
-        auto& sample_buffer = instance.StaticSelectBuffer<SampleT>();
-        // TODO: this could probably be cleaned up, oversampling being a
-        // property of the ringbuffer is kind of gross. It's really a property
-        // of the read/write heads.
-        sample_buffer.SetOversamplingEnabled(instance.emu.GetPCM().config_reg_3c & 0x40);
-
-        if (sample_buffer.IsFull())
+        if (FE_IsBufferFull<SampleT>(instance))
         {
             MCU_WorkThread_Unlock(instance.emu.GetMCU());
-            while (sample_buffer.IsFull())
+            while (FE_IsBufferFull<SampleT>(instance))
             {
                 SDL_Delay(1);
             }
@@ -407,11 +423,11 @@ void FE_Run(FE_Application& fe)
             case AudioFormat::S16:
                 fe.instances[i].thread = std::thread(FE_RunInstance<int16_t>, std::ref(fe.instances[i]));
                 break;
+            case AudioFormat::S32:
+                fe.instances[i].thread = std::thread(FE_RunInstance<int32_t>, std::ref(fe.instances[i]));
+                break;
             case AudioFormat::F32:
                 fe.instances[i].thread = std::thread(FE_RunInstance<float>, std::ref(fe.instances[i]));
-                break;
-            default:
-                fprintf(stderr, "warning: instance %" PRIu64 " has an invalid output format; it will not run\n", i);
                 break;
         }
     }
@@ -460,12 +476,12 @@ bool FE_CreateInstance(FE_Application& container, const std::filesystem::path& b
         case AudioFormat::S16:
             fe->emu.SetSampleCallback(FE_ReceiveSample_S16, fe);
             break;
+        case AudioFormat::S32:
+            fe->emu.SetSampleCallback(FE_ReceiveSample_S32, fe);
+            break;
         case AudioFormat::F32:
             fe->emu.SetSampleCallback(FE_ReceiveSample_F32, fe);
             break;
-        default:
-            fprintf(stderr, "ERROR: Instance has an invalid output format.\n");
-            return false;
     }
 
     LCD_LoadBack(fe->emu.GetLCD(), base_path / "back.data");
@@ -595,6 +611,10 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
             if (reader.Arg() == "s16")
             {
                 result.output_format = AudioFormat::S16;
+            }
+            else if (reader.Arg() == "s32")
+            {
+                result.output_format = AudioFormat::S32;
             }
             else if (reader.Arg() == "f32")
             {
@@ -753,7 +773,7 @@ Audio options:
   -p, --port         <port_number>              Set MIDI input port.
   -a, --audio-device <device_number>            Set Audio Device index.
   -b, --buffer-size  <page_size>[:page_count]   Set Audio Buffer size.
-  -f, --format       s16|f32                    Set output format.
+  -f, --format       s16|s32|f32                Set output format.
 
 Emulator options:
   -r, --reset     gs|gm                         Reset system in GS or GM mode.
@@ -838,18 +858,20 @@ int main(int argc, char *argv[])
     for (size_t i = 0; i < frontend.instances_in_use; ++i)
     {
         FE_Instance& fe = frontend.instances[i];
-        const size_t rb_size = frontend.audio_buffer_size / 2;
         switch (fe.format)
         {
-            case AudioFormat::S16:
-                fe.sample_buffer_s16 = Ringbuffer_S16(rb_size);
-                break;
-            case AudioFormat::F32:
-                fe.sample_buffer_f32 = Ringbuffer_F32(rb_size);
-                break;
-            default:
-                fprintf(stderr, "ERROR: Instance has an invalid output format.\n");
-                return 1;
+        case AudioFormat::S16:
+            fe.sample_buffer.Init(sizeof(int16_t) * frontend.audio_buffer_size);
+            fe.view_s16 = RingbufferView<AudioFrame<int16_t>>(fe.sample_buffer);
+            break;
+        case AudioFormat::S32:
+            fe.sample_buffer.Init(sizeof(int32_t) * frontend.audio_buffer_size);
+            fe.view_s32 = RingbufferView<AudioFrame<int32_t>>(fe.sample_buffer);
+            break;
+        case AudioFormat::F32:
+            fe.sample_buffer.Init(sizeof(float) * frontend.audio_buffer_size);
+            fe.view_f32 = RingbufferView<AudioFrame<float>>(fe.sample_buffer);
+            break;
         }
     }
 
