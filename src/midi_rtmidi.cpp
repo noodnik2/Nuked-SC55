@@ -7,9 +7,9 @@
 
 static RtMidiIn *s_midi_in = nullptr;
 
-static frontend_t* midi_frontend = nullptr;
+static FE_Application* midi_frontend = nullptr;
 
-void FE_RouteMIDI(frontend_t& fe, uint8_t* first, uint8_t* last);
+void FE_RouteMIDI(FE_Application& fe, uint8_t* first, uint8_t* last);
 
 static void MidiOnReceive(double, std::vector<uint8_t> *message, void *)
 {
@@ -24,7 +24,7 @@ static void MidiOnError(RtMidiError::Type, const std::string &errorText, void *)
     fflush(stderr);
 }
 
-bool MIDI_Init(frontend_t& frontend, int port)
+bool MIDI_Init(FE_Application& frontend, int port)
 {
     if (s_midi_in)
     {

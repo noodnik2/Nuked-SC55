@@ -50,7 +50,7 @@ using Ringbuffer_F32 = Ringbuffer<float>;
 template <typename>
 constexpr bool DependentFalse = false;
 
-struct fe_emu_instance_t {
+struct FE_Instance {
     Emulator        emu;
     Ringbuffer_S16  sample_buffer_s16;
     Ringbuffer_F32  sample_buffer_f32;
@@ -79,8 +79,8 @@ struct fe_emu_instance_t {
 
 const size_t FE_MAX_INSTANCES = 16;
 
-struct frontend_t {
-    fe_emu_instance_t instances[FE_MAX_INSTANCES];
+struct FE_Application {
+    FE_Instance instances[FE_MAX_INSTANCES];
     size_t instances_in_use = 0;
 
     uint32_t audio_buffer_size = 0;
@@ -107,15 +107,15 @@ struct FE_Parameters
     bool no_lcd = false;
 };
 
-bool FE_AllocateInstance(frontend_t& container, fe_emu_instance_t** result)
+bool FE_AllocateInstance(FE_Application& container, FE_Instance** result)
 {
     if (container.instances_in_use == FE_MAX_INSTANCES)
     {
         return false;
     }
 
-    fe_emu_instance_t& fe = container.instances[container.instances_in_use];
-    fe = fe_emu_instance_t();
+    FE_Instance& fe = container.instances[container.instances_in_use];
+    fe = FE_Instance();
     ++container.instances_in_use;
 
     if (result)
@@ -126,12 +126,12 @@ bool FE_AllocateInstance(frontend_t& container, fe_emu_instance_t** result)
     return true;
 }
 
-void FE_SendMIDI(frontend_t& fe, size_t n, uint8_t* first, uint8_t* last)
+void FE_SendMIDI(FE_Application& fe, size_t n, uint8_t* first, uint8_t* last)
 {
     fe.instances[n].emu.PostMIDI(std::span(first, last));
 }
 
-void FE_BroadcastMIDI(frontend_t& fe, uint8_t* first, uint8_t* last)
+void FE_BroadcastMIDI(FE_Application& fe, uint8_t* first, uint8_t* last)
 {
     for (size_t i = 0; i < fe.instances_in_use; ++i)
     {
@@ -139,7 +139,7 @@ void FE_BroadcastMIDI(frontend_t& fe, uint8_t* first, uint8_t* last)
     }
 }
 
-void FE_RouteMIDI(frontend_t& fe, uint8_t* first, uint8_t* last)
+void FE_RouteMIDI(FE_Application& fe, uint8_t* first, uint8_t* last)
 {
     if (*first < 0x80)
     {
@@ -162,7 +162,7 @@ void FE_RouteMIDI(frontend_t& fe, uint8_t* first, uint8_t* last)
 
 void FE_ReceiveSample_S16(void* userdata, int32_t left, int32_t right)
 {
-    fe_emu_instance_t& fe = *(fe_emu_instance_t*)userdata;
+    FE_Instance& fe = *(FE_Instance*)userdata;
 
     AudioFrame<int16_t> frame;
     frame.left = (int16_t)clamp<int32_t>(left >> 15, INT16_MIN, INT16_MAX);
@@ -175,7 +175,7 @@ void FE_ReceiveSample_F32(void* userdata, int32_t left, int32_t right)
 {
     constexpr float DIV_REC = 1.0f / 536870912.0f;
 
-    fe_emu_instance_t& fe = *(fe_emu_instance_t*)userdata;
+    FE_Instance& fe = *(FE_Instance*)userdata;
 
     AudioFrame<float> frame;
     frame.left = (float)left * DIV_REC;
@@ -187,7 +187,7 @@ void FE_ReceiveSample_F32(void* userdata, int32_t left, int32_t right)
 template <typename SampleT>
 void FE_AudioCallback(void* userdata, Uint8* stream, int len)
 {
-    frontend_t& frontend = *(frontend_t*)userdata;
+    FE_Application& frontend = *(FE_Application*)userdata;
 
     const size_t num_frames = (size_t)len / sizeof(AudioFrame<SampleT>);
     memset(stream, 0, (size_t)len);
@@ -235,7 +235,7 @@ static const char* audio_format_to_str(int format)
     return "UNK";
 }
 
-bool FE_OpenAudio(frontend_t& fe, const FE_Parameters& params)
+bool FE_OpenAudio(FE_Application& fe, const FE_Parameters& params)
 {
     SDL_AudioSpec spec = {};
     SDL_AudioSpec spec_actual = {};
@@ -310,7 +310,7 @@ bool FE_OpenAudio(frontend_t& fe, const FE_Parameters& params)
 }
 
 template <typename SampleT>
-void FE_RunInstance(fe_emu_instance_t& instance)
+void FE_RunInstance(FE_Instance& instance)
 {
     MCU_WorkThread_Lock(instance.emu.GetMCU());
     while (instance.running)
@@ -336,7 +336,7 @@ void FE_RunInstance(fe_emu_instance_t& instance)
     MCU_WorkThread_Unlock(instance.emu.GetMCU());
 }
 
-bool FE_HandleGlobalEvent(frontend_t& fe, const SDL_Event& ev)
+bool FE_HandleGlobalEvent(FE_Application& fe, const SDL_Event& ev)
 {
     switch (ev.type)
     {
@@ -348,7 +348,7 @@ bool FE_HandleGlobalEvent(frontend_t& fe, const SDL_Event& ev)
     }
 }
 
-void FE_EventLoop(frontend_t& fe)
+void FE_EventLoop(FE_Application& fe)
 {
     while (fe.running)
     {
@@ -388,7 +388,7 @@ void FE_EventLoop(frontend_t& fe)
     }
 }
 
-void FE_Run(frontend_t& fe)
+void FE_Run(FE_Application& fe)
 {
     fe.running = true;
 
@@ -430,9 +430,9 @@ bool FE_Init()
     return true;
 }
 
-bool FE_CreateInstance(frontend_t& container, const std::filesystem::path& base_path, const FE_Parameters& params)
+bool FE_CreateInstance(FE_Application& container, const std::filesystem::path& base_path, const FE_Parameters& params)
 {
-    fe_emu_instance_t* fe = nullptr;
+    FE_Instance* fe = nullptr;
 
     if (!FE_AllocateInstance(container, &fe))
     {
@@ -479,12 +479,12 @@ bool FE_CreateInstance(frontend_t& container, const std::filesystem::path& base_
     return true;
 }
 
-void FE_DestroyInstance(fe_emu_instance_t& fe)
+void FE_DestroyInstance(FE_Instance& fe)
 {
     fe.running = false;
 }
 
-void FE_Quit(frontend_t& container)
+void FE_Quit(FE_Application& container)
 {
     // Important to close audio devices first since this will stop the SDL
     // audio thread. Otherwise we might get a UAF destroying ringbuffers
@@ -784,7 +784,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    frontend_t frontend;
+    FE_Application frontend;
 
     std::filesystem::path base_path = P_GetProcessPath().parent_path();
 
@@ -830,7 +830,7 @@ int main(int argc, char *argv[])
 
     for (size_t i = 0; i < frontend.instances_in_use; ++i)
     {
-        fe_emu_instance_t& fe = frontend.instances[i];
+        FE_Instance& fe = frontend.instances[i];
         const size_t rb_size = frontend.audio_buffer_size / 2;
         switch (fe.format)
         {

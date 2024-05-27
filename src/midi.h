@@ -33,8 +33,8 @@
  */
 #pragma once
 
-struct frontend_t;
+struct FE_Application;
 
-bool MIDI_Init(frontend_t& fe, int port);
+bool MIDI_Init(FE_Application& fe, int port);
 void MIDI_Quit(void);
 
