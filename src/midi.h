@@ -35,6 +35,6 @@
 
 struct FE_Application;
 
-bool MIDI_Init(FE_Application& fe, int port);
+bool MIDI_Init(FE_Application& fe, unsigned int port);
 void MIDI_Quit(void);
 

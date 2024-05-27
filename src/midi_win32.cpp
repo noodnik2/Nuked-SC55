@@ -65,7 +65,7 @@ void CALLBACK MIDI_Callback(
             break;
         case MIM_DATA:
         {
-            int b1 = dwParam1 & 0xff;
+            uint8_t b1 = dwParam1 & 0xff;
             switch (b1 & 0xf0)
             {
                 case 0x80:
@@ -128,11 +128,11 @@ void CALLBACK MIDI_Callback(
     }
 }
 
-bool MIDI_Init(FE_Application& frontend, int port)
+bool MIDI_Init(FE_Application& frontend, unsigned int port)
 {
     midi_frontend = &frontend;
 
-    int num = midiInGetNumDevs();
+    UINT num = midiInGetNumDevs();
 
     if (num == 0)
     {
@@ -140,7 +140,7 @@ bool MIDI_Init(FE_Application& frontend, int port)
         return 0;
     }
 
-    if (port < 0 || port >= num)
+    if (port >= num)
     {
         fprintf(stderr, "Out of range midi port is requested. Defaulting to port 0\n");
         port = 0;

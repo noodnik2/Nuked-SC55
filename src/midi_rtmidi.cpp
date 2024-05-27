@@ -24,7 +24,7 @@ static void MidiOnError(RtMidiError::Type, const std::string &errorText, void *)
     fflush(stderr);
 }
 
-bool MIDI_Init(FE_Application& frontend, int port)
+bool MIDI_Init(FE_Application& frontend, unsigned int port)
 {
     if (s_midi_in)
     {
@@ -49,13 +49,13 @@ bool MIDI_Init(FE_Application& frontend, int port)
         return false;
     }
 
-    if ((unsigned int)port >= count)
+    if (port >= count)
     {
         fprintf(stderr, "Out of range midi port is requested. Defaulting to port 0\n");
         port = 0;
     }
 
-    s_midi_in->openPort(RangeCast<unsigned int>(port), "Nuked SC55");
+    s_midi_in->openPort(port, "Nuked SC55");
 
     return true;
 }

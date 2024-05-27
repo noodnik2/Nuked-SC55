@@ -94,7 +94,7 @@ struct FE_Application {
 struct FE_Parameters
 {
     bool help = false;
-    int port = 0;
+    unsigned int port = 0;
     int audio_device_index = -1;
     uint32_t page_size = 512;
     uint32_t page_num = 32;
