@@ -17,7 +17,6 @@ Full build
 ```
 git clone git@github.com:jcmoyer/Nuked-SC55.git
 cd Nuked-SC55
-git checkout modernize
 mkdir build
 cd build
 cmake ..
