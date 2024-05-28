@@ -645,7 +645,7 @@ struct R_TrackRenderState
     Emulator emu;
     R_Mixer* mixer = nullptr;
     size_t queue_id = 0;
-    size_t us_simulated = 0;
+    size_t ns_simulated = 0;
     const SMF_Track* track = nullptr;
     std::thread thread;
 
@@ -736,6 +736,19 @@ R_TrackList R_SplitTrackModulo(const SMF_Track& merged_track, size_t n)
     return result;
 }
 
+uint64_t R_NSPerStep(Emulator& emu)
+{
+    // These are best guesses.
+    if (emu.GetMCU().mcu_mk1)
+    {
+        return 600;
+    }
+    else
+    {
+        return 500;
+    }
+}
+
 void R_RenderOne(const SMF_Data& data, R_TrackRenderState& state)
 {
     uint64_t division = data.header.division;
@@ -743,18 +756,17 @@ void R_RenderOne(const SMF_Data& data, R_TrackRenderState& state)
 
     const SMF_Track& track = (const SMF_Track&)*state.track;
 
+    const uint64_t ns_per_step = R_NSPerStep(state.emu);
+
     for (const SMF_Event& event : track.events)
     {
-        const uint64_t this_event_time_us = state.us_simulated + SMF_TicksToUS(event.delta_time, us_per_qn, division);
+        const uint64_t this_event_time_ns =
+            state.ns_simulated + 1000 * SMF_TicksToUS(event.delta_time, us_per_qn, division);
 
-        // Simulate until this event fires. We step twice because each step is
-        // 12 cycles, and there are 24_000_000 cycles in a second.
-        // 24_000_000 / 1_000_000 = 24 cycles per microsecond.
-        while (state.us_simulated < this_event_time_us)
+        while (state.ns_simulated < this_event_time_ns)
         {
             MCU_Step(state.emu.GetMCU());
-            MCU_Step(state.emu.GetMCU());
-            ++state.us_simulated;
+            state.ns_simulated += ns_per_step;
         }
 
         if (event.IsTempo(data.bytes))
