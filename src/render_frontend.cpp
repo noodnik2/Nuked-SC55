@@ -35,6 +35,7 @@ struct R_Parameters
     std::filesystem::path rom_directory;
     AudioFormat output_format = AudioFormat::S16;
     bool output_stdout = false;
+    bool disable_oversampling = false;
 };
 
 enum class R_ParseError
@@ -169,6 +170,10 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
         else if (reader.Any("--stdout"))
         {
             result.output_stdout = true;
+        }
+        else if (reader.Any("--disable-oversampling"))
+        {
+            result.disable_oversampling = true;
         }
         else
         {
@@ -861,6 +866,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
         }
 
         render_states[i].emu.Reset();
+        render_states[i].emu.GetPCM().disable_oversampling = params.disable_oversampling;
 
         fprintf(stderr, "Running system reset for #%02" PRIu64 "...\n", i);
         R_RunReset(render_states[i].emu, params.reset);
@@ -898,7 +904,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     {
         render_output.Open(params.output_filename, params.output_format);
     }
-    render_output.SetSampleRate(MCU_GetOutputFrequency(render_states[0].emu.GetMCU()));
+    render_output.SetSampleRate(PCM_GetOutputFrequency(render_states[0].emu.GetPCM()));
 
     R_MixOutState mix_out_state;
     mix_out_state.mixer = &mixer;
@@ -973,6 +979,7 @@ General options:
 
 Audio options:
   -f, --format s16|f32         Set output format.
+  --disable-oversampling       Halves output frequency.
 
 Emulator options:
   -r, --reset     gs|gm        Send GS or GM reset before rendering.

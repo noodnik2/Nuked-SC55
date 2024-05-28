@@ -70,9 +70,12 @@ struct pcm_t {
     uint8_t waverom2[0x200000]{};
     uint8_t waverom3[0x100000]{};
     uint8_t waverom_exp[0x800000]{};
+
+    bool disable_oversampling = false;
 };
 
 void PCM_Write(pcm_t& pcm, uint32_t address, uint8_t data);
 uint8_t PCM_Read(pcm_t& pcm, uint32_t address);
 void PCM_Init(pcm_t& pcm, mcu_t& mcu);
 void PCM_Update(pcm_t& pcm, uint64_t cycles);
+uint32_t PCM_GetOutputFrequency(const pcm_t& pcm);

@@ -548,4 +548,3 @@ void MCU_PostUART(mcu_t& mcu, uint8_t data);
 void MCU_WorkThread_Lock(mcu_t& mcu);
 void MCU_WorkThread_Unlock(mcu_t& mcu);
 
-uint32_t MCU_GetOutputFrequency(const mcu_t& mcu);

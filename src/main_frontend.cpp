@@ -38,6 +38,7 @@
 #include "command_line.h"
 #include "audio.h"
 #include "cast.h"
+#include "pcm.h"
 #include <SDL.h>
 #include <cinttypes>
 #include <optional>
@@ -112,6 +113,7 @@ struct FE_Parameters
     std::optional<std::filesystem::path> rom_directory;
     AudioFormat output_format = AudioFormat::S16;
     bool no_lcd = false;
+    bool disable_oversampling = false;
 };
 
 bool FE_AllocateInstance(FE_Application& container, FE_Instance** result)
@@ -263,11 +265,6 @@ bool FE_OpenAudio(FE_Application& fe, const FE_Parameters& params)
     fe.audio_page_size = (params.page_size / 2) * 2; // must be even
     fe.audio_buffer_size = fe.audio_page_size * params.page_num;
 
-    // TODO: we just assume the first instance has the correct mcu type for
-    // all instances, which is PROBABLY correct but maybe we want to do some
-    // crazy stuff like running different mcu types concurrently in the future?
-    const mcu_t& mcu = fe.instances[0].emu.GetMCU();
-
     switch (params.output_format)
     {
         case AudioFormat::S16:
@@ -283,7 +280,7 @@ bool FE_OpenAudio(FE_Application& fe, const FE_Parameters& params)
             spec.callback = FE_AudioCallback<float>;
             break;
     }
-    spec.freq = RangeCast<int>(MCU_GetOutputFrequency(mcu));
+    spec.freq = RangeCast<int>(PCM_GetOutputFrequency(fe.instances[0].emu.GetPCM()));
     spec.channels = 2;
     spec.userdata = &fe;
     spec.samples = RangeCast<Uint16>(fe.audio_page_size / 4);
@@ -492,6 +489,7 @@ bool FE_CreateInstance(FE_Application& container, const std::filesystem::path& b
         return false;
     }
     fe->emu.Reset();
+    fe->emu.GetPCM().disable_oversampling = params.disable_oversampling;
 
     if (!params.no_lcd && !LCD_CreateWindow(fe->emu.GetLCD()))
     {
@@ -694,6 +692,10 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
         {
             result.no_lcd = true;
         }
+        else if (reader.Any("--disable-oversampling"))
+        {
+            result.disable_oversampling = true;
+        }
         else if (reader.Any("-d", "--rom-directory"))
         {
             if (!reader.Next())
@@ -774,6 +776,7 @@ Audio options:
   -a, --audio-device <device_number>            Set Audio Device index.
   -b, --buffer-size  <page_size>[:page_count]   Set Audio Buffer size.
   -f, --format       s16|s32|f32                Set output format.
+  --disable-oversampling                        Halves output frequency.
 
 Emulator options:
   -r, --reset     gs|gm                         Reset system in GS or GM mode.

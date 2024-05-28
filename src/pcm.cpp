@@ -625,7 +625,7 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
             pcm.ram1[30][5] = addclip20(pcm.accum_r,
                 orval | (shifter & noise_mask), 0);
 
-            if (pcm.config_reg_3c & 0x40) // oversampling
+            if (!pcm.disable_oversampling && (pcm.config_reg_3c & 0x40)) // oversampling
             {
                 pcm.ram2[30][10] = shifter;
 
@@ -1572,5 +1572,18 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
         int new_cycles = (reg_slots + 1) * 25;
 
         pcm.cycles += pcm.mcu->mcu_jv880 ? (new_cycles * 25) / 29 : new_cycles;
+    }
+}
+
+uint32_t PCM_GetOutputFrequency(const pcm_t& pcm)
+{
+    uint32_t freq = (pcm.mcu->mcu_mk1 || pcm.mcu->mcu_jv880) ? 64000 : 66207;
+    if (pcm.disable_oversampling)
+    {
+        return freq / 2;
+    }
+    else
+    {
+        return freq;
     }
 }
