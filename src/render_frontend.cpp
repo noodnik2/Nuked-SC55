@@ -17,6 +17,7 @@
 #include <source_location>
 #include <thread>
 #include <condition_variable>
+#include <cstring>
 
 #ifdef _WIN32
 #include <io.h>
