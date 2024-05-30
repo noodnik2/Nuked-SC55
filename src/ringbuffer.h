@@ -36,6 +36,7 @@
 #include "audio.h"
 #include "math_util.h"
 #include <memory>
+#include <span>
 
 // This type has reference semantics.
 class GenericBuffer
@@ -114,8 +115,8 @@ public:
     RingbufferView() = default;
 
     explicit RingbufferView(GenericBuffer& buffer)
+        : m_buffer((uint8_t*)buffer.DataFirst(), (uint8_t*)buffer.DataLast())
     {
-        m_buffer     = &buffer;
         m_read_head  = 0;
         m_write_head = 0;
         m_elem_count = buffer.GetByteLength() / sizeof(ElemT);
@@ -160,19 +161,19 @@ public:
 private:
     ElemT* GetWritePtr()
     {
-        return (ElemT*)m_buffer->DataFirst() + m_write_head;
+        return (ElemT*)m_buffer.data() + m_write_head;
     }
 
     const ElemT* GetReadPtr() const
     {
-        return (ElemT*)m_buffer->DataFirst() + m_read_head;
+        return (ElemT*)m_buffer.data() + m_read_head;
     }
 
 private:
-    GenericBuffer* m_buffer     = nullptr;
-    size_t         m_read_head  = 0;
-    size_t         m_write_head = 0;
-    size_t         m_elem_count = 0;
+    std::span<uint8_t> m_buffer;
+    size_t             m_read_head  = 0;
+    size_t             m_write_head = 0;
+    size_t             m_elem_count = 0;
 };
 
 inline void MixFrame(AudioFrame<int16_t>& dest, const AudioFrame<int16_t>& src)
