@@ -190,7 +190,11 @@ void FE_ReceiveSample_S32(void* userdata, const AudioFrame<int32_t>& in)
 {
     FE_Instance& fe = *(FE_Instance*)userdata;
 
-    fe.view_s32.UncheckedWriteOne(in);
+    AudioFrame<int32_t> out;
+    out.left  = (int32_t)clamp<int64_t>((int64_t)in.left << 1, INT32_MIN, INT32_MAX);
+    out.right = (int32_t)clamp<int64_t>((int64_t)in.right << 1, INT32_MIN, INT32_MAX);
+
+    fe.view_s32.UncheckedWriteOne(out);
 }
 
 void FE_ReceiveSample_F32(void* userdata, const AudioFrame<int32_t>& in)
