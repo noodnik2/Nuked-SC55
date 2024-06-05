@@ -36,7 +36,7 @@
 #include <Windows.h>
 #include <mmsystem.h>
 #include <span>
-#include "mcu.h"
+#include <cstdint>
 #include "midi.h"
 
 static HMIDIIN midi_handle;
