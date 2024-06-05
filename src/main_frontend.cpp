@@ -175,39 +175,15 @@ void FE_RouteMIDI(FE_Application& fe, std::span<const uint8_t> bytes)
     }
 }
 
-void FE_ReceiveSample_S16(void* userdata, const AudioFrame<int32_t>& in)
+template <typename SampleT>
+void FE_ReceiveSample(void* userdata, const AudioFrame<int32_t>& in)
 {
     FE_Instance& fe = *(FE_Instance*)userdata;
 
-    AudioFrame<int16_t> out;
-    out.left  = (int16_t)clamp<int32_t>(in.left >> 15, INT16_MIN, INT16_MAX);
-    out.right = (int16_t)clamp<int32_t>(in.right >> 15, INT16_MIN, INT16_MAX);
+    AudioFrame<SampleT> out;
+    Normalize(in, out);
 
-    fe.view_s16.UncheckedWriteOne(out);
-}
-
-void FE_ReceiveSample_S32(void* userdata, const AudioFrame<int32_t>& in)
-{
-    FE_Instance& fe = *(FE_Instance*)userdata;
-
-    AudioFrame<int32_t> out;
-    out.left  = (int32_t)clamp<int64_t>((int64_t)in.left << 1, INT32_MIN, INT32_MAX);
-    out.right = (int32_t)clamp<int64_t>((int64_t)in.right << 1, INT32_MIN, INT32_MAX);
-
-    fe.view_s32.UncheckedWriteOne(out);
-}
-
-void FE_ReceiveSample_F32(void* userdata, const AudioFrame<int32_t>& in)
-{
-    constexpr float DIV_REC = 1.0f / 536870912.0f;
-
-    FE_Instance& fe = *(FE_Instance*)userdata;
-
-    AudioFrame<float> out;
-    out.left  = (float)in.left * DIV_REC;
-    out.right = (float)in.right * DIV_REC;
-
-    fe.view_f32.UncheckedWriteOne(out);
+    fe.StaticSelectBuffer<SampleT>().UncheckedWriteOne(out);
 }
 
 template <typename SampleT>
@@ -475,13 +451,13 @@ bool FE_CreateInstance(FE_Application& container, const std::filesystem::path& b
     switch (fe->format)
     {
         case AudioFormat::S16:
-            fe->emu.SetSampleCallback(FE_ReceiveSample_S16, fe);
+            fe->emu.SetSampleCallback(FE_ReceiveSample<int16_t>, fe);
             break;
         case AudioFormat::S32:
-            fe->emu.SetSampleCallback(FE_ReceiveSample_S32, fe);
+            fe->emu.SetSampleCallback(FE_ReceiveSample<int32_t>, fe);
             break;
         case AudioFormat::F32:
-            fe->emu.SetSampleCallback(FE_ReceiveSample_F32, fe);
+            fe->emu.SetSampleCallback(FE_ReceiveSample<float>, fe);
             break;
     }
 

@@ -655,26 +655,13 @@ struct R_TrackRenderState
     std::atomic<bool> done;
 };
 
-void R_ReceiveSample_S16(void* userdata, const AudioFrame<int32_t>& in)
+template <typename SampleT>
+void R_ReceiveSample(void* userdata, const AudioFrame<int32_t>& in)
 {
     R_TrackRenderState* state = (R_TrackRenderState*)userdata;
 
-    AudioFrame<int16_t> out;
-    out.left  = (int16_t)clamp<int32_t>(in.left >> 15, INT16_MIN, INT16_MAX);
-    out.right = (int16_t)clamp<int32_t>(in.right >> 15, INT16_MIN, INT16_MAX);
-
-    state->mixer->SubmitFrame(state->queue_id, out);
-}
-
-void R_ReceiveSample_F32(void* userdata, const AudioFrame<int32_t>& in)
-{
-    constexpr float DIV_REC = 1.0f / 536870912.0f;
-
-    R_TrackRenderState* state = (R_TrackRenderState*)userdata;
-
-    AudioFrame<float> out;
-    out.left  = (float)in.left * DIV_REC;
-    out.right = (float)in.right * DIV_REC;
+    AudioFrame<SampleT> out;
+    Normalize(in, out);
 
     state->mixer->SubmitFrame(state->queue_id, out);
 }
@@ -887,10 +874,10 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
         switch (params.output_format)
         {
         case AudioFormat::S16:
-            render_states[i].emu.SetSampleCallback(R_ReceiveSample_S16, &render_states[i]);
+            render_states[i].emu.SetSampleCallback(R_ReceiveSample<int16_t>, &render_states[i]);
             break;
         case AudioFormat::F32:
-            render_states[i].emu.SetSampleCallback(R_ReceiveSample_F32, &render_states[i]);
+            render_states[i].emu.SetSampleCallback(R_ReceiveSample<float>, &render_states[i]);
             break;
         default:
             fprintf(stderr, "Invalid audio format\n");
