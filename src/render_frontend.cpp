@@ -159,6 +159,10 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
             {
                 result.output_format = AudioFormat::S16;
             }
+            else if (reader.Arg() == "s32")
+            {
+                result.output_format = AudioFormat::S32;
+            }
             else if (reader.Arg() == "f32")
             {
                 result.output_format = AudioFormat::F32;
@@ -800,6 +804,11 @@ void R_Mix(int16_t* dest, int16_t* src_first, int16_t* src_last)
     horizontal_sat_add_i16(dest, src_first, src_last);
 }
 
+void R_Mix(int32_t* dest, int32_t* src_first, int32_t* src_last)
+{
+    horizontal_sat_add_i32(dest, src_first, src_last);
+}
+
 void R_Mix(float* dest, float* src_first, float* src_last)
 {
     horizontal_add_f32(dest, src_first, src_last);
@@ -845,12 +854,12 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     case AudioFormat::S16:
         mixer.SetQueueCount<int16_t>(instances);
         break;
+    case AudioFormat::S32:
+        mixer.SetQueueCount<int32_t>(instances);
+        break;
     case AudioFormat::F32:
         mixer.SetQueueCount<float>(instances);
         break;
-    default:
-        fprintf(stderr, "Invalid audio format\n");
-        return false;
     }
 
     R_TrackRenderState render_states[SMF_CHANNEL_COUNT];
@@ -876,12 +885,12 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
         case AudioFormat::S16:
             render_states[i].emu.SetSampleCallback(R_ReceiveSample<int16_t>, &render_states[i]);
             break;
+        case AudioFormat::S32:
+            render_states[i].emu.SetSampleCallback(R_ReceiveSample<int32_t>, &render_states[i]);
+            break;
         case AudioFormat::F32:
             render_states[i].emu.SetSampleCallback(R_ReceiveSample<float>, &render_states[i]);
             break;
-        default:
-            fprintf(stderr, "Invalid audio format\n");
-            return false;
         }
 
         render_states[i].track = &split_tracks.tracks[i];
@@ -916,12 +925,12 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     case AudioFormat::S16:
         mix_out_thread = std::thread(R_MixOut<int16_t>, std::ref(mix_out_state));
         break;
+    case AudioFormat::S32:
+        mix_out_thread = std::thread(R_MixOut<int32_t>, std::ref(mix_out_state));
+        break;
     case AudioFormat::F32:
         mix_out_thread = std::thread(R_MixOut<float>, std::ref(mix_out_state));
         break;
-    default:
-        fprintf(stderr, "Invalid audio format\n");
-        return false;
     }
 
     // Now we wait.
@@ -978,7 +987,7 @@ General options:
   --stdout                     Render raw sample data to stdout. No header
 
 Audio options:
-  -f, --format s16|f32         Set output format.
+  -f, --format s16|s32|f32     Set output format.
   --disable-oversampling       Halves output frequency.
 
 Emulator options:
