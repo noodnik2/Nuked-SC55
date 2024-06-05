@@ -36,53 +36,53 @@
 #include <cstdint>
 
 template <typename T>
-inline T min(T a, T b)
+inline T Min(T a, T b)
 {
     return a < b ? a : b;
 }
 
 template <typename T>
-inline T clamp(T value, T min, T max)
+inline T Clamp(T value, T min, T max)
 {
     if (value < min) return min;
     if (value > max) return max;
     return value;
 }
 
-inline int16_t saturating_add(int16_t a, int16_t b)
+inline int16_t SaturatingAdd(int16_t a, int16_t b)
 {
     int32_t result = (int32_t)a + (int32_t)b;
-    return (int16_t)clamp<int32_t>(result, INT16_MIN, INT16_MAX);
+    return (int16_t)Clamp<int32_t>(result, INT16_MIN, INT16_MAX);
 }
 
-inline int32_t saturating_add(int32_t a, int32_t b)
+inline int32_t SaturatingAdd(int32_t a, int32_t b)
 {
     int64_t result = (int64_t)a + (int64_t)b;
-    return (int32_t)clamp<int64_t>(result, INT32_MIN, INT32_MAX);
+    return (int32_t)Clamp<int64_t>(result, INT32_MIN, INT32_MAX);
 }
 
 // Auto vectorizes in clang at -O2, gcc at -O3
-inline void horizontal_sat_add_i16(int16_t* dest, int16_t* src_first, int16_t* src_last)
+inline void HorizontalSatAddI16(int16_t* dest, int16_t* src_first, int16_t* src_last)
 {
     while (src_first != src_last)
     {
-        *dest = saturating_add(*dest, *src_first);
+        *dest = SaturatingAdd(*dest, *src_first);
         ++src_first;
         ++dest;
     }
 }
 
-inline void horizontal_sat_add_i32(int32_t* dest, int32_t* src_first, int32_t* src_last)
+inline void HorizontalSatAddI32(int32_t* dest, int32_t* src_first, int32_t* src_last)
 {
     while (src_first != src_last)
     {
-        *dest = saturating_add(*dest, *src_first);
+        *dest = SaturatingAdd(*dest, *src_first);
         ++src_first;
         ++dest;
     }
 }
 
-inline void horizontal_add_f32(float* dest, float* src_first, float* src_last)
+inline void HorizontalAddF32(float* dest, float* src_first, float* src_last)
 {
     while (src_first != src_last)
     {

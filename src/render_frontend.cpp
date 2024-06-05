@@ -545,7 +545,7 @@ public:
             size_t cc = m_queues[i].ChunkCount();
             if (!(m_queue_complete[i] && cc == 0))
             {
-                count = min(count, cc);
+                count = Min(count, cc);
             }
         }
         return count;
@@ -801,17 +801,17 @@ struct R_MixOutState
 void R_Mix(int16_t* dest, int16_t* src_first, int16_t* src_last)
 {
     // TODO more correct to clip *after* summation? we need an intermediate buffer of a larger type?
-    horizontal_sat_add_i16(dest, src_first, src_last);
+    HorizontalSatAddI16(dest, src_first, src_last);
 }
 
 void R_Mix(int32_t* dest, int32_t* src_first, int32_t* src_last)
 {
-    horizontal_sat_add_i32(dest, src_first, src_last);
+    HorizontalSatAddI32(dest, src_first, src_last);
 }
 
 void R_Mix(float* dest, float* src_first, float* src_last)
 {
-    horizontal_add_f32(dest, src_first, src_last);
+    HorizontalAddF32(dest, src_first, src_last);
 }
 
 template <typename T>

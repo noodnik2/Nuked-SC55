@@ -178,14 +178,14 @@ private:
 
 inline void MixFrame(AudioFrame<int16_t>& dest, const AudioFrame<int16_t>& src)
 {
-    dest.left  = saturating_add(dest.left, src.left);
-    dest.right = saturating_add(dest.right, src.right);
+    dest.left  = SaturatingAdd(dest.left, src.left);
+    dest.right = SaturatingAdd(dest.right, src.right);
 }
 
 inline void MixFrame(AudioFrame<int32_t>& dest, const AudioFrame<int32_t>& src)
 {
-    dest.left  = saturating_add(dest.left, src.left);
-    dest.right = saturating_add(dest.right, src.right);
+    dest.left  = SaturatingAdd(dest.left, src.left);
+    dest.right = SaturatingAdd(dest.right, src.right);
 }
 
 inline void MixFrame(AudioFrame<float>& dest, const AudioFrame<float>& src)
@@ -200,7 +200,7 @@ template <typename SampleT>
 size_t ReadMix(RingbufferView<AudioFrame<SampleT>>& rb, AudioFrame<SampleT>* dest, size_t frame_count)
 {
     const size_t have_count = rb.GetReadableCount();
-    const size_t read_count = min(have_count, frame_count);
+    const size_t read_count = Min(have_count, frame_count);
     for (size_t i = 0; i < read_count; ++i)
     {
         AudioFrame<SampleT> src;
