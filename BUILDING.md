@@ -19,8 +19,8 @@ git clone git@github.com:jcmoyer/Nuked-SC55.git
 cd Nuked-SC55
 mkdir build
 cd build
-cmake ..
-cmake --build . --config Release
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build .
 ```
 
 ### Windows
