@@ -300,7 +300,7 @@ bool FE_OpenAudio(FE_Application& fe, const FE_Parameters& params)
            spec_actual.channels,
            spec_actual.freq,
            spec_actual.samples);
-    fflush(stdout);
+    fflush(stderr);
 
     SDL_PauseAudioDevice(fe.sdl_audio, 0);
 
