@@ -284,6 +284,7 @@ bool FE_OpenAudio(FE_Application& fe, const FE_Parameters& params)
     fe.sdl_audio = SDL_OpenAudioDevice(device_index == -1 ? NULL : audioDevicename, 0, &spec, &spec_actual, 0);
     if (!fe.sdl_audio)
     {
+        fprintf(stderr, "Failed to open audio device: %s\n", SDL_GetError());
         return false;
     }
 
