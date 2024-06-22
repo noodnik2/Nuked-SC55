@@ -997,8 +997,7 @@ void MCU_Opcode_CLR(mcu_t& mcu, uint8_t opcode, uint8_t opcode_reg)
         uint32_t data_l = data & 0xff;
         data = (data_l << 8) | data_h;
         mcu.r[mcu.operand_reg] = data;
-        MCU_SetStatusCommon(mcu, data, OPERAND_BYTE); // FIXME: might be WORD???
-        //MCU_SetStatusCommon(data, OPERAND_WORD);
+        MCU_SetStatusCommon(mcu, data, OPERAND_WORD);
     }
     else if (opcode_reg == 5 && mcu.operand_type != GENERAL_IMMEDIATE) // NOT
     {

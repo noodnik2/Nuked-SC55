@@ -711,6 +711,10 @@ void MCU_Write(mcu_t& mcu, uint32_t address, uint8_t value)
                 }
             }
         }
+        else if (mcu.mcu_jv880 && address >= 0x6196 && address <= 0x6199)
+        {
+            // nop: the jv880 rom writes into the rom at 002E77-002E7D
+        }
         else
         {
             fprintf(stderr, "Unknown write %x %x\n", address, value);

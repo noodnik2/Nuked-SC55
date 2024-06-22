@@ -58,8 +58,10 @@ uint8_t PCM_ReadROM(pcm_t& pcm, uint32_t address)
             else
                 return pcm.waverom2[address & 0x1fffff];
         case 2:
-            if (pcm.mcu->mcu_jv880) return 0;
-            return pcm.waverom3[address & 0xfffff];
+            if (pcm.mcu->mcu_jv880)
+                return pcm.waverom_card[address & 0x1fffff];
+            else
+                return pcm.waverom3[address & 0xfffff];
         case 3:
         case 4:
         case 5:

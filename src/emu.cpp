@@ -90,7 +90,9 @@ const char* rs_name[(size_t)ROMSET_COUNT] = {
     "SC-155mk2"
 };
 
-const char* roms[(size_t)ROMSET_COUNT][5] =
+constexpr int ROM_SET_N_FILES = 6;
+
+const char* roms[(size_t)ROMSET_COUNT][ROM_SET_N_FILES] =
 {
     {
         "rom1.bin",
@@ -98,6 +100,7 @@ const char* roms[(size_t)ROMSET_COUNT][5] =
         "waverom1.bin",
         "waverom2.bin",
         "rom_sm.bin",
+        "",
     },
 
     {
@@ -106,6 +109,7 @@ const char* roms[(size_t)ROMSET_COUNT][5] =
         "waverom1.bin",
         "waverom2.bin",
         "rom_sm.bin",
+        "",
     },
 
     {
@@ -114,6 +118,7 @@ const char* roms[(size_t)ROMSET_COUNT][5] =
         "sc55_waverom1.bin",
         "sc55_waverom2.bin",
         "sc55_waverom3.bin",
+        "",
     },
 
     {
@@ -122,6 +127,7 @@ const char* roms[(size_t)ROMSET_COUNT][5] =
         "cm300_waverom1.bin",
         "cm300_waverom2.bin",
         "cm300_waverom3.bin",
+        "",
     },
 
     {
@@ -130,6 +136,7 @@ const char* roms[(size_t)ROMSET_COUNT][5] =
         "jv880_waverom1.bin",
         "jv880_waverom2.bin",
         "jv880_waverom_expansion.bin",
+        "jv880_waverom_pcmcard.bin",
     },
 
     {
@@ -138,12 +145,14 @@ const char* roms[(size_t)ROMSET_COUNT][5] =
         "scb55_waverom1.bin",
         "scb55_waverom2.bin",
         "",
+        "",
     },
 
     {
         "rlp3237_rom1.bin",
         "rlp3237_rom2.bin",
         "rlp3237_waverom1.bin",
+        "",
         "",
         "",
     },
@@ -154,6 +163,7 @@ const char* roms[(size_t)ROMSET_COUNT][5] =
         "sc155_waverom1.bin",
         "sc155_waverom2.bin",
         "sc155_waverom3.bin",
+        "",
     },
 
     {
@@ -162,6 +172,7 @@ const char* roms[(size_t)ROMSET_COUNT][5] =
         "waverom1.bin",
         "waverom2.bin",
         "rom_sm.bin",
+        "",
     },
 };
 
@@ -239,8 +250,7 @@ bool Emulator::LoadRoms(Romset romset, const std::filesystem::path& base_path)
 {
     std::vector<uint8_t> tempbuf(0x800000);
 
-    const size_t rf_num = 5;
-    std::ifstream s_rf[rf_num];
+    std::ifstream s_rf[ROM_SET_N_FILES];
 
     m_mcu->romset = romset;
     m_mcu->mcu_mk1 = false;
@@ -280,12 +290,12 @@ bool Emulator::LoadRoms(Romset romset, const std::filesystem::path& base_path)
             break;
     }
 
-    std::filesystem::path rpaths[5];
+    std::filesystem::path rpaths[ROM_SET_N_FILES];
 
     bool r_ok = true;
     std::string errors_list;
 
-    for(size_t i = 0; i < 5; ++i)
+    for(size_t i = 0; i < ROM_SET_N_FILES; ++i)
     {
         if (roms[(size_t)romset][i][0] == '\0')
         {
@@ -293,7 +303,7 @@ bool Emulator::LoadRoms(Romset romset, const std::filesystem::path& base_path)
         }
         rpaths[i] = base_path / roms[(size_t)romset][i];
         s_rf[i] = std::ifstream(rpaths[i].c_str(), std::ios::binary);
-        bool optional = m_mcu->mcu_jv880 && i == 4;
+        bool optional = m_mcu->mcu_jv880 && i >= 4;
         r_ok &= optional || s_rf[i];
         if (!s_rf[i])
         {
@@ -384,6 +394,11 @@ bool Emulator::LoadRoms(Romset romset, const std::filesystem::path& base_path)
             unscramble(tempbuf.data(), m_pcm->waverom_exp, 0x800000);
         else
             fprintf(stderr, "WaveRom EXP not found, skipping it.\n");
+
+        if (s_rf[5] && EMU_ReadStreamExact(s_rf[5], tempbuf, 0x200000))
+            unscramble(tempbuf.data(), m_pcm->waverom_card, 0x200000);
+        else
+            fprintf(stderr, "WaveRom PCM not found, skipping it.\n");
     }
     else
     {

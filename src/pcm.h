@@ -69,6 +69,7 @@ struct pcm_t {
     uint8_t waverom1[0x200000]{};
     uint8_t waverom2[0x200000]{};
     uint8_t waverom3[0x100000]{};
+    uint8_t waverom_card[0x200000]{};
     uint8_t waverom_exp[0x800000]{};
 
     bool disable_oversampling = false;

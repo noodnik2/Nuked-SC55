@@ -218,11 +218,15 @@ bool LCD_CreateWindow(lcd_t& lcd)
     {
         lcd.lcd_width = 820;
         lcd.lcd_height = 100;
+        lcd.lcd_col1 = 0x000000;
+        lcd.lcd_col2 = 0x78b500;
     }
     else
     {
         lcd.lcd_width = 741;
         lcd.lcd_height = 268;
+        lcd.lcd_col1 = 0x000000;
+        lcd.lcd_col2 = 0x0050c8;
     }
 
     std::string title = "Nuked SC-55: ";
@@ -264,9 +268,6 @@ void LCD_UnInit(lcd_t& lcd)
     }
 }
 
-uint32_t lcd_col1 = 0x000000;
-uint32_t lcd_col2 = 0x0050c8;
-
 void LCD_FontRenderStandard(lcd_t& lcd, int32_t x, int32_t y, uint8_t ch, bool overlay = false)
 {
     uint8_t* f;
@@ -281,11 +282,11 @@ void LCD_FontRenderStandard(lcd_t& lcd, int32_t x, int32_t y, uint8_t ch, bool o
             uint32_t col;
             if (f[i] & (1<<(4-j)))
             {
-                col = lcd_col1;
+                col = lcd.lcd_col1;
             }
             else
             {
-                col = lcd_col2;
+                col = lcd.lcd_col2;
             }
             int xx = x + i * 6;
             int yy = y + j * 6;
@@ -317,11 +318,11 @@ void LCD_FontRenderLevel(lcd_t& lcd, int32_t x, int32_t y, uint8_t ch, uint8_t w
             uint32_t col;
             if (f[i] & (1<<(4-j)))
             {
-                col = lcd_col1;
+                col = lcd.lcd_col1;
             }
             else
             {
-                col = lcd_col2;
+                col = lcd.lcd_col2;
             }
             int xx = x + i * 11;
             int yy = y + j * 26;
@@ -384,11 +385,11 @@ void LCD_FontRenderLR(lcd_t& lcd, uint8_t ch)
     int col;
     if (f[0] & 1)
     {
-        col = lcd_col1;
+        col = lcd.lcd_col1;
     }
     else
     {
-        col = lcd_col2;
+        col = lcd.lcd_col2;
     }
     for (int letter = 0; letter < 2; letter++)
     {
@@ -419,7 +420,7 @@ void LCD_Update(lcd_t& lcd)
             {
                 for (size_t i = 0; i < lcd.lcd_height; i++) {
                     for (size_t j = 0; j < lcd.lcd_width; j++) {
-                        lcd.lcd_buffer[i][j] = 0xFF0F6FFF;
+                        lcd.lcd_buffer[i][j] = 0xFF03be51;
                     }
                 }
             }
