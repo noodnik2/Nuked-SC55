@@ -92,19 +92,19 @@ void TIMER_Write(mcu_timer_t& timer, uint32_t address, uint8_t data)
     case REG_OCRAH:
     case REG_OCRBH:
     case REG_ICRH:
-        timer.timer_tempreg = data;
+        timer.tempreg = data;
         break;
     case REG_FRCL:
-        ftimer->frc = (timer.timer_tempreg << 8) | data;
+        ftimer->frc = (timer.tempreg << 8) | data;
         break;
     case REG_OCRAL:
-        ftimer->ocra = (timer.timer_tempreg << 8) | data;
+        ftimer->ocra = (timer.tempreg << 8) | data;
         break;
     case REG_OCRBL:
-        ftimer->ocrb = (timer.timer_tempreg << 8) | data;
+        ftimer->ocrb = (timer.tempreg << 8) | data;
         break;
     case REG_ICRL:
-        ftimer->icr = (timer.timer_tempreg << 8) | data;
+        ftimer->icr = (timer.tempreg << 8) | data;
         break;
     }
 }
@@ -128,22 +128,22 @@ uint8_t TIMER_Read(mcu_timer_t& timer, uint32_t address)
         return ret;
     }
     case REG_FRCH:
-        timer.timer_tempreg = ftimer->frc & 0xff;
+        timer.tempreg = ftimer->frc & 0xff;
         return ftimer->frc >> 8;
     case REG_OCRAH:
-        timer.timer_tempreg = ftimer->ocra & 0xff;
+        timer.tempreg = ftimer->ocra & 0xff;
         return ftimer->ocra >> 8;
     case REG_OCRBH:
-        timer.timer_tempreg = ftimer->ocrb & 0xff;
+        timer.tempreg = ftimer->ocrb & 0xff;
         return ftimer->ocrb >> 8;
     case REG_ICRH:
-        timer.timer_tempreg = ftimer->icr & 0xff;
+        timer.tempreg = ftimer->icr & 0xff;
         return ftimer->icr >> 8;
     case REG_FRCL:
     case REG_OCRAL:
     case REG_OCRBL:
     case REG_ICRL:
-        return timer.timer_tempreg;
+        return timer.tempreg;
     }
     return 0xff;
 }
@@ -228,17 +228,17 @@ constexpr uint64_t TIMER_STEP_TABLE_MK1[8] = {
 
 void TIMER_Clock(mcu_timer_t& timer, uint64_t cycles)
 {
-    const bool mk1 = timer.mcu->mcu_mk1;
+    const bool mk1 = timer.mcu->is_mk1;
     const auto& FRT_STEP_TABLE = mk1 ? FRT_STEP_TABLE_MK1 : FRT_STEP_TABLE_GENERIC;
     const auto& TIMER_STEP_TABLE = mk1 ? TIMER_STEP_TABLE_MK1 : TIMER_STEP_TABLE_GENERIC;
 
-    while (timer.timer_cycles*2 < cycles) // FIXME
+    while (timer.cycles*2 < cycles) // FIXME
     {
         for (int i = 0; i < 3; i++)
         {
             frt_t *ftimer = &timer.frt[i];
 
-            const bool frt_step = !(timer.timer_cycles & FRT_STEP_TABLE[ftimer->tcr & 3]);
+            const bool frt_step = !(timer.cycles & FRT_STEP_TABLE[ftimer->tcr & 3]);
 
             if (frt_step)
             {
@@ -269,7 +269,7 @@ void TIMER_Clock(mcu_timer_t& timer, uint64_t cycles)
             }
         }
 
-        const bool timer_step = !(timer.timer_cycles & TIMER_STEP_TABLE[timer.tcr & 7]);
+        const bool timer_step = !(timer.cycles & TIMER_STEP_TABLE[timer.tcr & 7]);
 
         if (timer_step)
         {
@@ -301,6 +301,6 @@ void TIMER_Clock(mcu_timer_t& timer, uint64_t cycles)
                 MCU_Interrupt_SetRequest(*timer.mcu, INTERRUPT_SOURCE_TIMER_CMIB, 1);
         }
 
-        timer.timer_cycles++;
+        timer.cycles++;
     }
 }

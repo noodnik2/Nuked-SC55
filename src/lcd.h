@@ -49,11 +49,11 @@ static const int lcd_height_max = 1024;
 struct lcd_t {
     mcu_t* mcu = nullptr;
 
-    size_t lcd_width = 0;
-    size_t lcd_height = 0;
+    size_t width = 0;
+    size_t height = 0;
 
-    uint32_t lcd_col1 = 0;
-    uint32_t lcd_col2 = 0;
+    uint32_t color1 = 0;
+    uint32_t color2 = 0;
 
     uint32_t LCD_DL = 0, LCD_N = 0, LCD_F = 0, LCD_D = 0, LCD_C = 0, LCD_B = 0, LCD_ID = 0, LCD_S = 0;
     uint32_t LCD_DD_RAM = 0, LCD_AC = 0, LCD_CG_RAM = 0;
@@ -61,11 +61,11 @@ struct lcd_t {
     uint8_t LCD_Data[80]{};
     uint8_t LCD_CG[64]{};
 
-    uint8_t lcd_enable = 0;
-    bool lcd_quit_requested = false;
+    uint8_t enable = 0;
+    bool quit_requested = false;
 
-    uint32_t lcd_buffer[lcd_height_max][lcd_width_max]{};
-    uint32_t lcd_background[268][741]{};
+    uint32_t buffer[lcd_height_max][lcd_width_max]{};
+    uint32_t background[268][741]{};
 
     SDL_Window *window = nullptr;
     SDL_Renderer *renderer = nullptr;

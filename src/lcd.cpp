@@ -46,12 +46,12 @@
 
 void LCD_Enable(lcd_t& lcd, uint32_t enable)
 {
-    lcd.lcd_enable = enable;
+    lcd.enable = enable;
 }
 
 bool LCD_QuitRequested(lcd_t& lcd)
 {
-    return lcd.lcd_quit_requested;
+    return lcd.quit_requested;
 }
 
 void LCD_Write(lcd_t& lcd, uint32_t address, uint8_t data)
@@ -204,7 +204,7 @@ void LCD_LoadBack(lcd_t& lcd, const std::filesystem::path& path)
     if (!file)
         return;
 
-    file.read((char*)lcd.lcd_background, sizeof(lcd.lcd_background));
+    file.read((char*)lcd.background, sizeof(lcd.background));
 }
 
 void LCD_Init(lcd_t& lcd, mcu_t& mcu)
@@ -216,24 +216,24 @@ bool LCD_CreateWindow(lcd_t& lcd)
 {
     if (lcd.mcu->romset == Romset::JV880)
     {
-        lcd.lcd_width = 820;
-        lcd.lcd_height = 100;
-        lcd.lcd_col1 = 0x000000;
-        lcd.lcd_col2 = 0x78b500;
+        lcd.width = 820;
+        lcd.height = 100;
+        lcd.color1 = 0x000000;
+        lcd.color2 = 0x78b500;
     }
     else
     {
-        lcd.lcd_width = 741;
-        lcd.lcd_height = 268;
-        lcd.lcd_col1 = 0x000000;
-        lcd.lcd_col2 = 0x0050c8;
+        lcd.width = 741;
+        lcd.height = 268;
+        lcd.color1 = 0x000000;
+        lcd.color2 = 0x0050c8;
     }
 
     std::string title = "Nuked SC-55: ";
 
     title += EMU_RomsetName(lcd.mcu->romset);
 
-    lcd.window = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, lcd.lcd_width, lcd.lcd_height, SDL_WINDOW_SHOWN);
+    lcd.window = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, lcd.width, lcd.height, SDL_WINDOW_SHOWN);
     if (!lcd.window)
         return false;
 
@@ -241,7 +241,7 @@ bool LCD_CreateWindow(lcd_t& lcd)
     if (!lcd.renderer)
         return false;
 
-    lcd.texture = SDL_CreateTexture(lcd.renderer, SDL_PIXELFORMAT_BGR888, SDL_TEXTUREACCESS_STREAMING, lcd.lcd_width, lcd.lcd_height);
+    lcd.texture = SDL_CreateTexture(lcd.renderer, SDL_PIXELFORMAT_BGR888, SDL_TEXTUREACCESS_STREAMING, lcd.width, lcd.height);
 
     if (!lcd.texture)
         return false;
@@ -282,11 +282,11 @@ void LCD_FontRenderStandard(lcd_t& lcd, int32_t x, int32_t y, uint8_t ch, bool o
             uint32_t col;
             if (f[i] & (1<<(4-j)))
             {
-                col = lcd.lcd_col1;
+                col = lcd.color1;
             }
             else
             {
-                col = lcd.lcd_col2;
+                col = lcd.color2;
             }
             int xx = x + i * 6;
             int yy = y + j * 6;
@@ -295,9 +295,9 @@ void LCD_FontRenderStandard(lcd_t& lcd, int32_t x, int32_t y, uint8_t ch, bool o
                 for (int jj = 0; jj < 5; jj++)
                 {
                     if (overlay)
-                        lcd.lcd_buffer[xx+ii][yy+jj] &= col;
+                        lcd.buffer[xx+ii][yy+jj] &= col;
                     else
-                        lcd.lcd_buffer[xx+ii][yy+jj] = col;
+                        lcd.buffer[xx+ii][yy+jj] = col;
                 }
             }
         }
@@ -318,11 +318,11 @@ void LCD_FontRenderLevel(lcd_t& lcd, int32_t x, int32_t y, uint8_t ch, uint8_t w
             uint32_t col;
             if (f[i] & (1<<(4-j)))
             {
-                col = lcd.lcd_col1;
+                col = lcd.color1;
             }
             else
             {
-                col = lcd.lcd_col2;
+                col = lcd.color2;
             }
             int xx = x + i * 11;
             int yy = y + j * 26;
@@ -330,7 +330,7 @@ void LCD_FontRenderLevel(lcd_t& lcd, int32_t x, int32_t y, uint8_t ch, uint8_t w
             {
                 for (int jj = 0; jj < 24; jj++)
                 {
-                    lcd.lcd_buffer[xx+ii][yy+jj] = col;
+                    lcd.buffer[xx+ii][yy+jj] = col;
                 }
             }
         }
@@ -385,11 +385,11 @@ void LCD_FontRenderLR(lcd_t& lcd, uint8_t ch)
     int col;
     if (f[0] & 1)
     {
-        col = lcd.lcd_col1;
+        col = lcd.color1;
     }
     else
     {
-        col = lcd.lcd_col2;
+        col = lcd.color2;
     }
     for (int letter = 0; letter < 2; letter++)
     {
@@ -398,7 +398,7 @@ void LCD_FontRenderLR(lcd_t& lcd, uint8_t ch)
             for (int j = 0; j < 11; j++)
             {
                 if (LR[letter][i][j])
-                    lcd.lcd_buffer[i+LR_xy[letter][0]][j+LR_xy[letter][1]] = col;
+                    lcd.buffer[i+LR_xy[letter][0]][j+LR_xy[letter][1]] = col;
             }
         }
     }
@@ -406,34 +406,34 @@ void LCD_FontRenderLR(lcd_t& lcd, uint8_t ch)
 
 void LCD_Update(lcd_t& lcd)
 {
-    if (!lcd.mcu->mcu_cm300 && !lcd.mcu->mcu_st && !lcd.mcu->mcu_scb55)
+    if (!lcd.mcu->is_cm300 && !lcd.mcu->is_st && !lcd.mcu->is_scb55)
     {
         MCU_WorkThread_Lock(*lcd.mcu);
 
-        if (!lcd.lcd_enable && !lcd.mcu->mcu_jv880)
+        if (!lcd.enable && !lcd.mcu->is_jv880)
         {
-            memset(lcd.lcd_buffer, 0, sizeof(lcd.lcd_buffer));
+            memset(lcd.buffer, 0, sizeof(lcd.buffer));
         }
         else
         {
-            if (lcd.mcu->mcu_jv880)
+            if (lcd.mcu->is_jv880)
             {
-                for (size_t i = 0; i < lcd.lcd_height; i++) {
-                    for (size_t j = 0; j < lcd.lcd_width; j++) {
-                        lcd.lcd_buffer[i][j] = 0xFF03be51;
+                for (size_t i = 0; i < lcd.height; i++) {
+                    for (size_t j = 0; j < lcd.width; j++) {
+                        lcd.buffer[i][j] = 0xFF03be51;
                     }
                 }
             }
             else
             {
-                for (size_t i = 0; i < lcd.lcd_height; i++) {
-                    for (size_t j = 0; j < lcd.lcd_width; j++) {
-                        lcd.lcd_buffer[i][j] = lcd.lcd_background[i][j];
+                for (size_t i = 0; i < lcd.height; i++) {
+                    for (size_t j = 0; j < lcd.width; j++) {
+                        lcd.buffer[i][j] = lcd.background[i][j];
                     }
                 }
             }
 
-            if (lcd.mcu->mcu_jv880)
+            if (lcd.mcu->is_jv880)
             {
                 for (int i = 0; i < 2; i++)
                 {
@@ -508,7 +508,7 @@ void LCD_Update(lcd_t& lcd)
 
         MCU_WorkThread_Unlock(*lcd.mcu);
 
-        SDL_UpdateTexture(lcd.texture, NULL, lcd.lcd_buffer, lcd_width_max * 4);
+        SDL_UpdateTexture(lcd.texture, NULL, lcd.buffer, lcd_width_max * 4);
         SDL_RenderCopy(lcd.renderer, lcd.texture, NULL, NULL);
         SDL_RenderPresent(lcd.renderer);
     }
@@ -548,7 +548,7 @@ void LCD_HandleEvent(lcd_t& lcd, const SDL_Event& sdl_event)
         case SDL_WINDOWEVENT:
             if (sdl_event.window.event == SDL_WINDOWEVENT_CLOSE)
             {
-                lcd.lcd_quit_requested = true;
+                lcd.quit_requested = true;
             }
             break;
 
@@ -559,10 +559,10 @@ void LCD_HandleEvent(lcd_t& lcd, const SDL_Event& sdl_event)
                     break;
 
                 int mask = 0;
-                uint32_t button_pressed = lcd.mcu->mcu_button_pressed;
+                uint32_t button_pressed = lcd.mcu->button_pressed;
 
-                auto button_map = lcd.mcu->mcu_jv880 ? button_map_jv880 : button_map_sc55;
-                auto button_size = (lcd.mcu->mcu_jv880 ? sizeof(button_map_jv880) : sizeof(button_map_sc55)) / sizeof(button_map_sc55[0]);
+                auto button_map = lcd.mcu->is_jv880 ? button_map_jv880 : button_map_sc55;
+                auto button_size = (lcd.mcu->is_jv880 ? sizeof(button_map_jv880) : sizeof(button_map_sc55)) / sizeof(button_map_sc55[0]);
                 for (size_t i = 0; i < button_size; i++)
                 {
                     if (button_map[i][0] == sdl_event.key.keysym.scancode)
@@ -574,7 +574,7 @@ void LCD_HandleEvent(lcd_t& lcd, const SDL_Event& sdl_event)
                 else
                     button_pressed &= ~mask;
 
-                lcd.mcu->mcu_button_pressed = button_pressed;
+                lcd.mcu->button_pressed = button_pressed;
 
 #if 0
                 if (sdl_event.key.keysym.scancode >= SDL_SCANCODE_1 && sdl_event.key.keysym.scancode < SDL_SCANCODE_0)

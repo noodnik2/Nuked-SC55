@@ -76,9 +76,9 @@ uint16_t MCU_SC155Sliders(mcu_t& mcu, uint32_t index)
 
 uint16_t MCU_AnalogReadPin(mcu_t& mcu, uint32_t pin)
 {
-    if (mcu.mcu_cm300)
+    if (mcu.is_cm300)
         return 0;
-    if (mcu.mcu_jv880)
+    if (mcu.is_jv880)
     {
         if (pin == 1)
             return ANALOG_LEVEL_BATTERY;
@@ -93,15 +93,15 @@ READ_RCU:
         else
             return ANALOG_LEVEL_RCU_LOW;
     }
-    if (mcu.mcu_mk1)
+    if (mcu.is_mk1)
     {
-        if (mcu.mcu_sc155 && (mcu.dev_register[DEV_P9DR] & 1) != 0)
+        if (mcu.is_sc155 && (mcu.dev_register[DEV_P9DR] & 1) != 0)
         {
             return MCU_SC155Sliders(mcu, pin);
         }
         if (pin == 7)
         {
-            if (mcu.mcu_sc155 && (mcu.dev_register[DEV_P9DR] & 2) != 0)
+            if (mcu.is_sc155 && (mcu.dev_register[DEV_P9DR] & 2) != 0)
                 return MCU_SC155Sliders(mcu, 8);
             else
                 return ANALOG_LEVEL_BATTERY;
@@ -111,20 +111,20 @@ READ_RCU:
     }
     else
     {
-        if (mcu.mcu_sc155 && (mcu.io_sd & 16) != 0)
+        if (mcu.is_sc155 && (mcu.io_sd & 16) != 0)
         {
             return MCU_SC155Sliders(mcu, pin);
         }
         if (pin == 7)
         {
-            if (mcu.mcu_mk1)
+            if (mcu.is_mk1)
                 return ANALOG_LEVEL_BATTERY;
             switch ((mcu.io_sd >> 2) & 3)
             {
             case 0: // Battery voltage
                 return ANALOG_LEVEL_BATTERY;
             case 1: // NC
-                if (mcu.mcu_sc155)
+                if (mcu.is_sc155)
                     return MCU_SC155Sliders(mcu, 8);
                 return 0;
             case 2: // SW
@@ -315,10 +315,10 @@ uint8_t MCU_DeviceRead(mcu_t& mcu, uint32_t address)
         return 0xff;
     case DEV_P7DR:
     {
-        if (!mcu.mcu_jv880) return 0xff;
+        if (!mcu.is_jv880) return 0xff;
 
         uint8_t data = 0xff;
-        uint32_t button_pressed = mcu.mcu_button_pressed;
+        uint32_t button_pressed = mcu.button_pressed;
 
         if (mcu.io_sd == 0b11111011)
             data &= ((button_pressed >> 0) & 0b11111) ^ 0xFF;
@@ -333,8 +333,8 @@ uint8_t MCU_DeviceRead(mcu_t& mcu, uint32_t address)
     case DEV_P9DR:
     {
         int cfg = 0;
-        if (!mcu.mcu_mk1)
-            cfg = mcu.mcu_sc155 ? 0 : 2; // bit 1: 0 - SC-155mk2 (???), 1 - SC-55mk2
+        if (!mcu.is_mk1)
+            cfg = mcu.is_sc155 ? 0 : 2; // bit 1: 0 - SC-155mk2 (???), 1 - SC-55mk2
 
         int dir = mcu.dev_register[DEV_P9DDR];
 
@@ -407,7 +407,7 @@ void MCU_UpdateAnalog(mcu_t& mcu, uint64_t cycles)
 uint8_t MCU_Read(mcu_t& mcu, uint32_t address)
 {
     uint32_t address_rom = address & 0x3ffff;
-    if (address & 0x80000 && !mcu.mcu_jv880)
+    if (address & 0x80000 && !mcu.is_jv880)
         address_rom |= 0x40000;
     uint8_t page = (address >> 16) & 0xf;
     address &= 0xffff;
@@ -419,14 +419,14 @@ uint8_t MCU_Read(mcu_t& mcu, uint32_t address)
             ret = mcu.rom1[address & 0x7fff];
         else
         {
-            if (!mcu.mcu_mk1)
+            if (!mcu.is_mk1)
             {
-                uint16_t base = mcu.mcu_jv880 ? 0xf000 : 0xe000;
+                uint16_t base = mcu.is_jv880 ? 0xf000 : 0xe000;
                 if (address >= base && address < (base | 0x400))
                 {
                     ret = PCM_Read(*mcu.pcm, address & 0x3f);
                 }
-                else if (!mcu.mcu_scb55 && address >= 0xec00 && address < 0xf000)
+                else if (!mcu.is_scb55 && address >= 0xec00 && address < 0xf000)
                 {
                     ret = SM_SysRead(*mcu.sm, address & 0xff);
                 }
@@ -445,7 +445,7 @@ uint8_t MCU_Read(mcu_t& mcu, uint32_t address)
                 {
                     ret = mcu.ga_int_trigger;
                     mcu.ga_int_trigger = 0;
-                    MCU_Interrupt_SetRequest(mcu, mcu.mcu_jv880 ? INTERRUPT_SOURCE_IRQ0 : INTERRUPT_SOURCE_IRQ1, 0);
+                    MCU_Interrupt_SetRequest(mcu, mcu.is_jv880 ? INTERRUPT_SOURCE_IRQ0 : INTERRUPT_SOURCE_IRQ1, 0);
                 }
                 else
                 {
@@ -479,13 +479,13 @@ uint8_t MCU_Read(mcu_t& mcu, uint32_t address)
                 {
                     mcu.io_sd = address & 0xff;
 
-                    if (mcu.mcu_cm300)
+                    if (mcu.is_cm300)
                         return 0xff;
 
                     LCD_Enable(*mcu.lcd, (mcu.io_sd & 8) != 0);
 
                     uint8_t data = 0xff;
-                    uint32_t button_pressed = mcu.mcu_button_pressed;
+                    uint32_t button_pressed = mcu.button_pressed;
 
                     if ((mcu.io_sd & 1) == 0)
                         data &= ((button_pressed >> 0) & 255) ^ 255;
@@ -541,40 +541,40 @@ uint8_t MCU_Read(mcu_t& mcu, uint32_t address)
         ret = mcu.rom2[address_rom & mcu.rom2_mask];
         break;
     case 8:
-        if (!mcu.mcu_jv880)
+        if (!mcu.is_jv880)
             ret = mcu.rom2[address_rom & mcu.rom2_mask];
         else
             ret = 0xff;
         break;
     case 9:
-        if (!mcu.mcu_jv880)
+        if (!mcu.is_jv880)
             ret = mcu.rom2[address_rom & mcu.rom2_mask];
         else
             ret = 0xff;
         break;
     case 14:
     case 15:
-        if (!mcu.mcu_jv880)
+        if (!mcu.is_jv880)
             ret = mcu.rom2[address_rom & mcu.rom2_mask];
         else
             ret = mcu.cardram[address & 0x7fff]; // FIXME
         break;
     case 10:
     case 11:
-        if (!mcu.mcu_mk1)
+        if (!mcu.is_mk1)
             ret = mcu.sram[address & 0x7fff]; // FIXME
         else
             ret = 0xff;
         break;
     case 12:
     case 13:
-        if (mcu.mcu_jv880)
+        if (mcu.is_jv880)
             ret = mcu.nvram[address & 0x7fff]; // FIXME
         else
             ret = 0xff;
         break;
     case 5:
-        if (mcu.mcu_mk1)
+        if (mcu.is_mk1)
             ret = mcu.sram[address & 0x7fff]; // FIXME
         else
             ret = 0xff;
@@ -614,9 +614,9 @@ void MCU_Write(mcu_t& mcu, uint32_t address, uint8_t value)
     {
         if (address & 0x8000)
         {
-            if (!mcu.mcu_mk1)
+            if (!mcu.is_mk1)
             {
-                uint16_t base = mcu.mcu_jv880 ? 0xf000 : 0xe000;
+                uint16_t base = mcu.is_jv880 ? 0xf000 : 0xe000;
                 if (address >= (base | 0x400) && address < (base | 0x800))
                 {
                     if (address == (base | 0x404) || address == (base | 0x405))
@@ -645,7 +645,7 @@ void MCU_Write(mcu_t& mcu, uint32_t address, uint8_t value)
                 {
                     PCM_Write(*mcu.pcm, address & 0x3f, value);
                 }
-                else if (!mcu.mcu_scb55 && address >= 0xec00 && address < 0xf000)
+                else if (!mcu.is_scb55 && address >= 0xec00 && address < 0xf000)
                 {
                     SM_SysWrite(*mcu.sm, address & 0xff, value);
                 }
@@ -711,7 +711,7 @@ void MCU_Write(mcu_t& mcu, uint32_t address, uint8_t value)
                 }
             }
         }
-        else if (mcu.mcu_jv880 && address >= 0x6196 && address <= 0x6199)
+        else if (mcu.is_jv880 && address >= 0x6196 && address <= 0x6199)
         {
             // nop: the jv880 rom writes into the rom at 002E77-002E7D
         }
@@ -720,19 +720,19 @@ void MCU_Write(mcu_t& mcu, uint32_t address, uint8_t value)
             fprintf(stderr, "Unknown write %x %x\n", address, value);
         }
     }
-    else if (page == 5 && mcu.mcu_mk1)
+    else if (page == 5 && mcu.is_mk1)
     {
         mcu.sram[address & 0x7fff] = value; // FIXME
     }
-    else if (page == 10 && !mcu.mcu_mk1)
+    else if (page == 10 && !mcu.is_mk1)
     {
         mcu.sram[address & 0x7fff] = value; // FIXME
     }
-    else if (page == 12 && mcu.mcu_jv880)
+    else if (page == 12 && mcu.is_jv880)
     {
         mcu.nvram[address & 0x7fff] = value; // FIXME
     }
-    else if (page == 14 && mcu.mcu_jv880)
+    else if (page == 14 && mcu.is_jv880)
     {
         mcu.cardram[address & 0x7fff] = value; // FIXME
     }
@@ -810,7 +810,7 @@ void MCU_Reset(mcu_t& mcu)
 
     MCU_DeviceReset(mcu);
 
-    if (mcu.mcu_mk1)
+    if (mcu.is_mk1)
     {
         mcu.ga_int_enable = 255;
     }
@@ -888,7 +888,7 @@ void MCU_Step(mcu_t& mcu)
 
     TIMER_Clock(*mcu.timer, mcu.cycles);
 
-    if (!mcu.mcu_mk1 && !mcu.mcu_jv880 && !mcu.mcu_scb55)
+    if (!mcu.is_mk1 && !mcu.is_jv880 && !mcu.is_scb55)
         SM_Update(*mcu.sm, mcu.cycles);
     else
     {
@@ -898,7 +898,7 @@ void MCU_Step(mcu_t& mcu)
 
     MCU_UpdateAnalog(mcu, mcu.cycles);
 
-    if (mcu.mcu_mk1)
+    if (mcu.is_mk1)
     {
         if (mcu.ga_lcd_counter)
         {
@@ -929,15 +929,15 @@ uint8_t MCU_ReadP0(mcu_t& mcu)
 uint8_t MCU_ReadP1(mcu_t& mcu)
 {
     uint8_t data = 0xff;
-    uint32_t button_pressed = mcu.mcu_button_pressed;
+    uint32_t button_pressed = mcu.button_pressed;
 
-    if ((mcu.mcu_p0_data & 1) == 0)
+    if ((mcu.p0_data & 1) == 0)
         data &= ((button_pressed >> 0) & 255) ^ 255;
-    if ((mcu.mcu_p0_data & 2) == 0)
+    if ((mcu.p0_data & 2) == 0)
         data &= ((button_pressed >> 8) & 255) ^ 255;
-    if ((mcu.mcu_p0_data & 4) == 0)
+    if ((mcu.p0_data & 4) == 0)
         data &= ((button_pressed >> 16) & 255) ^ 255;
-    if ((mcu.mcu_p0_data & 8) == 0)
+    if ((mcu.p0_data & 8) == 0)
         data &= ((button_pressed >> 24) & 255) ^ 255;
 
     return data;
@@ -945,12 +945,12 @@ uint8_t MCU_ReadP1(mcu_t& mcu)
 
 void MCU_WriteP0(mcu_t& mcu, uint8_t data)
 {
-    mcu.mcu_p0_data = data;
+    mcu.p0_data = data;
 }
 
 void MCU_WriteP1(mcu_t& mcu, uint8_t data)
 {
-    mcu.mcu_p1_data = data;
+    mcu.p1_data = data;
 }
 
 void MCU_PostSample(mcu_t& mcu, const AudioFrame<int32_t>& frame)
@@ -965,7 +965,7 @@ void MCU_GA_SetGAInt(mcu_t& mcu, int line, int value)
         mcu.ga_int_trigger = line;
     mcu.ga_int[line] = value;
 
-    if (mcu.mcu_jv880)
+    if (mcu.is_jv880)
         MCU_Interrupt_SetRequest(mcu, INTERRUPT_SOURCE_IRQ0, mcu.ga_int_trigger != 0);
     else
         MCU_Interrupt_SetRequest(mcu, INTERRUPT_SOURCE_IRQ1, mcu.ga_int_trigger != 0);
@@ -973,7 +973,7 @@ void MCU_GA_SetGAInt(mcu_t& mcu, int line, int value)
 
 void MCU_EncoderTrigger(mcu_t& mcu, int dir)
 {
-    if (!mcu.mcu_jv880) return;
+    if (!mcu.is_jv880) return;
     MCU_GA_SetGAInt(mcu, dir == 0 ? 3 : 4, 0);
     MCU_GA_SetGAInt(mcu, dir == 0 ? 3 : 4, 1);
 }

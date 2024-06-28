@@ -57,21 +57,21 @@ struct submcu_t {
     uint64_t cycles = 0;
     uint8_t sleep = 0;
     mcu_t* mcu = nullptr;
-    uint8_t sm_rom[4096]{};
+    uint8_t rom[4096]{};
 
-    uint8_t sm_ram[128]{};
-    uint8_t sm_shared_ram[192]{};
-    uint8_t sm_access[0x18]{};
+    uint8_t ram[128]{};
+    uint8_t shared_ram[192]{};
+    uint8_t access[0x18]{};
 
-    uint8_t sm_p0_dir = 0;
-    uint8_t sm_p1_dir = 0;
+    uint8_t p0_dir = 0;
+    uint8_t p1_dir = 0;
 
-    uint8_t sm_device_mode[32]{};
-    uint8_t sm_cts = 0;
+    uint8_t device_mode[32]{};
+    uint8_t cts = 0;
 
-    uint64_t sm_timer_cycles = 0;
-    uint8_t sm_timer_prescaler = 0;
-    uint8_t sm_timer_counter = 0;
+    uint64_t timer_cycles = 0;
+    uint8_t timer_prescaler = 0;
+    uint8_t timer_counter = 0;
 
     uint8_t uart_rx_gotbyte = 0;
 };

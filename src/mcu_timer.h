@@ -56,8 +56,8 @@ struct mcu_timer_t {
 
     mcu_t* mcu = nullptr;
 
-    uint64_t timer_cycles = 0;
-    uint8_t timer_tempreg = 0;
+    uint64_t cycles = 0;
+    uint8_t tempreg = 0;
 
     frt_t frt[3]{};
 };

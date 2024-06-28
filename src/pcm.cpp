@@ -48,17 +48,17 @@ uint8_t PCM_ReadROM(pcm_t& pcm, uint32_t address)
     switch (bank)
     {
         case 0:
-            if (pcm.mcu->mcu_mk1)
+            if (pcm.mcu->is_mk1)
                 return pcm.waverom1[address & 0xfffff];
             else
                 return pcm.waverom1[address & 0x1fffff];
         case 1:
-            if (!pcm.mcu->mcu_jv880)
+            if (!pcm.mcu->is_jv880)
                 return pcm.waverom2[address & 0xfffff];
             else
                 return pcm.waverom2[address & 0x1fffff];
         case 2:
-            if (pcm.mcu->mcu_jv880)
+            if (pcm.mcu->is_jv880)
                 return pcm.waverom_card[address & 0x1fffff];
             else
                 return pcm.waverom3[address & 0xfffff];
@@ -66,7 +66,7 @@ uint8_t PCM_ReadROM(pcm_t& pcm, uint32_t address)
         case 4:
         case 5:
         case 6:
-            if (pcm.mcu->mcu_jv880)
+            if (pcm.mcu->is_jv880)
                 return pcm.waverom_exp[(address & 0x1fffff) + (bank - 3) * 0x200000];
         default:
             break;
@@ -205,7 +205,7 @@ uint8_t PCM_Read(pcm_t& pcm, uint32_t address)
         if (address == 0x3e && pcm.irq_assert)
         {
             pcm.irq_assert = 0;
-            if (pcm.mcu->mcu_jv880)
+            if (pcm.mcu->is_jv880)
                 MCU_GA_SetGAInt(*pcm.mcu, 5, 0);
             else
                 MCU_Interrupt_SetRequest(*pcm.mcu, INTERRUPT_SOURCE_IRQ0, 0);
@@ -1379,7 +1379,7 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
             int filter = ram2[11];
             int v3;
 
-            if (pcm.mcu->mcu_mk1)
+            if (pcm.mcu->is_mk1)
             {
                 int mult1 = multi(reg1, filter >> 8); // 8
                 int mult2 = multi(reg1, (filter >> 1) & 127); // 9
@@ -1437,7 +1437,7 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
                     ram2[8] |= 0x4000;
                 pcm.irq_assert = 1;
                 pcm.irq_channel = slot;
-                if (pcm.mcu->mcu_jv880)
+                if (pcm.mcu->is_jv880)
                     MCU_GA_SetGAInt(*pcm.mcu, 5, 1);
                 else
                     MCU_Interrupt_SetRequest(*pcm.mcu, INTERRUPT_SOURCE_IRQ0, 1);
@@ -1573,13 +1573,13 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
 
         int new_cycles = (reg_slots + 1) * 25;
 
-        pcm.cycles += pcm.mcu->mcu_jv880 ? (new_cycles * 25) / 29 : new_cycles;
+        pcm.cycles += pcm.mcu->is_jv880 ? (new_cycles * 25) / 29 : new_cycles;
     }
 }
 
 uint32_t PCM_GetOutputFrequency(const pcm_t& pcm)
 {
-    uint32_t freq = (pcm.mcu->mcu_mk1 || pcm.mcu->mcu_jv880) ? 64000 : 66207;
+    uint32_t freq = (pcm.mcu->is_mk1 || pcm.mcu->is_jv880) ? 64000 : 66207;
     if (pcm.disable_oversampling)
     {
         return freq / 2;

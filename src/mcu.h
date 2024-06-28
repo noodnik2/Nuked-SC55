@@ -250,12 +250,12 @@ struct mcu_t {
 
     Romset romset = Romset::MK2;
 
-    int mcu_mk1 = 0; // 0 - SC-55mkII, SC-55ST. 1 - SC-55, CM-300/SCC-1
-    int mcu_cm300 = 0; // 0 - SC-55, 1 - CM-300/SCC-1
-    int mcu_st = 0; // 0 - SC-55mk2, 1 - SC-55ST
-    int mcu_jv880 = 0; // 0 - SC-55, 1 - JV880
-    int mcu_scb55 = 0; // 0 - sub mcu (e.g SC-55mk2), 1 - no sub mcu (e.g SCB-55)
-    int mcu_sc155 = 0; // 0 - SC-55(MK2), 1 - SC-155(MK2)
+    int is_mk1 = 0; // 0 - SC-55mkII, SC-55ST. 1 - SC-55, CM-300/SCC-1
+    int is_cm300 = 0; // 0 - SC-55, 1 - CM-300/SCC-1
+    int is_st = 0; // 0 - SC-55mk2, 1 - SC-55ST
+    int is_jv880 = 0; // 0 - SC-55, 1 - JV880
+    int is_scb55 = 0; // 0 - sub mcu (e.g SC-55mk2), 1 - no sub mcu (e.g SCB-55)
+    int is_sc155 = 0; // 0 - SC-55(MK2), 1 - SC-155(MK2)
 
     int rom2_mask = ROM2_SIZE - 1;
 
@@ -264,10 +264,10 @@ struct mcu_t {
     int ga_int_trigger = 0;
     int ga_lcd_counter = 0;
 
-    std::atomic<uint32_t> mcu_button_pressed;
+    std::atomic<uint32_t> button_pressed;
 
-    uint8_t mcu_p0_data = 0;
-    uint8_t mcu_p1_data = 0;
+    uint8_t p0_data = 0;
+    uint8_t p1_data = 0;
 
     int adf_rd = 0;
 

@@ -253,40 +253,40 @@ bool Emulator::LoadRoms(Romset romset, const std::filesystem::path& base_path)
     std::ifstream s_rf[ROM_SET_N_FILES];
 
     m_mcu->romset = romset;
-    m_mcu->mcu_mk1 = false;
-    m_mcu->mcu_cm300 = false;
-    m_mcu->mcu_st = false;
-    m_mcu->mcu_jv880 = false;
-    m_mcu->mcu_scb55 = false;
-    m_mcu->mcu_sc155 = false;
+    m_mcu->is_mk1 = false;
+    m_mcu->is_cm300 = false;
+    m_mcu->is_st = false;
+    m_mcu->is_jv880 = false;
+    m_mcu->is_scb55 = false;
+    m_mcu->is_sc155 = false;
     switch (romset)
     {
         case Romset::MK2:
         case Romset::SC155MK2:
             if (romset == Romset::SC155MK2)
-                m_mcu->mcu_sc155 = true;
+                m_mcu->is_sc155 = true;
             break;
         case Romset::ST:
-            m_mcu->mcu_st = true;
+            m_mcu->is_st = true;
             break;
         case Romset::MK1:
         case Romset::SC155:
-            m_mcu->mcu_mk1 = true;
-            m_mcu->mcu_st = false;
+            m_mcu->is_mk1 = true;
+            m_mcu->is_st = false;
             if (romset == Romset::SC155)
-                m_mcu->mcu_sc155 = true;
+                m_mcu->is_sc155 = true;
             break;
         case Romset::CM300:
-            m_mcu->mcu_mk1 = true;
-            m_mcu->mcu_cm300 = true;
+            m_mcu->is_mk1 = true;
+            m_mcu->is_cm300 = true;
             break;
         case Romset::JV880:
-            m_mcu->mcu_jv880 = true;
+            m_mcu->is_jv880 = true;
             m_mcu->rom2_mask /= 2; // rom is half the size
             break;
         case Romset::SCB55:
         case Romset::RLP3237:
-            m_mcu->mcu_scb55 = true;
+            m_mcu->is_scb55 = true;
             break;
     }
 
@@ -303,7 +303,7 @@ bool Emulator::LoadRoms(Romset romset, const std::filesystem::path& base_path)
         }
         rpaths[i] = base_path / roms[(size_t)romset][i];
         s_rf[i] = std::ifstream(rpaths[i].c_str(), std::ios::binary);
-        bool optional = m_mcu->mcu_jv880 && i >= 4;
+        bool optional = m_mcu->is_jv880 && i >= 4;
         r_ok &= optional || s_rf[i];
         if (!s_rf[i])
         {
@@ -341,7 +341,7 @@ bool Emulator::LoadRoms(Romset romset, const std::filesystem::path& base_path)
         return false;
     }
 
-    if (m_mcu->mcu_mk1)
+    if (m_mcu->is_mk1)
     {
         if (!EMU_ReadStreamExact(s_rf[2], tempbuf, 0x100000))
         {
@@ -370,7 +370,7 @@ bool Emulator::LoadRoms(Romset romset, const std::filesystem::path& base_path)
 
         unscramble(tempbuf.data(), m_pcm->waverom3, 0x100000);
     }
-    else if (m_mcu->mcu_jv880)
+    else if (m_mcu->is_jv880)
     {
         if (!EMU_ReadStreamExact(s_rf[2], tempbuf, 0x200000))
         {
@@ -420,10 +420,10 @@ bool Emulator::LoadRoms(Romset romset, const std::filesystem::path& base_path)
                 return false;
             }
 
-            unscramble(tempbuf.data(), m_mcu->mcu_scb55 ? m_pcm->waverom3 : m_pcm->waverom2, 0x100000);
+            unscramble(tempbuf.data(), m_mcu->is_scb55 ? m_pcm->waverom3 : m_pcm->waverom2, 0x100000);
         }
 
-        if (s_rf[4] && !EMU_ReadStreamExact(s_rf[4], m_sm->sm_rom, ROMSM_SIZE))
+        if (s_rf[4] && !EMU_ReadStreamExact(s_rf[4], m_sm->rom, ROMSM_SIZE))
         {
             fprintf(stderr, "FATAL ERROR: Failed to read the sub mcu ROM.\n");
             fflush(stderr);
