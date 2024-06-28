@@ -36,6 +36,16 @@
 
 struct mcu_t;
 
+struct PCM_Config
+{
+    int noise_mask = 0;
+    int orval      = 0;
+    int write_mask = 0;
+    int dac_mask   = 0; // unused
+
+    bool oversampling = false;
+};
+
 struct pcm_t {
     uint32_t ram1[32][8]{};
     uint16_t ram2[32][16]{};
@@ -51,6 +61,7 @@ struct pcm_t {
     uint8_t config_reg_3d = 0;
     uint32_t irq_channel = 0;
     uint32_t irq_assert = 0;
+    PCM_Config config{};
 
     uint32_t nfs = 0;
 
@@ -80,3 +91,4 @@ uint8_t PCM_Read(pcm_t& pcm, uint32_t address);
 void PCM_Init(pcm_t& pcm, mcu_t& mcu);
 void PCM_Update(pcm_t& pcm, uint64_t cycles);
 uint32_t PCM_GetOutputFrequency(const pcm_t& pcm);
+void PCM_GetConfig(PCM_Config& config, uint8_t config_byte);

@@ -122,6 +122,7 @@ void PCM_Write(pcm_t& pcm, uint32_t address, uint8_t data)
     else if (address == 0x3c)
     {
         pcm.config_reg_3c = data;
+        PCM_GetConfig(pcm.config, data);
     }
     else if (address == 0x3d)
     {
@@ -525,6 +526,71 @@ inline void eram_pack(pcm_t& pcm, int addr, int val)
     pcm.eram[addr] = data;
 }
 
+void PCM_GetConfig(PCM_Config& config, uint8_t config_byte)
+{
+    if ((config_byte & 0x30) != 0)
+    {
+        switch ((config_byte >> 2) & 3)
+        {
+        case 1:
+            config.noise_mask = 3;
+            break;
+        case 2:
+            config.noise_mask = 7;
+            break;
+        case 3:
+            config.noise_mask = 15;
+            break;
+        }
+        switch (config_byte & 3)
+        {
+        case 1:
+            config.orval |= 1 << 8;
+            break;
+        case 2:
+            config.orval |= 1 << 10;
+            break;
+        }
+        config.write_mask = 15;
+        config.dac_mask   = ~15;
+    }
+    else
+    {
+        switch ((config_byte >> 2) & 3)
+        {
+        case 2:
+            config.noise_mask = 1;
+            break;
+        case 3:
+            config.noise_mask = 3;
+            break;
+        }
+        switch (config_byte & 3)
+        {
+        case 1:
+            config.orval |= 1 << 6;
+            break;
+        case 2:
+            config.orval |= 1 << 8;
+            break;
+        }
+        config.write_mask = 3;
+        config.dac_mask   = ~3;
+    }
+    if ((config_byte & 0x80) == 0)
+    {
+        config.write_mask = 0;
+    }
+    if ((config_byte & 0x30) == 0x30)
+    {
+        config.orval |= 1 << 12;
+    }
+    if (config_byte & 0x40)
+    {
+        config.oversampling = true;
+    }
+}
+
 void PCM_Update(pcm_t& pcm, uint64_t cycles)
 {
     int reg_slots = (pcm.config_reg_3d & 31) + 1;
@@ -532,66 +598,6 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
     while (pcm.cycles < cycles)
     {
         { // final mixing
-            int noise_mask = 0;
-            int orval = 0;
-            int write_mask = 0;
-            int dac_mask = 0;
-            (void)dac_mask; // unused
-            if ((pcm.config_reg_3c & 0x30) != 0)
-            {
-                switch ((pcm.config_reg_3c >> 2) & 3)
-                {
-                    case 1:
-                        noise_mask = 3;
-                        break;
-                    case 2:
-                        noise_mask = 7;
-                        break;
-                    case 3:
-                        noise_mask = 15;
-                        break;
-                }
-                switch (pcm.config_reg_3c & 3)
-                {
-                    case 1:
-                        orval |= 1 << 8;
-                        break;
-                    case 2:
-                        orval |= 1 << 10;
-                        break;
-                }
-                write_mask = 15;
-                dac_mask = ~15;
-            }
-            else
-            {
-                switch ((pcm.config_reg_3c >> 2) & 3)
-                {
-                    case 2:
-                        noise_mask = 1;
-                        break;
-                    case 3:
-                        noise_mask = 3;
-                        break;
-                }
-                switch (pcm.config_reg_3c & 3)
-                {
-                    case 1:
-                        orval |= 1 << 6;
-                        break;
-                    case 2:
-                        orval |= 1 << 8;
-                        break;
-                }
-                write_mask = 3;
-                dac_mask = ~3;
-            }
-            if ((pcm.config_reg_3c & 0x80) == 0)
-                write_mask = 0;
-            if ((pcm.config_reg_3c & 0x30) == 0x30)
-                orval |= 1 << 12;
-
-
             int shifter = pcm.ram2[30][10];
             int xr = ((shifter >> 0) ^ (shifter >> 1) ^ (shifter >> 7) ^ (shifter >> 12)) & 1;
             shifter = (shifter >> 1) | (xr << 15);
@@ -601,17 +607,17 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
             pcm.accum_r = addclip20(pcm.accum_r, pcm.ram1[30][1], 0);
 
             pcm.ram1[30][2] = addclip20(pcm.accum_l,
-                orval | (shifter & noise_mask), 0);
+                pcm.config.orval | (shifter & pcm.config.noise_mask), 0);
 
             pcm.ram1[30][4] = addclip20(pcm.accum_r,
-                orval | (shifter & noise_mask), 0);
+                pcm.config.orval | (shifter & pcm.config.noise_mask), 0);
 
-            pcm.ram1[30][0] = pcm.accum_l & write_mask;
-            pcm.ram1[30][1] = pcm.accum_r & write_mask;
+            pcm.ram1[30][0] = pcm.accum_l & pcm.config.write_mask;
+            pcm.ram1[30][1] = pcm.accum_r & pcm.config.write_mask;
             
 
-            int32_t samp_l = (int32_t)((pcm.ram1[30][2] & ~write_mask) << 12);
-            int32_t samp_r = (int32_t)((pcm.ram1[30][4] & ~write_mask) << 12);
+            int32_t samp_l = (int32_t)((pcm.ram1[30][2] & ~pcm.config.write_mask) << 12);
+            int32_t samp_r = (int32_t)((pcm.ram1[30][4] & ~pcm.config.write_mask) << 12);
 
             MCU_PostSample(*pcm.mcu, {samp_l, samp_r});
 
@@ -622,21 +628,21 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
             pcm.accum_r = addclip20(pcm.accum_r, pcm.ram1[30][1], 0);
 
             pcm.ram1[30][3] = addclip20(pcm.accum_l,
-                orval | (shifter & noise_mask), 0);
+                pcm.config.orval | (shifter & pcm.config.noise_mask), 0);
 
             pcm.ram1[30][5] = addclip20(pcm.accum_r,
-                orval | (shifter & noise_mask), 0);
+                pcm.config.orval | (shifter & pcm.config.noise_mask), 0);
 
-            if (!pcm.disable_oversampling && (pcm.config_reg_3c & 0x40)) // oversampling
+            if (!pcm.disable_oversampling && pcm.config.oversampling) // oversampling
             {
                 pcm.ram2[30][10] = shifter;
 
-                pcm.ram1[30][0] = pcm.accum_l & write_mask;
-                pcm.ram1[30][1] = pcm.accum_r & write_mask;
+                pcm.ram1[30][0] = pcm.accum_l & pcm.config.write_mask;
+                pcm.ram1[30][1] = pcm.accum_r & pcm.config.write_mask;
 
 
-                samp_l = (int32_t)((pcm.ram1[30][3] & ~write_mask) << 12);
-                samp_r = (int32_t)((pcm.ram1[30][5] & ~write_mask) << 12);
+                samp_l = (int32_t)((pcm.ram1[30][3] & ~pcm.config.write_mask) << 12);
+                samp_r = (int32_t)((pcm.ram1[30][5] & ~pcm.config.write_mask) << 12);
 
                 MCU_PostSample(*pcm.mcu, {samp_l, samp_r});
             }
