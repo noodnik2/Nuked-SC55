@@ -839,6 +839,7 @@ void R_MixOut(R_MixOutState& state)
 bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
 {
     const size_t instances = params.instances;
+    auto t_start = std::chrono::high_resolution_clock::now();
 
     // First combine all of the events so it's easier to process
     const SMF_Track merged_track = SMF_MergeTracks(data);
@@ -970,7 +971,11 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
 
     mix_out_thread.join();
 
-    fprintf(stderr, "Done!\n");
+    auto t_finish = std::chrono::high_resolution_clock::now();
+    auto t_diff   = std::chrono::duration_cast<std::chrono::nanoseconds>(t_finish - t_start);
+    auto t_sec    = (double)t_diff.count() / 1e9;
+
+    fprintf(stderr, "Done in %.2fs!\n", t_sec);
 
     return true;
 }
