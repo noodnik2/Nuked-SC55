@@ -639,7 +639,7 @@ inline void PCM_UpdateSlot(pcm_t& pcm, int slot, const ReverbChorus& adds)
         wave_address += nibble_add - nibble_subtract;
     wave_address &= 0xfffff;
 
-    int newnibble = PCM_ReadROM(pcm, (hiaddr << 20) | wave_address);
+    uint8_t newnibble = PCM_ReadROM(pcm, (hiaddr << 20) | wave_address);
     bool newnibble_sel = address_b4 ^ ((b6 || !nibble_cmp1) && okey);
     if (newnibble_sel)
         newnibble = (newnibble >> 4) & 15;
@@ -659,7 +659,7 @@ inline void PCM_UpdateSlot(pcm_t& pcm, int slot, const ReverbChorus& adds)
 
     // address 0
     int address_cnt = address;
-    int samp0 = (int8_t)PCM_ReadROM(pcm, (hiaddr << 20) | address_cnt); // 18
+    int8_t samp0 = (int8_t)PCM_ReadROM(pcm, (hiaddr << 20) | address_cnt); // 18
 
     cmp1 = address;
     cmp2 = address_cnt;
@@ -685,7 +685,7 @@ inline void PCM_UpdateSlot(pcm_t& pcm, int slot, const ReverbChorus& adds)
     address_cnt = address_cnt2 & 0xfffff; // 11
     b15 = b6 && (b15 ^ address_cmp); // 11
 
-    int samp1 = (int8_t)PCM_ReadROM(pcm, (hiaddr << 20) | address_cnt); // 20
+    int8_t samp1 = (int8_t)PCM_ReadROM(pcm, (hiaddr << 20) | address_cnt); // 20
 
     cmp1 = address;
     cmp2 = address_cnt;
@@ -714,7 +714,7 @@ inline void PCM_UpdateSlot(pcm_t& pcm, int slot, const ReverbChorus& adds)
     address_cnt = address_cnt2 & 0xfffff; // 15
     b15 = b6 && (b15 ^ address_cmp); // 15
 
-    int samp2 = (int8_t)PCM_ReadROM(pcm, (hiaddr << 20) | address_cnt); // 1
+    int8_t samp2 = (int8_t)PCM_ReadROM(pcm, (hiaddr << 20) | address_cnt); // 1
 
     cmp1 = address;
     cmp2 = address_cnt;
@@ -743,7 +743,7 @@ inline void PCM_UpdateSlot(pcm_t& pcm, int slot, const ReverbChorus& adds)
     address_cnt = address_cnt2 & 0xfffff; // 19
     b15 = b6 && (b15 ^ address_cmp); // 19
 
-    int samp3 = (int8_t)PCM_ReadROM(pcm, (hiaddr << 20) | address_cnt); // 5
+    int8_t samp3 = (int8_t)PCM_ReadROM(pcm, (hiaddr << 20) | address_cnt); // 5
 
     cmp1 = address;
     cmp2 = address_cnt;
