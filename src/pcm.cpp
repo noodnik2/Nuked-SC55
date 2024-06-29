@@ -593,10 +593,10 @@ void PCM_GetConfig(PCM_Config& config, uint8_t config_byte)
 
 void PCM_Update(pcm_t& pcm, uint64_t cycles)
 {
-    int reg_slots = (pcm.config_reg_3d & 31) + 1;
-    int voice_active = pcm.voice_mask & pcm.voice_mask_pending;
     while (pcm.cycles < cycles)
     {
+        const int reg_slots = (pcm.config_reg_3d & 31) + 1;
+        const int voice_active = pcm.voice_mask & pcm.voice_mask_pending;
         { // final mixing
             int shifter = pcm.ram2[30][10];
             int xr = ((shifter >> 0) ^ (shifter >> 1) ^ (shifter >> 7) ^ (shifter >> 12)) & 1;
