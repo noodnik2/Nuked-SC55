@@ -336,9 +336,9 @@ inline void calc_tv(pcm_t& pcm, int e, int adjust, uint16_t *levelcur, int activ
     int target = (adjust >> 8) & 0xff;
 
                 
-    int w1 = (speed & 0xf0) == 0;
-    int w2 = w1 || (speed & 0x10) != 0;
-    int w3 = pcm.nfs &&
+    bool w1 = (speed & 0xf0) == 0;
+    bool w2 = w1 || (speed & 0x10) != 0;
+    bool w3 = pcm.nfs &&
         ((speed & 0x80) == 0 || ((speed & 0x40) == 0 && (!w2 || (speed & 0x20) == 0)));
 
     int type = w2 | (w3 << 3);
@@ -348,7 +348,7 @@ inline void calc_tv(pcm_t& pcm, int e, int adjust, uint16_t *levelcur, int activ
         type |= 4;
 
 
-    int write = !active;
+    bool write = !active;
     int addlow = 0;
     if (type & 4)
     {
@@ -421,7 +421,7 @@ inline void calc_tv(pcm_t& pcm, int e, int adjust, uint16_t *levelcur, int activ
         int sum1 = (target << 11); // 5
         if (e != 2 || active)
             sum1 -= (*levelcur << 4); // 6
-        int neg = (sum1 & 0x80000) != 0;
+        bool neg = (sum1 & 0x80000) != 0;
         (void)neg; // unused
 
         int preshift = sum1;
@@ -451,7 +451,7 @@ inline void calc_tv(pcm_t& pcm, int e, int adjust, uint16_t *levelcur, int activ
         int sum1 = target << 11; // 5
         if (e != 2 || active)
             sum1 -= (*levelcur << 4); // 6
-        int neg = (sum1 & 0x80000) != 0;
+        bool neg = (sum1 & 0x80000) != 0;
         int preshift = (speed & 15) << 9;
         if (!w1)
             preshift |= 0x2000;
@@ -467,8 +467,8 @@ inline void calc_tv(pcm_t& pcm, int e, int adjust, uint16_t *levelcur, int activ
 
         int sum3 = (target << 11) - (sum2_l << 4);
 
-        int neg2 = (sum3 & 0x80000) != 0;
-        int xnor = !(neg2 ^ neg);
+        bool neg2 = (sum3 & 0x80000) != 0;
+        bool xnor = !(neg2 ^ neg);
 
         if (write && pcm.nfs)
         {
@@ -595,17 +595,17 @@ inline void PCM_UpdateSlot(pcm_t& pcm, int slot, const ReverbChorus& adds)
 
     uint32_t *ram1 = pcm.ram1[slot];
     uint16_t *ram2 = pcm.ram2[slot];
-    int okey = (ram2[7] & 0x20) != 0;
-    int key = (voice_active >> slot) & 1;
+    bool okey = (ram2[7] & 0x20) != 0;
+    bool key = (voice_active >> slot) & 1;
 
-    int active = okey && key;
-    int kon = key && !okey;
+    bool active = okey && key;
+    bool kon = key && !okey;
 
     // address generator
 
-    int b15 = (ram2[8] & 0x8000) != 0; // 0
-    int b6 = (ram2[7] & 0x40) != 0; // 1
-    int b7 = (ram2[7] & 0x80) != 0; // 1
+    bool b15 = (ram2[8] & 0x8000) != 0; // 0
+    bool b6 = (ram2[7] & 0x40) != 0; // 1
+    bool b7 = (ram2[7] & 0x80) != 0; // 1
     int hiaddr = (ram2[7] >> 8) & 15; // 1
     int old_nibble = (ram2[7] >> 12) & 15; // 1
 
@@ -615,8 +615,8 @@ inline void PCM_UpdateSlot(pcm_t& pcm, int slot, const ReverbChorus& adds)
 
     int cmp1 = b15 ? address_loop : address_end;
     int cmp2 = address;
-    int nibble_cmp1 = (cmp1 & 0xffff0) == (cmp2 & 0xffff0); // 2
-    int irq_flag = 0;
+    bool nibble_cmp1 = (cmp1 & 0xffff0) == (cmp2 & 0xffff0); // 2
+    bool irq_flag = 0;
 
     // fixme:
     if (kon)
@@ -626,13 +626,13 @@ inline void PCM_UpdateSlot(pcm_t& pcm, int slot, const ReverbChorus& adds)
     irq_flag ^= b7;
 
     int nibble_address = (!b6 && nibble_cmp1) ? address_loop : address; // 3
-    int address_b4 = (nibble_address & 0x10) != 0;
+    bool address_b4 = (nibble_address & 0x10) != 0;
     int wave_address = nibble_address >> 5;
-    int xor2 = (address_b4 ^ b7);
-    int check1 = xor2 && active;
-    int xor1 = (b15 ^ !nibble_cmp1);
-    int nibble_add = b6 ? check1 && xor1 : (!nibble_cmp1 && check1);
-    int nibble_subtract = b6 && !xor1 && active && !xor2;
+    bool xor2 = (address_b4 ^ b7);
+    bool check1 = xor2 && active;
+    bool xor1 = (b15 ^ !nibble_cmp1);
+    bool nibble_add = b6 ? check1 && xor1 : (!nibble_cmp1 && check1);
+    bool nibble_subtract = b6 && !xor1 && active && !xor2;
     if (b7)
         wave_address -= nibble_add - nibble_subtract;
     else
@@ -640,7 +640,7 @@ inline void PCM_UpdateSlot(pcm_t& pcm, int slot, const ReverbChorus& adds)
     wave_address &= 0xfffff;
 
     int newnibble = PCM_ReadROM(pcm, (hiaddr << 20) | wave_address);
-    int newnibble_sel = address_b4 ^ ((b6 || !nibble_cmp1) && okey);
+    bool newnibble_sel = address_b4 ^ ((b6 || !nibble_cmp1) && okey);
     if (newnibble_sel)
         newnibble = (newnibble >> 4) & 15;
     else
@@ -663,21 +663,21 @@ inline void PCM_UpdateSlot(pcm_t& pcm, int slot, const ReverbChorus& adds)
 
     cmp1 = address;
     cmp2 = address_cnt;
-    int nibble_cmp2 = (cmp1 & 0xffff0) == (cmp2 & 0xffff0); // 8
+    bool nibble_cmp2 = (cmp1 & 0xffff0) == (cmp2 & 0xffff0); // 8
     cmp1 = b15 ? address_loop : address_end;
     cmp2 = address_cnt;
-    int address_cmp = (cmp1 & 0xfffff) == (cmp2 & 0xfffff); // 9
+    bool address_cmp = (cmp1 & 0xfffff) == (cmp2 & 0xfffff); // 9
 
     int next_address = address_cnt; // 11
-    int usenew = !nibble_cmp2;
-    int next_b15 = b15;
+    bool usenew = !nibble_cmp2;
+    bool next_b15 = b15;
 
     cmp1 = (!b6 && address_cmp) ? address_loop : address_cnt;
     cmp2 = address_cnt;
     int address_cnt2 = (kon || (!b6 && address_cmp)) ? cmp1 : cmp2;
 
-    int address_add = (!address_cmp && b6 && !b15) || (!address_cmp && !b6);
-    int address_sub = !address_cmp && b6 && b15;
+    bool address_add = (!address_cmp && b6 && !b15) || (!address_cmp && !b6);
+    bool address_sub = !address_cmp && b6 && b15;
     if (b7)
         address_cnt2 -= address_add - address_sub;
     else
@@ -689,7 +689,7 @@ inline void PCM_UpdateSlot(pcm_t& pcm, int slot, const ReverbChorus& adds)
 
     cmp1 = address;
     cmp2 = address_cnt;
-    int nibble_cmp3 = (cmp1 & 0xffff0) == (cmp2 & 0xffff0); // 12
+    bool nibble_cmp3 = (cmp1 & 0xffff0) == (cmp2 & 0xffff0); // 12
     cmp1 = b15 ? address_loop : address_end;
     cmp2 = address_cnt;
     address_cmp = (cmp1 & 0xfffff) == (cmp2 & 0xfffff); // 13
@@ -718,7 +718,7 @@ inline void PCM_UpdateSlot(pcm_t& pcm, int slot, const ReverbChorus& adds)
 
     cmp1 = address;
     cmp2 = address_cnt;
-    int nibble_cmp4 = (cmp1 & 0xffff0) == (cmp2 & 0xffff0); // 16
+    bool nibble_cmp4 = (cmp1 & 0xffff0) == (cmp2 & 0xffff0); // 16
     cmp1 = b15 ? address_loop : address_end;
     cmp2 = address_cnt;
     address_cmp = (cmp1 & 0xfffff) == (cmp2 & 0xfffff); // 17
@@ -747,7 +747,7 @@ inline void PCM_UpdateSlot(pcm_t& pcm, int slot, const ReverbChorus& adds)
 
     cmp1 = address;
     cmp2 = address_cnt;
-    int nibble_cmp5 = (cmp1 & 0xffff0) == (cmp2 & 0xffff0); // 20
+    bool nibble_cmp5 = (cmp1 & 0xffff0) == (cmp2 & 0xffff0); // 20
     cmp1 = b15 ? address_loop : address_end;
     cmp2 = address_cnt;
     address_cmp = (cmp1 & 0xfffff) == (cmp2 & 0xfffff); // 21
@@ -774,7 +774,7 @@ inline void PCM_UpdateSlot(pcm_t& pcm, int slot, const ReverbChorus& adds)
 
     cmp1 = address;
     cmp2 = address_cnt;
-    int nibble_cmp6 = (cmp1 & 0xffff0) == (cmp2 & 0xffff0); // 24
+    bool nibble_cmp6 = (cmp1 & 0xffff0) == (cmp2 & 0xffff0); // 24
 
     if (sub_phase_of >= 4)
     {
@@ -1120,14 +1120,14 @@ inline void PCM_UpdateCounter(pcm_t& pcm)
 inline void PCM_AddressGenerator(pcm_t& pcm)
 {
     // address generator
-    int key = 1;
-    int okey = (pcm.ram2[31][7] & 0x20) != 0;
-    int active = key && okey;
-    int kon = key && !okey;
+    bool key = 1;
+    bool okey = (pcm.ram2[31][7] & 0x20) != 0;
+    bool active = key && okey;
+    bool kon = key && !okey;
 
-    int b15 = (pcm.ram2[31][8] & 0x8000) != 0; // 0
-    int b6 = (pcm.ram2[31][7] & 0x40) != 0; // 1
-    int b7 = (pcm.ram2[31][7] & 0x80) != 0; // 1
+    bool b15 = (pcm.ram2[31][8] & 0x8000) != 0; // 0
+    bool b6 = (pcm.ram2[31][7] & 0x40) != 0; // 1
+    bool b7 = (pcm.ram2[31][7] & 0x80) != 0; // 1
     int old_nibble = (pcm.ram2[31][7] >> 12) & 15; // 1
     (void)old_nibble; // unused
 
@@ -1152,7 +1152,7 @@ inline void PCM_AddressGenerator(pcm_t& pcm)
 
     int cmp1 = b15 ? address_loop : address_end;
     int cmp2 = address_cnt;
-    int address_cmp = (cmp1 & 0xfffff) == (cmp2 & 0xfffff); // 9
+    bool address_cmp = (cmp1 & 0xfffff) == (cmp2 & 0xfffff); // 9
     int next_b15 = b15;
 
     int next_address = address_cnt; // 11
@@ -1223,9 +1223,9 @@ inline void PCM_CalcReverbChorus(pcm_t& pcm, ReverbChorus& out)
     }
 
     {
-        int okey = (pcm.ram2[31][7] & 0x20) != 0;
-        int key = 1;
-        int active = okey && key;
+        bool okey = (pcm.ram2[31][7] & 0x20) != 0;
+        bool key = 1;
+        bool active = okey && key;
         int u = 0;
         calc_tv(pcm, 1, pcm.ram2[30][0], &pcm.ram2[30][9], active, &u);
     }
