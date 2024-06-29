@@ -127,6 +127,7 @@ void PCM_Write(pcm_t& pcm, uint32_t address, uint8_t data)
     else if (address == 0x3d)
     {
         pcm.config_reg_3d = data;
+        pcm.config.reg_slots = (data & 31) + 1;
     }
     else if (address == 0x3e)
     {
@@ -595,7 +596,6 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
 {
     while (pcm.cycles < cycles)
     {
-        const int reg_slots = (pcm.config_reg_3d & 31) + 1;
         const int voice_active = pcm.voice_mask & pcm.voice_mask_pending;
         { // final mixing
             int shifter = pcm.ram2[30][10];
@@ -1109,7 +1109,7 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
         pcm.rcsum[0] = 0;
         pcm.rcsum[1] = 0;
 
-        for (int slot = 0; slot < reg_slots; slot++)
+        for (int slot = 0; slot < pcm.config.reg_slots; slot++)
         {
             uint32_t *ram1 = pcm.ram1[slot];
             uint16_t *ram2 = pcm.ram2[slot];
@@ -1482,7 +1482,7 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
             int rc1 = multi(sample3, (rc >> 0) & 255) >> 5; // chorus
             
             // mix reverb/chorus?
-            int slot2 = (slot == reg_slots - 1) ? 31 : slot + 1;
+            int slot2 = (slot == pcm.config.reg_slots - 1) ? 31 : slot + 1;
             switch (slot2)
             {
                 // 17, 18 - reverb
@@ -1535,7 +1535,7 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
             pcm.rcsum[0] = addclip20(pcm.rcsum[0], rc0 >> 1, rc0 & 1);
             pcm.rcsum[1] = addclip20(pcm.rcsum[1], rc1 >> 1, rc1 & 1);
 
-            if (slot != reg_slots - 1)
+            if (slot != pcm.config.reg_slots - 1)
             {
                 pcm.ram1[31][1] = suml;
                 pcm.ram1[31][3] = sumr;
@@ -1577,7 +1577,7 @@ void PCM_Update(pcm_t& pcm, uint64_t cycles)
 
         pcm.nfs = 1;
 
-        int new_cycles = (reg_slots + 1) * 25;
+        int new_cycles = (pcm.config.reg_slots + 1) * 25;
 
         pcm.cycles += pcm.mcu->is_jv880 ? (new_cycles * 25) / 29 : new_cycles;
     }

@@ -38,12 +38,17 @@ struct mcu_t;
 
 struct PCM_Config
 {
+    // config_reg_3c
     int noise_mask = 0;
     int orval      = 0;
     int write_mask = 0;
     int dac_mask   = 0; // unused
 
     bool oversampling = false;
+
+    // config_reg_3d
+    // important that this starts at 1, see derivation in PCM_Write
+    int reg_slots = 1;
 };
 
 struct pcm_t {
