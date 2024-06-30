@@ -90,6 +90,18 @@ const char* rs_name[(size_t)ROMSET_COUNT] = {
     "SC-155mk2"
 };
 
+const char* rs_name_simple[(size_t)ROMSET_COUNT] = {
+    "mk2",
+    "st",
+    "mk1",
+    "cm300",
+    "jv880",
+    "scb55",
+    "rlp3237",
+    "sc155",
+    "sc155mk2"
+};
+
 constexpr int ROM_SET_N_FILES = 6;
 
 const char* roms[(size_t)ROMSET_COUNT][ROM_SET_N_FILES] =
@@ -437,6 +449,19 @@ bool Emulator::LoadRoms(Romset romset, const std::filesystem::path& base_path)
 const char* EMU_RomsetName(Romset romset)
 {
     return rs_name[(size_t)romset];
+}
+
+bool EMU_ParseRomsetName(std::string_view name, Romset& romset)
+{
+    for (size_t i = 0; i < ROMSET_COUNT; ++i)
+    {
+        if (rs_name_simple[i] == name)
+        {
+            romset = (Romset)i;
+            return true;
+        }
+    }
+    return false;
 }
 
 void Emulator::PostMIDI(uint8_t byte)

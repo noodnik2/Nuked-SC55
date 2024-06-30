@@ -37,6 +37,7 @@ struct R_Parameters
     AudioFormat output_format = AudioFormat::S16;
     bool output_stdout = false;
     bool disable_oversampling = false;
+    std::string_view romset_name;
 };
 
 enum class R_ParseError
@@ -147,6 +148,15 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
             {
                 return R_ParseError::RomDirectoryNotFound;
             }
+        }
+        else if (reader.Any("-d", "--romset"))
+        {
+            if (!reader.Next())
+            {
+                return R_ParseError::UnexpectedEnd;
+            }
+
+            result.romset_name = reader.Arg();
         }
         else if (reader.Any("-f", "--format"))
         {
@@ -846,8 +856,22 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     // Then create a track specifically for each emulator instance
     const R_TrackList split_tracks = R_SplitTrackModulo(merged_track, instances);
 
-    Romset rs = EMU_DetectRomset(params.rom_directory);
-    fprintf(stderr, "Detected romset: %s\n", EMU_RomsetName(rs));
+    Romset rs;
+    if (params.romset_name.size())
+    {
+        if (!EMU_ParseRomsetName(params.romset_name, rs))
+        {
+            // interpreting romset_name as a char pointer here is safe because it points into argv
+            fprintf(stderr, "Could not parse romset name: `%s`\n", params.romset_name.data());
+            return false;
+        }
+        fprintf(stderr, "Using romset: %s\n", EMU_RomsetName(rs));
+    }
+    else
+    {
+        rs = EMU_DetectRomset(params.rom_directory);
+        fprintf(stderr, "Detected romset: %s\n", EMU_RomsetName(rs));
+    }
 
     R_Mixer mixer;
     switch (params.output_format)
@@ -1001,7 +1025,9 @@ Emulator options:
                                takes longer to render)
 
 ROM management options:
-  -d, --rom-directory <dir>    Sets the directory to load roms from. Romset will be detected.
+  -d, --rom-directory <dir>    Sets the directory to load roms from. Romset will be autodetected when
+                               not also passing --romset.
+  --romset <name>              Sets the romset to load.
 )";
 
     std::string name = P_GetProcessPath().stem().generic_string();

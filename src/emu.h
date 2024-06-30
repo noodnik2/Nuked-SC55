@@ -41,6 +41,7 @@
 #include <filesystem>
 #include <memory>
 #include <span>
+#include <string_view>
 
 struct EMU_Options
 {
@@ -88,4 +89,4 @@ private:
 
 Romset EMU_DetectRomset(const std::filesystem::path& base_path);
 const char* EMU_RomsetName(Romset romset);
-
+bool EMU_ParseRomsetName(std::string_view name, Romset& romset);
