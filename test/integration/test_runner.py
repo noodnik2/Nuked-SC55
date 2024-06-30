@@ -8,12 +8,21 @@ parser.add_argument("--render-exe", type=str)
 parser.add_argument("--input", type=str)
 parser.add_argument("--sha256", type=str)
 parser.add_argument("--rom-directory", type=str)
+parser.add_argument("--romset", type=str)
 
 
 def main():
     args = parser.parse_args()
 
-    cmd = [args.render_exe, "--stdout", args.input, "-d", args.rom_directory]
+    cmd = [
+        args.render_exe,
+        "--stdout",
+        args.input,
+        "-d",
+        args.rom_directory,
+        "--romset",
+        args.romset,
+    ]
 
     with subprocess.Popen(cmd, stdout=subprocess.PIPE) as proc:
         digest = hashlib.file_digest(proc.stdout, "sha256")

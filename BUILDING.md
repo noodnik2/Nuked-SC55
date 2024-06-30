@@ -54,11 +54,16 @@ ctest . -C Release
 ```
 
 Note that these tests take a long time to finish individually, so you may want
-to pass `-j` to run them in parallel. Currently these tests require a SC-55mk2
-romset with these hashes:
+to pass `-j` to run them in parallel. Currently these tests require a SC-55mk1
+and SC-55mk2 romset with these SHA256 hashes:
 
 ```
-$ sha256sum rom1.bin rom2.bin rom_sm.bin waverom1.bin waverom2.bin
+7e1bacd1d7c62ed66e465ba05597dcd60dfc13fc23de0287fdbce6cf906c6544 *sc55_rom1.bin
+effc6132d68f7e300aaef915ccdd08aba93606c22d23e580daf9ea6617913af1 *sc55_rom2.bin
+5655509a531804f97ea2d7ef05b8fec20ebf46216b389a84c44169257a4d2007 *sc55_waverom1.bin
+c655b159792d999b90df9e4fa782cf56411ba1eaa0bb3ac2bdaf09e1391006b1 *sc55_waverom2.bin
+334b2d16be3c2362210fdbec1c866ad58badeb0f84fd9bf5d0ac599baf077cc2 *sc55_waverom3.bin
+
 8a1eb33c7599b746c0c50283e4349a1bb1773b5c0ec0e9661219bf6c067d2042 *rom1.bin
 a4c9fd821059054c7e7681d61f49ce6f42ed2fe407a7ec1ba0dfdc9722582ce0 *rom2.bin
 b0b5f865a403f7308b4be8d0ed3ba2ed1c22db881b8a8326769dea222f6431d8 *rom_sm.bin
