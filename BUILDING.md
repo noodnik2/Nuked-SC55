@@ -14,7 +14,7 @@ Tested compilers:
 
 Full build
 
-```
+```bash
 git clone git@github.com:jcmoyer/Nuked-SC55.git
 cd Nuked-SC55
 mkdir build
@@ -22,6 +22,11 @@ cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build .
 ```
+
+If you're building a binary to only run on your local machine, consider adding
+`-DCMAKE_CXX_FLAGS="-march=native -mtune=native"
+-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON` to the first cmake command above to
+enable more optimizations.
 
 ### Windows
 
