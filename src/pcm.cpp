@@ -270,29 +270,20 @@ void PCM_Init(pcm_t& pcm, mcu_t& mcu)
     pcm.mcu = &mcu;
 }
 
-inline uint32_t addclip20(uint32_t add1, uint32_t add2, uint32_t cin)
+// Sign-extends a 20-bit signed integer to a 32-bit signed integer.
+constexpr inline int32_t sx20(int32_t in)
 {
-    uint32_t sum = (add1 + add2 + cin) & 0xfffff;
-    if ((add1 & 0x80000) != 0 && (add2 & 0x80000) != 0 && (sum & 0x80000) == 0)
-        sum = 0x80000;
-    else if ((add1 & 0x80000) == 0 && (add2 & 0x80000) == 0 && (sum & 0x80000) != 0)
-        sum = 0x7ffff;
-    return sum;
+    return (in << 12) >> 12;
+}
+
+inline int32_t addclip20(int32_t add1, int32_t add2, int32_t cin)
+{
+    return sx20(add1) + sx20(add2) + cin;
 }
 
 inline int32_t multi(int32_t val1, int8_t val2)
 {
-    if (val1 & 0x80000)
-        val1 |= ~0xfffff;
-    else
-        val1 &= 0x7ffff;
-
-    val1 *= val2;
-    if (val1 & 0x8000000)
-        val1 |= ~0x1ffffff;
-    else
-        val1 &= 0x1ffffff;
-    return val1;
+    return sx20(val1) * val2;
 }
 
 static const int interp_lut[3][128] = {
