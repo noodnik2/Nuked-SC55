@@ -731,7 +731,7 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
             result.romset = Romset::SC155;
             result.autodetect = false;
         }
-        else if (!reader.Any("--sc155mk2"))
+        else if (reader.Any("--sc155mk2"))
         {
             result.romset = Romset::SC155MK2;
             result.autodetect = false;
