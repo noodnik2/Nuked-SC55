@@ -38,6 +38,7 @@ struct R_Parameters
     bool output_stdout = false;
     bool disable_oversampling = false;
     std::string_view romset_name;
+    bool debug = false;
 };
 
 enum class R_ParseError
@@ -98,6 +99,10 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
         {
             result.help = true;
             return R_ParseError::Success;
+        }
+        else if (reader.Any("--debug"))
+        {
+            result.debug = true;
         }
         else if (reader.Any("-n", "--instances"))
         {
@@ -663,6 +668,7 @@ struct R_TrackRenderState
     size_t ns_simulated = 0;
     const SMF_Track* track = nullptr;
     std::thread thread;
+    std::chrono::high_resolution_clock::duration elapsed;
 
     // these fields are accessed from main thread during render process
     std::atomic<size_t> events_processed = 0;
@@ -760,6 +766,7 @@ void R_RenderOne(const SMF_Data& data, R_TrackRenderState& state)
 
     const uint64_t ns_per_step = R_NSPerStep(state.emu);
 
+    auto t_start = std::chrono::high_resolution_clock::now();
     for (const SMF_Event& event : track.events)
     {
         const uint64_t this_event_time_ns =
@@ -784,6 +791,7 @@ void R_RenderOne(const SMF_Data& data, R_TrackRenderState& state)
 
         ++state.events_processed;
     }
+    state.elapsed = std::chrono::high_resolution_clock::now() - t_start;
 
     state.mixer->MarkComplete(state.queue_id);
 
@@ -994,6 +1002,15 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     }
 
     mix_out_thread.join();
+
+    if (params.debug)
+    {
+        for (size_t i = 0; i < instances; ++i)
+        {
+            auto t_instance_sec = (double)render_states[i].elapsed.count() / 1e9;
+            fprintf(stderr, "#%02" PRIu64 " took %.2fs\n", i, t_instance_sec);
+        }
+    }
 
     auto t_finish = std::chrono::high_resolution_clock::now();
     auto t_diff   = std::chrono::duration_cast<std::chrono::nanoseconds>(t_finish - t_start);
