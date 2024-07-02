@@ -66,8 +66,8 @@ ctest . -C Release
 ```
 
 Note that these tests take a long time to finish individually, so you may want
-to pass `-j` to run them in parallel. Currently these tests require a SC-55mk1
-and SC-55mk2 romset with these SHA256 hashes:
+to pass `-j` to run them in parallel. Currently these tests require a SC-55
+(v1.21) and SC-55mk2 romset with these SHA256 hashes:
 
 ```
 7e1bacd1d7c62ed66e465ba05597dcd60dfc13fc23de0287fdbce6cf906c6544 *sc55_rom1.bin
