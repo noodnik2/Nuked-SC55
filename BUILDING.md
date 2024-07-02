@@ -28,6 +28,13 @@ If you're building a binary to only run on your local machine, consider adding
 -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON` to the first cmake command above to
 enable more optimizations.
 
+After building, you can create a self-contained install with any required files
+in their correct locations under `<path>`:
+
+```bash
+cmake --install . --prefix=<path>
+```
+
 ### Windows
 
 For builds using msvc you will most likely need to pass
