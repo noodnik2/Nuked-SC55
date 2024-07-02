@@ -20,7 +20,6 @@ def main():
         extra_args = []
 
     args = parser.parse_args(runner_args)
-    print(args)
 
     cmd = [
         args.render_exe,
@@ -31,7 +30,7 @@ def main():
         digest = hashlib.file_digest(proc.stdout, "sha256")
 
     if digest.hexdigest().casefold() != args.sha256.casefold():
-        print(f"hash mismatch for {args.input}")
+        print("hash mismatch")
         sys.exit(1)
 
     sys.exit(proc.wait())
