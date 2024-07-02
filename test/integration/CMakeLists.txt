@@ -5,8 +5,9 @@ function(add_render_test romset filename sha256)
         NAME "Render ${romset} ${filename}"
         COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/test_runner.py
             --render-exe $<TARGET_FILE:nuked-sc55-render>
-            --input ${CMAKE_CURRENT_SOURCE_DIR}/${filename}
             --sha256 ${sha256}
+            --
+            ${CMAKE_CURRENT_SOURCE_DIR}/${filename}
             --rom-directory ${NUKED_TEST_ROMDIR}
             --romset ${romset}
         COMMAND_EXPAND_LISTS

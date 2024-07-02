@@ -3,26 +3,29 @@ import argparse
 import hashlib
 import sys
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--render-exe", type=str)
-parser.add_argument("--input", type=str)
-parser.add_argument("--sha256", type=str)
-parser.add_argument("--rom-directory", type=str)
-parser.add_argument("--romset", type=str)
+parser = argparse.ArgumentParser(
+    epilog="Arguments after the first '--' will be forwarded to the render executable."
+)
+parser.add_argument("--render-exe", type=str, required=True)
+parser.add_argument("--sha256", type=str, required=True)
 
 
 def main():
-    args = parser.parse_args()
+    try:
+        dashdash = sys.argv.index("--")
+        runner_args = sys.argv[1:dashdash]
+        extra_args = sys.argv[dashdash + 1 :]
+    except ValueError:
+        runner_args = sys.argv[1:]
+        extra_args = []
+
+    args = parser.parse_args(runner_args)
+    print(args)
 
     cmd = [
         args.render_exe,
         "--stdout",
-        args.input,
-        "-d",
-        args.rom_directory,
-        "--romset",
-        args.romset,
-    ]
+    ] + extra_args
 
     with subprocess.Popen(cmd, stdout=subprocess.PIPE) as proc:
         digest = hashlib.file_digest(proc.stdout, "sha256")
