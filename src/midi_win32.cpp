@@ -37,6 +37,8 @@
 #include <mmsystem.h>
 #include <span>
 #include <cstdint>
+#include <string>
+#include "command_line.h"
 #include "midi.h"
 
 static HMIDIIN midi_handle;
@@ -125,42 +127,116 @@ void CALLBACK MIDI_Callback(
     }
 }
 
-bool MIDI_Init(FE_Application& frontend, unsigned int port)
+void MIDI_PrintDevices()
 {
-    midi_frontend = &frontend;
+    const UINT num_devices = midiInGetNumDevs();
 
-    UINT num = midiInGetNumDevs();
+    if (num_devices == 0)
+    {
+        fprintf(stderr, "No midi devices found.\n");
+    }
 
-    if (num == 0)
+    MMRESULT result;
+    MIDIINCAPSA device_caps;
+
+    fprintf(stderr, "\nKnown midi devices:\n\n");
+
+    for (UINT i = 0; i < num_devices; ++i)
+    {
+        result = midiInGetDevCapsA(i, &device_caps, sizeof(MIDIINCAPSA));
+        if (result == MMSYSERR_NOERROR)
+        {
+            fprintf(stderr, "  %d: %s\n", i, device_caps.szPname);
+        }
+    }
+
+    fprintf(stderr, "\n");
+}
+
+struct MIDI_PickedDevice
+{
+    UINT        device_id;
+    MIDIINCAPSA device_caps;
+};
+
+bool MIDI_PickInputDevice(std::string_view preferred_name, MIDI_PickedDevice& out_picked)
+{
+    const UINT num_devices = midiInGetNumDevs();
+
+    if (num_devices == 0)
     {
         fprintf(stderr, "No midi input\n");
-        return 0;
-    }
-
-    if (port >= num)
-    {
-        fprintf(stderr, "Out of range midi port is requested. Defaulting to port 0\n");
-        port = 0;
-    }
-
-    MIDIINCAPSA caps;
-    MMRESULT result;
-
-    result = midiInGetDevCapsA(port, &caps, sizeof(MIDIINCAPSA));
-    if (result != MMSYSERR_NOERROR)
-    {
-        fprintf(stderr, "midiInGetDevCapsA failed\n");
         return false;
     }
 
-    result = midiInOpen(&midi_handle, port, (DWORD_PTR)MIDI_Callback, 0, CALLBACK_FUNCTION);
+    MMRESULT result;
+
+    if (preferred_name.size() == 0)
+    {
+        // default to first device
+        result = midiInGetDevCapsA(0, &out_picked.device_caps, sizeof(MIDIINCAPSA));
+        if (result != MMSYSERR_NOERROR)
+        {
+            fprintf(stderr, "midiInGetDevCapsA failed\n");
+            return false;
+        }
+        out_picked.device_id = 0;
+        return true;
+    }
+
+    for (UINT i = 0; i < num_devices; ++i)
+    {
+        result = midiInGetDevCapsA(i, &out_picked.device_caps, sizeof(MIDIINCAPSA));
+        if (result != MMSYSERR_NOERROR)
+        {
+            fprintf(stderr, "midiInGetDevCapsA failed\n");
+            return false;
+        }
+        if (std::string_view(out_picked.device_caps.szPname) == preferred_name)
+        {
+            out_picked.device_id = i;
+            return true;
+        }
+    }
+
+    // user provided a number
+    if (UINT device_id; TryParse(preferred_name, device_id))
+    {
+        if (device_id < num_devices)
+        {
+            result = midiInGetDevCaps(device_id, &out_picked.device_caps, sizeof(MIDIINCAPSA));
+            if (result != MMSYSERR_NOERROR)
+            {
+                fprintf(stderr, "midiInGetDevCapsA failed\n");
+                return false;
+            }
+            out_picked.device_id = device_id;
+            return true;
+        }
+    }
+
+    fprintf(stderr, "No input device named '%s'\n", std::string(preferred_name).c_str());
+    return false;
+}
+
+bool MIDI_Init(FE_Application& fe, std::string_view port_name_or_id)
+{
+    midi_frontend = &fe;
+
+    MIDI_PickedDevice picked_device;
+    if (!MIDI_PickInputDevice(port_name_or_id, picked_device))
+    {
+        return false;
+    }
+
+    MMRESULT result = midiInOpen(&midi_handle, picked_device.device_id, (DWORD_PTR)MIDI_Callback, 0, CALLBACK_FUNCTION);
     if (result != MMSYSERR_NOERROR)
     {
         fprintf(stderr, "midiInOpen failed\n");
         return false;
     }
 
-    fprintf(stderr, "Opened midi port: %s\n", caps.szPname);
+    fprintf(stderr, "Opened midi port: %s\n", picked_device.device_caps.szPname);
 
     midi_buffer.lpData = (LPSTR)midi_in_buffer;
     midi_buffer.dwBufferLength = sizeof(midi_in_buffer);

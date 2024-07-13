@@ -102,7 +102,7 @@ struct FE_Application {
 struct FE_Parameters
 {
     bool help = false;
-    unsigned int port = 0;
+    std::string midi_device;
     std::string audio_device;
     uint32_t page_size = 512;
     uint32_t page_num = 32;
@@ -594,7 +594,6 @@ enum class FE_ParseError
     PageSizeInvalid,
     PageCountInvalid,
     UnknownArgument,
-    PortInvalid,
     RomDirectoryNotFound,
     FormatInvalid,
 };
@@ -617,8 +616,6 @@ const char* FE_ParseErrorStr(FE_ParseError err)
             return "Page count invalid";
         case FE_ParseError::UnknownArgument:
             return "Unknown argument";
-        case FE_ParseError::PortInvalid:
-            return "Port invalid";
         case FE_ParseError::RomDirectoryNotFound:
             return "Rom directory doesn't exist";
         case FE_ParseError::FormatInvalid:
@@ -645,10 +642,7 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
                 return FE_ParseError::UnexpectedEnd;
             }
 
-            if (!reader.TryParse(result.port))
-            {
-                return FE_ParseError::PortInvalid;
-            }
+            result.midi_device = reader.Arg();
         }
         else if (reader.Any("-a", "--audio-device"))
         {
@@ -832,7 +826,7 @@ General options:
   -?, -h, --help                                Display this information.
 
 Audio options:
-  -p, --port         <port_number>              Set MIDI input port.
+  -p, --port         <device_name_or_number>    Set MIDI input port.
   -a, --audio-device <device_name_or_number>    Set output audio device.
   -b, --buffer-size  <page_size>[:page_count]   Set Audio Buffer size.
   -f, --format       s16|s32|f32                Set output format.
@@ -856,6 +850,7 @@ ROM management options:
 
     std::string name = P_GetProcessPath().stem().generic_string();
     fprintf(stderr, USAGE_STR, name.c_str());
+    MIDI_PrintDevices();
     FE_PrintAudioDevices();
 }
 
@@ -939,7 +934,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (!MIDI_Init(frontend, params.port))
+    if (!MIDI_Init(frontend, params.midi_device))
     {
         fprintf(stderr, "ERROR: Failed to initialize the MIDI Input.\nWARNING: Continuing without MIDI Input...\n");
         fflush(stderr);

@@ -33,8 +33,11 @@
  */
 #pragma once
 
+#include <string_view>
+
 struct FE_Application;
 
-bool MIDI_Init(FE_Application& fe, unsigned int port);
+bool MIDI_Init(FE_Application& fe, std::string_view port_name_or_id);
 void MIDI_Quit(void);
+void MIDI_PrintDevices();
 
