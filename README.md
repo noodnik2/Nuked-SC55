@@ -16,6 +16,7 @@ Differences from upstream:
   breaking things.
 - Command line is handled slightly differently. Pass `--help` to a binary to
   see what arguments it accepts.
+- Improved performance without sacrificing accuracy.
 
 ## Building
 
