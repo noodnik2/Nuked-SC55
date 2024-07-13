@@ -103,7 +103,7 @@ struct FE_Parameters
 {
     bool help = false;
     unsigned int port = 0;
-    int audio_device_index = -1;
+    std::string audio_device;
     uint32_t page_size = 512;
     uint32_t page_num = 32;
     bool autodetect = true;
@@ -237,6 +237,79 @@ static const char* FE_AudioFormatStr(SDL_AudioFormat format)
     return "UNK";
 }
 
+enum class FE_PickOutputResult
+{
+    WantMatchedName,
+    WantDefaultDevice,
+    NoOutputDevices,
+    NoMatchingName,
+};
+
+FE_PickOutputResult FE_PickOutputDevice(std::string_view preferred_name, std::string& out_device_name)
+{
+    out_device_name.clear();
+
+    const int num_audio_devs = SDL_GetNumAudioDevices(0);
+    if (num_audio_devs == 0)
+    {
+        return FE_PickOutputResult::NoOutputDevices;
+    }
+
+    if (preferred_name.size() == 0)
+    {
+        return FE_PickOutputResult::WantDefaultDevice;
+    }
+
+    for (int i = 0; i < num_audio_devs; ++i)
+    {
+        if (SDL_GetAudioDeviceName(i, 0) == preferred_name)
+        {
+            out_device_name = SDL_GetAudioDeviceName(i, 0);
+            return FE_PickOutputResult::WantMatchedName;
+        }
+    }
+
+    // maybe we have an index instead of a name
+    if (int out_device_id; TryParse(preferred_name, out_device_id))
+    {
+        if (out_device_id >= 0 && out_device_id < num_audio_devs)
+        {
+            out_device_name = SDL_GetAudioDeviceName(out_device_id, 0);
+            return FE_PickOutputResult::WantMatchedName;
+        }
+    }
+
+    out_device_name = preferred_name;
+    return FE_PickOutputResult::NoMatchingName;
+}
+
+void FE_PrintAudioDevices()
+{
+    // we may want to print this information without initializing all of SDL
+    if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0)
+    {
+        fprintf(stderr, "Failed to init audio: %s\n", SDL_GetError());
+        return;
+    }
+
+    const int num_audio_devs = SDL_GetNumAudioDevices(0);
+    if (num_audio_devs == 0)
+    {
+        fprintf(stderr, "No output devices found.\n");
+    }
+
+    fprintf(stderr, "\nKnown output devices:\n\n");
+
+    for (int i = 0; i < num_audio_devs; ++i)
+    {
+        fprintf(stderr, "  %d: %s\n", i, SDL_GetAudioDeviceName(i, 0));
+    }
+
+    fprintf(stderr, "\n");
+
+    SDL_QuitSubSystem(SDL_INIT_AUDIO);
+}
+
 bool FE_OpenAudio(FE_Application& fe, const FE_Parameters& params)
 {
     SDL_AudioSpec spec = {};
@@ -265,30 +338,42 @@ bool FE_OpenAudio(FE_Application& fe, const FE_Parameters& params)
     spec.userdata = &fe;
     spec.samples = RangeCast<Uint16>(fe.audio_page_size / 4);
 
-    int num = SDL_GetNumAudioDevices(0);
-    if (num == 0)
+    std::string output_device_name;
+    FE_PickOutputResult output_result = FE_PickOutputDevice(params.audio_device, output_device_name);
+    switch (output_result)
     {
-        fprintf(stderr, "No audio output device found.\n");
-        return false;
+    case FE_PickOutputResult::WantMatchedName:
+        fe.sdl_audio = SDL_OpenAudioDevice(output_device_name.c_str(), 0, &spec, &spec_actual, 0);
+        break;
+    case FE_PickOutputResult::WantDefaultDevice:
+        output_device_name = "Default device";
+        fe.sdl_audio = SDL_OpenAudioDevice(NULL, 0, &spec, &spec_actual, 0);
+        break;
+    case FE_PickOutputResult::NoOutputDevices:
+        // in some cases this may still work
+        fprintf(stderr, "No output devices found; attempting to open default device\n");
+        output_device_name = "Default device";
+        fe.sdl_audio = SDL_OpenAudioDevice(NULL, 0, &spec, &spec_actual, 0);
+        break;
+    case FE_PickOutputResult::NoMatchingName:
+        // in some cases SDL cannot list all audio devices so we should still try
+        fprintf(stderr, "No output device named '%s'; attempting to open it anyways...\n", params.audio_device.c_str());
+        fe.sdl_audio = SDL_OpenAudioDevice(output_device_name.c_str(), 0, &spec, &spec_actual, 0);
+        break;
     }
 
-    int device_index = params.audio_device_index;
-    if (device_index < -1 || device_index >= num)
-    {
-        fprintf(stderr, "Out of range audio device index is requested. Default audio output device is selected.\n");
-        device_index = -1;
-    }
-
-    const char* audioDevicename = device_index == -1 ? "Default device" : SDL_GetAudioDeviceName(device_index, 0);
-
-    fe.sdl_audio = SDL_OpenAudioDevice(device_index == -1 ? NULL : audioDevicename, 0, &spec, &spec_actual, 0);
     if (!fe.sdl_audio)
     {
         fprintf(stderr, "Failed to open audio device: %s\n", SDL_GetError());
+        // if we failed for this reason the user might want to know what valid devices exist
+        if (output_result == FE_PickOutputResult::NoMatchingName)
+        {
+            FE_PrintAudioDevices();
+        }
         return false;
     }
 
-    fprintf(stderr, "Audio device: %s\n", audioDevicename);
+    fprintf(stderr, "Audio device: %s\n", output_device_name.c_str());
 
     fprintf(stderr, "Audio Requested: F=%s, C=%d, R=%d, B=%d\n",
            FE_AudioFormatStr(spec.format),
@@ -510,7 +595,6 @@ enum class FE_ParseError
     PageCountInvalid,
     UnknownArgument,
     PortInvalid,
-    AudioDeviceInvalid,
     RomDirectoryNotFound,
     FormatInvalid,
 };
@@ -535,8 +619,6 @@ const char* FE_ParseErrorStr(FE_ParseError err)
             return "Unknown argument";
         case FE_ParseError::PortInvalid:
             return "Port invalid";
-        case FE_ParseError::AudioDeviceInvalid:
-            return "Audio device invalid";
         case FE_ParseError::RomDirectoryNotFound:
             return "Rom directory doesn't exist";
         case FE_ParseError::FormatInvalid:
@@ -575,10 +657,7 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
                 return FE_ParseError::UnexpectedEnd;
             }
 
-            if (!reader.TryParse(result.audio_device_index))
-            {
-                return FE_ParseError::AudioDeviceInvalid;
-            }
+            result.audio_device = reader.Arg();
         }
         else if (reader.Any("-f", "--format"))
         {
@@ -754,7 +833,7 @@ General options:
 
 Audio options:
   -p, --port         <port_number>              Set MIDI input port.
-  -a, --audio-device <device_number>            Set Audio Device index.
+  -a, --audio-device <device_name_or_number>    Set output audio device.
   -b, --buffer-size  <page_size>[:page_count]   Set Audio Buffer size.
   -f, --format       s16|s32|f32                Set output format.
   --disable-oversampling                        Halves output frequency.
@@ -777,6 +856,7 @@ ROM management options:
 
     std::string name = P_GetProcessPath().stem().generic_string();
     fprintf(stderr, USAGE_STR, name.c_str());
+    FE_PrintAudioDevices();
 }
 
 int main(int argc, char *argv[])
