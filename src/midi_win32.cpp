@@ -139,7 +139,7 @@ void MIDI_PrintDevices()
     MMRESULT result;
     MIDIINCAPSA device_caps;
 
-    fprintf(stderr, "\nKnown midi devices:\n\n");
+    fprintf(stderr, "Known midi devices:\n\n");
 
     for (UINT i = 0; i < num_devices; ++i)
     {
@@ -149,8 +149,6 @@ void MIDI_PrintDevices()
             fprintf(stderr, "  %d: %s\n", i, device_caps.szPname);
         }
     }
-
-    fprintf(stderr, "\n");
 }
 
 struct MIDI_PickedDevice

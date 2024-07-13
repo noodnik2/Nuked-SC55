@@ -56,7 +56,7 @@ void MIDI_PrintDevices()
             fprintf(stderr, "No midi devices found.\n");
         }
 
-        fprintf(stderr, "\nKnown midi devices:\n\n");
+        fprintf(stderr, "Known midi devices:\n\n");
 
         for (unsigned int i = 0; i < num_devices; ++i)
         {
@@ -65,8 +65,6 @@ void MIDI_PrintDevices()
 
             fprintf(stderr, "  %d: %s\n", i, friendly_name.c_str());
         }
-
-        fprintf(stderr, "\n");
     }
     catch (const RtMidiError& err)
     {

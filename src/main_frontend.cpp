@@ -846,6 +846,7 @@ ROM management options:
   --jv880                                       Use JV-880 ROM set.
   --scb55                                       Use SCB-55 ROM set.
   --rlp3237                                     Use RLP-3237 ROM set.
+
 )";
 
     std::string name = P_GetProcessPath().stem().generic_string();
