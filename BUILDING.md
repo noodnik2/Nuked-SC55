@@ -51,6 +51,8 @@ enough.
 Requirements:
 
 - Python 3
+- [Catch2 v3.7.0](https://github.com/catchorg/Catch2) installed in
+  `CMAKE_PREFIX_PATH`
 
 There is a test suite that makes sure new commits don't change existing
 behavior. It is expected that all tests pass for every commit unless either:
