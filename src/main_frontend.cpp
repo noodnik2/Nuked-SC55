@@ -43,6 +43,10 @@
 #include <cinttypes>
 #include <optional>
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 // Workaround until all compilers implement CWG 2518 (at time of writing, MSVC
 // doesn't accept a static_assert(false) in a constexpr conditional branch)
 template <typename>
@@ -504,6 +508,20 @@ void FE_Run(FE_Application& fe)
     }
 }
 
+#ifdef _WIN32
+// On Windows we install a Ctrl-C handler to make sure that the event loop always receives an SDL_QUIT event. This
+// is what normally happens on other platforms but only some Windows environments (for instance, a mingw64 shell).
+// If the program is run from cmd or Windows explorer, SDL_QUIT is never sent and the program hangs.
+BOOL WINAPI FE_CtrlCHandler(DWORD dwCtrlType)
+{
+    (void)dwCtrlType;
+    SDL_Event quit_event{};
+    quit_event.type = SDL_QUIT;
+    SDL_PushEvent(&quit_event);
+    return TRUE;
+}
+#endif
+
 bool FE_Init()
 {
     if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
@@ -512,6 +530,10 @@ bool FE_Init()
         fflush(stderr);
         return false;
     }
+
+#ifdef _WIN32
+    SetConsoleCtrlHandler(FE_CtrlCHandler, TRUE);
+#endif
 
     return true;
 }
