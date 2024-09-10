@@ -150,11 +150,11 @@ public:
     {
         if (m_read_head <= m_write_head)
         {
-            return m_elem_count - (m_write_head - m_read_head);
+            return m_elem_count - (m_write_head - m_read_head) - 1;
         }
         else
         {
-            return m_read_head - m_write_head;
+            return m_read_head - m_write_head - 1;
         }
     }
 

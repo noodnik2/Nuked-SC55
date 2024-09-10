@@ -398,7 +398,7 @@ bool FE_IsBufferFull(FE_Instance& instance)
 {
     // MCU_Step will always produce 1 or 2 samples. It's simplest to always leave enough space for oversampling because
     // then we don't need to re-align the write head every time.
-    return instance.StaticSelectBuffer<SampleT>().GetWritableCount() <= 2;
+    return instance.StaticSelectBuffer<SampleT>().GetWritableCount() < 2;
 }
 
 template <typename SampleT>
