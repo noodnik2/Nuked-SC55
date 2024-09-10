@@ -26,6 +26,14 @@
 
 using namespace std::chrono_literals;
 
+enum class R_EndBehavior
+{
+    // Cut the track at the last MIDI event.
+    Cut,
+    // Keep rendering until the emulator produces silence.
+    Release,
+};
+
 struct R_Parameters
 {
     std::string_view input_filename;
@@ -39,6 +47,7 @@ struct R_Parameters
     bool disable_oversampling = false;
     std::string_view romset_name;
     bool debug = false;
+    R_EndBehavior end_behavior = R_EndBehavior::Cut;
 };
 
 enum class R_ParseError
@@ -52,6 +61,7 @@ enum class R_ParseError
     UnexpectedEnd,
     RomDirectoryNotFound,
     FormatInvalid,
+    EndInvalid,
 };
 
 const char* R_ParseErrorStr(R_ParseError err)
@@ -76,6 +86,8 @@ const char* R_ParseErrorStr(R_ParseError err)
             return "Rom directory doesn't exist";
         case R_ParseError::FormatInvalid:
             return "Output format invalid";
+        case R_ParseError::EndInvalid:
+            return "End behavior invalid";
     }
     return "Unknown error";
 }
@@ -194,6 +206,26 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
         else if (reader.Any("--disable-oversampling"))
         {
             result.disable_oversampling = true;
+        }
+        else if (reader.Any("--end"))
+        {
+            if (!reader.Next())
+            {
+                return R_ParseError::UnexpectedEnd;
+            }
+
+            if (reader.Arg() == "cut")
+            {
+                result.end_behavior = R_EndBehavior::Cut;
+            }
+            else if (reader.Arg() == "release")
+            {
+                result.end_behavior = R_EndBehavior::Release;
+            }
+            else
+            {
+                return R_ParseError::EndInvalid;
+            }
         }
         else
         {
@@ -669,11 +701,21 @@ struct R_TrackRenderState
     const SMF_Track* track = nullptr;
     std::thread thread;
     std::chrono::high_resolution_clock::duration elapsed;
+    size_t num_silent_frames = 0;
+    R_EndBehavior end_behavior;
 
     // these fields are accessed from main thread during render process
     std::atomic<size_t> events_processed = 0;
     std::atomic<bool> done;
 };
+
+bool R_IsSilence(const AudioFrame<int32_t>& in_raw)
+{
+    // The emulator doesn't produce exact zeroes when no notes are playing.
+    constexpr int32_t MIN = -0x4000;
+    constexpr int32_t MAX = +0x4000;
+    return MIN <= in_raw.left && in_raw.left <= MAX && MIN <= in_raw.right && in_raw.right <= MAX;
+}
 
 template <typename SampleT>
 void R_ReceiveSample(void* userdata, const AudioFrame<int32_t>& in)
@@ -682,6 +724,15 @@ void R_ReceiveSample(void* userdata, const AudioFrame<int32_t>& in)
 
     AudioFrame<SampleT> out;
     Normalize(in, out);
+
+    if (R_IsSilence(in))
+    {
+        ++state->num_silent_frames;
+    }
+    else
+    {
+        state->num_silent_frames = 0;
+    }
 
     state->mixer->SubmitFrame(state->queue_id, out);
 }
@@ -790,6 +841,17 @@ void R_RenderOne(const SMF_Data& data, R_TrackRenderState& state)
         }
 
         ++state.events_processed;
+    }
+
+    if (state.end_behavior == R_EndBehavior::Release)
+    {
+        const uint32_t frequency = PCM_GetOutputFrequency(state.emu.GetPCM());
+        // TODO: make this configurable? do we care? currently 100ms
+        const size_t silence_time = frequency / 10;
+        while (state.num_silent_frames < silence_time)
+        {
+            MCU_Step(state.emu.GetMCU());
+        }
     }
     state.elapsed = std::chrono::high_resolution_clock::now() - t_start;
 
@@ -929,6 +991,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
         render_states[i].track = &split_tracks.tracks[i];
         render_states[i].mixer = &mixer;
         render_states[i].queue_id = i;
+        render_states[i].end_behavior = params.end_behavior;
 
         render_states[i].thread = std::thread(R_RenderOne, std::cref(data), std::ref(render_states[i]));
     }
@@ -1035,6 +1098,9 @@ General options:
 Audio options:
   -f, --format s16|s32|f32     Set output format.
   --disable-oversampling       Halves output frequency.
+  --end cut|release            Choose how the end of the track is handled:
+        cut (default)              Stop rendering at the last MIDI event
+        release                    Continue to render audio after the last MIDI event until silence
 
 Emulator options:
   -r, --reset     gs|gm        Send GS or GM reset before rendering.
