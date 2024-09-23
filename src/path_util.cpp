@@ -22,7 +22,7 @@ std::filesystem::path P_GetProcessPath()
         fprintf(stderr, "fatal: P_GetProcessPath failed\n");
         exit(1);
     }
-#elif DEFINED (__APPLE__)
+#elif defined(__APPLE__)
     char path[1024];
     uint32_t actual_size = sizeof(path);
     if (_NSGetExecutablePath(path, &actual_size) != 0)
