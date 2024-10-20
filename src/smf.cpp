@@ -240,7 +240,7 @@ bool SMF_ReadTrack(SMF_Reader& reader, SMF_Data& result, uint64_t expected_end)
         new_event.timestamp = total_time;
         new_event.status = running_status;
 
-        switch (running_status & 0xF0)
+        switch (new_event.status & 0xF0)
         {
             // 2 param
             case 0x80:
@@ -262,26 +262,30 @@ bool SMF_ReadTrack(SMF_Reader& reader, SMF_Data& result, uint64_t expected_end)
             // variable length
             case 0xF0:
                 {
-                    const uint8_t mode = running_status & 0x0F;
-                    switch (mode)
+                    if (new_event.status == 0xF0 || new_event.status == 0xF7)
                     {
-                        case 0xF:
-                            {
-                                uint32_t meta_len;
-                                // meta event type
-                                new_event.data_first = reader.GetOffset();
-                                CHECK(reader.Skip(1));
-                                // meta event len
-                                CHECK(SMF_ReadVarint(reader, meta_len));
-                                // meta event data
-                                CHECK(reader.Skip(meta_len));
-                                new_event.data_last = reader.GetOffset();
-                                break;
-                            }
-
-                        default:
-                            fprintf(stderr, "unhandled Fx message: %x\n", running_status);
-                            break;
+                        // Sysex events
+                        uint32_t sysex_len;
+                        CHECK(SMF_ReadVarint(reader, sysex_len));
+                        new_event.data_first = reader.GetOffset();
+                        CHECK(reader.Skip(sysex_len));
+                        new_event.data_last = reader.GetOffset();
+                    }
+                    else if (new_event.status == 0xFF)
+                    {
+                        // Meta events
+                        uint32_t meta_len;
+                        new_event.data_first = reader.GetOffset();
+                        // Skip type byte
+                        CHECK(reader.Skip(1));
+                        CHECK(SMF_ReadVarint(reader, meta_len));
+                        CHECK(reader.Skip(meta_len));
+                        new_event.data_last = reader.GetOffset();
+                    }
+                    else
+                    {
+                        fprintf(stderr, "Panic: unhandled Fx message: %x\n", new_event.status);
+                        exit(1);
                     }
                 }
                 break;

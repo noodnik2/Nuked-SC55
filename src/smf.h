@@ -41,6 +41,11 @@ struct SMF_Event
         return status >= 0xf0;
     }
 
+    bool IsSystemExclusive() const
+    {
+        return status == 0xf0 || status == 0xf7;
+    }
+
     bool IsMetaEvent() const
     {
         return status == 0xff;
