@@ -22,6 +22,10 @@ Differences from upstream:
 
 See [BUILDING.md](BUILDING.md).
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 Nuked SC-55 can be distributed and used under the original MAME license (see
