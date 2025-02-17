@@ -872,8 +872,6 @@ struct R_MixOutState
     // Written by mix thread, read by main thread
     std::atomic<size_t> frames_mixed = 0;
 
-    std::vector<AudioFrame<int16_t>> mix_buffer;
-
     // Eventually we need to abstract over this to stream to other outputs.
     WAV_Handle* output = nullptr;
 };
@@ -897,17 +895,18 @@ void R_Mix(float* dest, float* src_first, float* src_last)
 template <typename T>
 void R_MixOut(R_MixOutState& state)
 {
-    state.mix_buffer.reserve(state.mixer->GetChunkSize());
+    std::vector<AudioFrame<T>> mix_buffer;
+    mix_buffer.reserve(state.mixer->GetChunkSize());
 
     while (!state.mixer->IsFinished())
     {
         state.mixer->WaitForWork();
 
-        state.frames_mixed += state.mixer->MixFrames(state.mix_buffer, [](void* dest, void* src_first, void* src_last) {
+        state.frames_mixed += state.mixer->MixFrames(mix_buffer, [](void* dest, void* src_first, void* src_last) {
             R_Mix((T*)dest, (T*)src_first, (T*)src_last);
         });
 
-        for (auto& frame : state.mix_buffer)
+        for (auto& frame : mix_buffer)
         {
             state.output->Write(frame);
         }
