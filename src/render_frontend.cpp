@@ -250,6 +250,17 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
     return R_ParseError::Success;
 }
 
+void R_PrintRomsets()
+{
+    fprintf(stderr, "Accepted romset names:\n");
+    fprintf(stderr, "  ");
+    for (const char* name : EMU_GetParsableRomsetNames())
+    {
+        fprintf(stderr, "%s ", name);
+    }
+    fprintf(stderr, "\n");
+}
+
 void R_Panic(const char* msg, const std::source_location where = std::source_location::current())
 {
     fprintf(stderr, "%s:%d: in %s: %s", where.file_name(), (int)where.line(), where.function_name(), msg);
@@ -932,6 +943,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
         {
             // interpreting romset_name as a char pointer here is safe because it points into argv
             fprintf(stderr, "Could not parse romset name: `%s`\n", params.romset_name.data());
+            R_PrintRomsets();
             return false;
         }
         fprintf(stderr, "Using romset: %s\n", EMU_RomsetName(rs));
@@ -1110,10 +1122,13 @@ ROM management options:
   -d, --rom-directory <dir>    Sets the directory to load roms from. Romset will be autodetected when
                                not also passing --romset.
   --romset <name>              Sets the romset to load.
+
 )";
 
     std::string name = P_GetProcessPath().stem().generic_string();
     fprintf(stderr, USAGE_STR, name.c_str());
+
+    R_PrintRomsets();
 }
 
 int main(int argc, char* argv[])
