@@ -33,7 +33,9 @@
  */
 #pragma once
 
+#include <cmath>
 #include <cstdint>
+#include <type_traits>
 
 template <typename T>
 inline T Min(T a, T b)
@@ -47,6 +49,20 @@ inline T Clamp(T value, T min, T max)
     if (value < min) return min;
     if (value > max) return max;
     return value;
+}
+
+template <typename T>
+    requires std::is_signed_v<T>
+inline T PickCloser(T to, T a, T b)
+{
+    if (std::abs(to - a) < std::abs(to - b))
+    {
+        return a;
+    }
+    else
+    {
+        return b;
+    }
 }
 
 inline int16_t SaturatingAdd(int16_t a, int16_t b)

@@ -28,9 +28,24 @@ if(USE_RTMIDI)
     find_package(rtmidi MODULE REQUIRED)
 endif()
 
+# ASIO
+if(WIN32)
+    option(NUKED_ENABLE_ASIO "Enable ASIO" OFF)
+    set(NUKED_ASIO_SDK_DIR "" CACHE PATH
+        "Directory containing the ASIO SDK")
+endif()
+
 #==============================================================================
 # Support functions
 #==============================================================================
+function(target_disable_warnings tgt)
+    if(MSVC)
+        target_compile_options(${tgt} PRIVATE /W0)
+    else()
+        target_compile_options(${tgt} PRIVATE -w)
+    endif()
+endfunction()
+
 function(target_enable_warnings tgt)
     if(MSVC)
         target_compile_options(${tgt} PRIVATE /W4
@@ -90,6 +105,8 @@ add_executable(nuked-sc55)
 target_sources(nuked-sc55
     PRIVATE
     src/midi.h
+    src/output_sdl.cpp src/output_sdl.h
+    src/audio_sdl.cpp src/audio_sdl.h
     src/main_frontend.cpp # main() is here!
 )
 
@@ -115,6 +132,37 @@ endif()
 if(APPLE)
     find_library(LIBCoreAudio CoreAudio)
     target_link_libraries(nuked-sc55 PRIVATE ${LIBCoreAudio})
+endif()
+
+# This always needs to happen even if we don't use ASIO because it defines the
+# macro for asio support. This will probably change to a more general config
+# header in the future including version number etc.
+configure_file(src/asio_config.h.in asio_config.h @ONLY)
+target_include_directories(nuked-sc55 PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+
+if(NUKED_ENABLE_ASIO)
+    if (NOT IS_DIRECTORY "${NUKED_ASIO_SDK_DIR}")
+        message(FATAL_ERROR "Since NUKED_ENABLE_ASIO is ON, NUKED_ASIO_SDK_DIR"
+            " must point to a directory containing the ASIO SDK.")
+    endif()
+
+    add_library(asio_sdk)
+    target_sources(asio_sdk
+        PRIVATE
+        "${NUKED_ASIO_SDK_DIR}/common/asio.cpp"
+        "${NUKED_ASIO_SDK_DIR}/host/asiodrivers.cpp"
+        "${NUKED_ASIO_SDK_DIR}/host/pc/asiolist.cpp"
+    )
+    target_include_directories(asio_sdk PUBLIC "${NUKED_ASIO_SDK_DIR}/common")
+    target_include_directories(asio_sdk PUBLIC "${NUKED_ASIO_SDK_DIR}/host")
+    target_include_directories(asio_sdk PUBLIC "${NUKED_ASIO_SDK_DIR}/host/pc")
+    target_disable_warnings(asio_sdk)
+
+    target_sources(nuked-sc55
+        PRIVATE
+        src/output_asio.cpp src/output_asio.h
+    )
+    target_link_libraries(nuked-sc55 PRIVATE asio_sdk)
 endif()
 
 #==============================================================================
