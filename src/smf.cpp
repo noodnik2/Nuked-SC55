@@ -117,6 +117,20 @@ public:
         return true;
     }
 
+    [[nodiscard]]
+    bool Seek(size_t new_offset)
+    {
+        if (m_offset <= m_bytes.size())
+        {
+            m_offset = new_offset;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
     size_t GetOffset() const
     {
         return m_offset;
@@ -276,11 +290,18 @@ bool SMF_ReadTrack(SMF_Reader& reader, SMF_Data& result, uint64_t expected_end)
                         // Meta events
                         uint32_t meta_len;
                         new_event.data_first = reader.GetOffset();
-                        // Skip type byte
-                        CHECK(reader.Skip(1));
+                        uint8_t meta_type;
+                        CHECK(reader.ReadU8(meta_type));
                         CHECK(SMF_ReadVarint(reader, meta_len));
                         CHECK(reader.Skip(meta_len));
                         new_event.data_last = reader.GetOffset();
+
+                        // End of track: stop reading events and skip to where the next track would be
+                        if (meta_type == 0x2F)
+                        {
+                            CHECK(reader.Seek(expected_end));
+                            return true;
+                        }
                     }
                     else
                     {
