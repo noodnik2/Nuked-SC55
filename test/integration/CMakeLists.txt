@@ -85,3 +85,5 @@ add_render_test("mk1" "avmidi/29.mid" "c2ddcdec3722cb59396e836fdb6469979d4b0f58b
 add_render_test("mk1" "avmidi/30.mid" "a5766389bdb3536ae0b1ca411194459198be988126e5a15e3db30f424b654297")
 add_render_test("mk1" "avmidi/31.mid" "5e0e8310bc90f29286bd554b6a655a9471f790cf8e1c6736bac597ee1ec2e9ad")
 add_render_test("mk1" "avmidi/32.mid" "d59c14eaa3d3362979fabba5948005a79aa6d05df5f45bfcc6158433f6ec74df")
+
+add_render_test("mk2" "issue_18/issue_18.mid" "61c0ef6490e0f43d34d9f93583e4255ef897800cd8f34b3f156c14890a58ae10")
