@@ -859,16 +859,6 @@ void MCU_UpdateUART_TX(mcu_t& mcu)
     // fprintf(stderr, "tx:%x\n", mcu.dev_register[DEV_TDR]);
 }
 
-void MCU_WorkThread_Lock(mcu_t& mcu)
-{
-    mcu.work_thread_lock.lock();
-}
-
-void MCU_WorkThread_Unlock(mcu_t& mcu)
-{
-    mcu.work_thread_lock.unlock();
-}
-
 void MCU_Step(mcu_t& mcu)
 {
     if (!mcu.ex_ignore)

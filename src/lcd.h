@@ -33,8 +33,10 @@
  */
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <filesystem>
+#include <mutex>
 
 struct mcu_t;
 
@@ -55,13 +57,16 @@ struct lcd_t {
     uint32_t color1 = 0;
     uint32_t color2 = 0;
 
+    // all the variables in this group are updated by the MCU via LCD_Write
     uint32_t LCD_DL = 0, LCD_N = 0, LCD_F = 0, LCD_D = 0, LCD_C = 0, LCD_B = 0, LCD_ID = 0, LCD_S = 0;
     uint32_t LCD_DD_RAM = 0, LCD_AC = 0, LCD_CG_RAM = 0;
     uint32_t LCD_RAM_MODE = 0;
     uint8_t LCD_Data[80]{};
     uint8_t LCD_CG[64]{};
 
-    uint8_t enable = 0;
+    // updated by MCU via LCD_Enable
+    std::atomic<uint8_t> enable = 0;
+
     bool quit_requested = false;
 
     uint32_t buffer[lcd_height_max][lcd_width_max]{};
@@ -70,6 +75,8 @@ struct lcd_t {
     SDL_Window *window = nullptr;
     SDL_Renderer *renderer = nullptr;
     SDL_Texture *texture = nullptr;
+
+    std::mutex mutex;
 };
 
 

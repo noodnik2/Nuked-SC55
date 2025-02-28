@@ -1,3 +1,10 @@
+# Version 0.5.0 (TBD)
+
+## Enhancements
+
+- The standard frontend will now always respond to user input even if the
+  emulator starts falling behind.
+
 # Version 0.4.2 (2025-02-23)
 
 ## Enhancements

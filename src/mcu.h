@@ -36,7 +36,6 @@
 #include <cstdint>
 #include <atomic>
 #include <thread>
-#include <mutex>
 #include "mcu_interrupt.h"
 #include "cast.h"
 #include "audio.h"
@@ -286,8 +285,6 @@ struct mcu_t {
 
     void* callback_userdata = nullptr;
     mcu_sample_callback sample_callback = MCU_DefaultSampleCallback;
-
-    std::mutex work_thread_lock;
 };
 
 bool MCU_Init(mcu_t& mcu, submcu_t& sm, pcm_t& pcm, mcu_timer_t& timer, lcd_t& lcd);
@@ -544,7 +541,4 @@ void MCU_EncoderTrigger(mcu_t& mcu, int dir);
 
 void MCU_PostSample(mcu_t& mcu, const AudioFrame<int32_t>& frame);
 void MCU_PostUART(mcu_t& mcu, uint8_t data);
-
-void MCU_WorkThread_Lock(mcu_t& mcu);
-void MCU_WorkThread_Unlock(mcu_t& mcu);
 
