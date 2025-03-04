@@ -4,6 +4,9 @@
 
 - The standard frontend will now always respond to user input even if the
   emulator starts falling behind.
+- The renderer frontend will now run the emulator for a bit before sending any
+  MIDI events even if you don't specify a reset with `-r` or `--reset`. This
+  should ensure it's ready to accept program changes. (#20)
 
 # Version 0.4.2 (2025-02-23)
 

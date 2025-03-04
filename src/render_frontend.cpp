@@ -750,11 +750,6 @@ void R_ReceiveSample(void* userdata, const AudioFrame<int32_t>& in)
 
 void R_RunReset(Emulator& emu, EMU_SystemReset reset)
 {
-    if (reset == EMU_SystemReset::NONE)
-    {
-        return;
-    }
-
     emu.PostSystemReset(reset);
 
     for (size_t i = 0; i < 24'000'000; ++i)
@@ -983,7 +978,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
         render_states[i].emu.Reset();
         render_states[i].emu.GetPCM().disable_oversampling = params.disable_oversampling;
 
-        fprintf(stderr, "Running system reset for #%02" PRIu64 "...\n", i);
+        fprintf(stderr, "Initializing emulator #%02" PRIu64 "...\n", i);
         R_RunReset(render_states[i].emu, params.reset);
 
         switch (params.output_format)
