@@ -11,7 +11,6 @@
 #include "math_util.h"
 #include "ringbuffer.h"
 #include <atomic>
-#include <cinttypes>
 
 // number of buffers, one per stereo channel
 const size_t N_BUFFERS = 2;
@@ -229,7 +228,7 @@ bool Out_ASIO_Create(const char* driver_name)
 
     if ((size_t)g_output.output_channel_count < N_BUFFERS)
     {
-        fprintf(stderr, "%" PRIu64 " channels required; aborting\n", N_BUFFERS);
+        fprintf(stderr, "%zu channels required; aborting\n", N_BUFFERS);
         ASIOExit();
         return false;
     }
@@ -272,7 +271,7 @@ bool Out_ASIO_Create(const char* driver_name)
         }
 
         fprintf(stderr,
-                "ASIO channel %" PRIu64 ": %s: %s\n",
+                "ASIO channel %zu: %s: %s\n",
                 i,
                 g_output.channel_info[i].name,
                 SampleTypeToString(g_output.channel_info[i].type));
@@ -284,7 +283,7 @@ bool Out_ASIO_Create(const char* driver_name)
     {
         if (g_output.output_type != g_output.channel_info[i].type)
         {
-            fprintf(stderr, "ASIO channel %" PRIu64 " has a different output type!\n", i);
+            fprintf(stderr, "ASIO channel %zu has a different output type!\n", i);
             ASIOExit();
             return false;
         }
@@ -327,7 +326,7 @@ void Out_ASIO_AddStream(SDL_AudioStream* stream)
 {
     if (g_output.stream_count == MAX_STREAMS)
     {
-        fprintf(stderr, "PANIC: attempted to add more than %" PRIu64 " ASIO streams\n", MAX_STREAMS);
+        fprintf(stderr, "PANIC: attempted to add more than %zu ASIO streams\n", MAX_STREAMS);
         exit(1);
     }
     g_output.streams[g_output.stream_count] = stream;

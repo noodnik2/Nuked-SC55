@@ -2,7 +2,6 @@
 
 #include "cast.h"
 #include <SDL.h>
-#include <cinttypes>
 
 // one per instance
 const size_t MAX_STREAMS = 16;
@@ -159,7 +158,7 @@ void Out_SDL_AddStream(RingbufferView& view)
 {
     if (g_output.stream_count == MAX_STREAMS)
     {
-        fprintf(stderr, "PANIC: attempted to add more than %" PRIu64 " SDL streams\n", MAX_STREAMS);
+        fprintf(stderr, "PANIC: attempted to add more than %zu SDL streams\n", MAX_STREAMS);
         exit(1);
     }
 

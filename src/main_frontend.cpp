@@ -316,7 +316,7 @@ void FE_PrintAudioDevices()
 
         for (size_t i = 0; i < outputs.size(); ++i)
         {
-            fprintf(stderr, "  %" PRIu64 ": %s\n", i, outputs[i].name.c_str());
+            fprintf(stderr, "  %zu: %s\n", i, outputs[i].name.c_str());
         }
 
         fprintf(stderr, "\n");
@@ -354,7 +354,7 @@ bool FE_OpenSDLAudio(FE_Application& fe, const FE_Parameters& params, const char
             break;
         }
         Out_SDL_AddStream(fe.instances[i].view);
-        fprintf(stderr, "#%02" PRIu64 ": allocated %" PRIu64 " bytes for audio\n", i, inst.sample_buffer.GetByteLength());
+        fprintf(stderr, "#%02zu: allocated %zu bytes for audio\n", i, inst.sample_buffer.GetByteLength());
     }
 
     if (!Out_SDL_Start())
@@ -428,7 +428,7 @@ bool FE_OpenASIOAudio(FE_Application& fe, const FE_Parameters& params, const cha
             break;
         }
         fprintf(
-            stderr, "#%02" PRIu64 ": allocated %" PRIu64 " bytes for audio\n", i, inst.sample_buffer.GetByteLength());
+            stderr, "#%02zu: allocated %zu bytes for audio\n", i, inst.sample_buffer.GetByteLength());
     }
 
     return true;
