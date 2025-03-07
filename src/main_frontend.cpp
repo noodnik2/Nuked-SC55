@@ -40,7 +40,6 @@
 #include "cast.h"
 #include "pcm.h"
 #include <SDL.h>
-#include <cinttypes>
 #include <optional>
 
 #ifdef _WIN32
@@ -918,7 +917,7 @@ int main(int argc, char *argv[])
     {
         if (!FE_CreateInstance(frontend, base_path, params))
         {
-            fprintf(stderr, "FATAL ERROR: Failed to create instance %" PRIu64 "\n", i);
+            fprintf(stderr, "FATAL ERROR: Failed to create instance %zu\n", i);
             return 1;
         }
     }

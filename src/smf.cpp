@@ -6,7 +6,6 @@
 #include <string>
 #include <fstream>
 #include <cstring>
-#include <cinttypes>
 
 // security: do not call without verifying [ptr,ptr+1] is a readable range
 // performance: 16 bit load + rol in clang and gcc, worse in MSVC
@@ -326,7 +325,7 @@ void SMF_PrintStats(const SMF_Data& data)
 {
     for (size_t i = 0; i < data.tracks.size(); ++i)
     {
-        fprintf(stderr, "Track %02" PRIu64 ": %" PRIu64 " events\n", i, data.tracks[i].events.size());
+        fprintf(stderr, "Track %02zu: %zu events\n", i, data.tracks[i].events.size());
     }
 }
 
@@ -372,7 +371,7 @@ bool SMF_ReadChunk(SMF_Reader& reader, SMF_Data& data)
     }
     else
     {
-        fprintf(stderr, "Unexpected chunk type at %" PRIu64 "\n", chunk_start);
+        fprintf(stderr, "Unexpected chunk type at %zu\n", chunk_start);
         return false;
     }
 
