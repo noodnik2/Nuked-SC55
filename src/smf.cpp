@@ -371,7 +371,7 @@ bool SMF_ReadChunk(SMF_Reader& reader, SMF_Data& data)
     }
     else
     {
-        fprintf(stderr, "Unexpected chunk type at %zu\n", chunk_start);
+        fprintf(stderr, "Unexpected chunk type at %zu\n", (size_t)chunk_start);
         return false;
     }
 
