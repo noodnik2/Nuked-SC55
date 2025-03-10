@@ -57,6 +57,8 @@ public:
 
     bool Init(size_t size_bytes)
     {
+        Free();
+
         size_t alloc_size = 64 + size_bytes;
 
         m_alloc_base = malloc(alloc_size);
@@ -92,7 +94,17 @@ public:
         return std::assume_aligned<64>(m_buffer);
     }
 
+    const void* DataFirst() const
+    {
+        return std::assume_aligned<64>(m_buffer);
+    }
+
     void* DataLast()
+    {
+        return (uint8_t*)DataFirst() + m_buffer_size;
+    }
+
+    const void* DataLast() const
     {
         return (uint8_t*)DataFirst() + m_buffer_size;
     }
