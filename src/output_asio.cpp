@@ -322,7 +322,7 @@ bool Out_ASIO_Start()
     return true;
 }
 
-void Out_ASIO_AddStream(SDL_AudioStream* stream)
+void Out_ASIO_AddSource(SDL_AudioStream* stream)
 {
     if (g_output.stream_count == MAX_STREAMS)
     {

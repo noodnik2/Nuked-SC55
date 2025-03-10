@@ -12,5 +12,5 @@ void Out_SDL_Destroy();
 bool Out_SDL_Start();
 void Out_SDL_Stop();
 
-void Out_SDL_AddStream(RingbufferView& view);
+void Out_SDL_AddSource(RingbufferView& view);
 

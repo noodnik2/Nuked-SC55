@@ -172,7 +172,7 @@ void Out_SDL_Stop()
     SDL_CloseAudioDevice(g_output.device);
 }
 
-void Out_SDL_AddStream(RingbufferView& view)
+void Out_SDL_AddSource(RingbufferView& view)
 {
     if (g_output.stream_count == MAX_STREAMS)
     {

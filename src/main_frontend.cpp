@@ -349,7 +349,7 @@ bool FE_OpenSDLAudio(FE_Application& fe, const AudioOutputParameters& params, co
             inst.CreateAndPrepareBuffer<float>();
             break;
         }
-        Out_SDL_AddStream(fe.instances[i].view);
+        Out_SDL_AddSource(fe.instances[i].view);
         fprintf(stderr, "#%02zu: allocated %zu bytes for audio\n", i, inst.sample_buffer.GetByteLength());
     }
 
@@ -403,7 +403,7 @@ bool FE_OpenASIOAudio(FE_Application& fe, const AudioOutputParameters& params, c
                                          Out_ASIO_GetFormat(),
                                          2,
                                          Out_ASIO_GetFrequency());
-        Out_ASIO_AddStream(inst.stream);
+        Out_ASIO_AddSource(inst.stream);
 
         switch (inst.format)
         {
