@@ -151,3 +151,15 @@ Use SCB-55 ROM set. This overrides autodetect.
 ### `--rlp3237`
 
 Use RLP-3237 ROM set. This overrides autodetect.
+
+## ASIO specific parameters
+
+The following options are only enabled in ASIO builds.
+
+### `--asio-sample-rate <rate>`
+
+Requests the ASIO driver to use `<rate>` frequency. Defaults to 44100.
+
+The emulator natively produces audio at 64000hz or 66207hz depending on the
+romset. Some ASIO drivers cannot support these frequencies so resampling to
+`<rate>` is necessary.
