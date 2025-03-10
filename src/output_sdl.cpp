@@ -13,12 +13,11 @@ struct SDLOutput
 
     SDL_AudioDeviceID device = 0;
 
-    size_t buffer_size = 0;
-
     RingbufferView* views[MAX_STREAMS]{};
     size_t          stream_count = 0;
 
-    bool is_started = false;
+    // Parameters requested by the user
+    AudioOutputParameters create_params;
 };
 
 static SDLOutput g_output;
@@ -34,14 +33,14 @@ void AudioCallback(void* userdata, Uint8* stream, int len)
 
     for (size_t i = 0; i < g_output.stream_count; ++i)
     {
-        if (g_output.views[i]->GetReadableElements<Frame>() >= g_output.buffer_size)
+        if (g_output.views[i]->GetReadableElements<Frame>() >= g_output.create_params.buffer_size)
         {
-            auto span = g_output.views[i]->UncheckedPrepareRead<Frame>(g_output.buffer_size);
+            auto span = g_output.views[i]->UncheckedPrepareRead<Frame>(g_output.create_params.buffer_size);
             for (size_t samp = 0; samp < span.size(); ++samp)
             {
                 MixFrame(*((Frame*)stream + samp), span[samp]);
             }
-            g_output.views[i]->UncheckedFinishRead<Frame>(g_output.buffer_size);
+            g_output.views[i]->UncheckedFinishRead<Frame>(g_output.create_params.buffer_size);
         }
     }
 }
@@ -149,7 +148,7 @@ bool Out_SDL_Create(const char* device_name, const AudioOutputParameters& params
             spec_actual.freq,
             spec_actual.samples);
 
-    g_output.buffer_size    = params.buffer_size;
+    g_output.create_params  = params;
     g_output.requested_spec = spec;
     g_output.actual_spec    = spec_actual;
 
@@ -185,4 +184,3 @@ void Out_SDL_AddStream(RingbufferView& view)
 
     ++g_output.stream_count;
 }
-
