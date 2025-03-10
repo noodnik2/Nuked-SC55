@@ -387,12 +387,6 @@ bool FE_OpenASIOAudio(FE_Application& fe, const AudioOutputParameters& params, c
         return false;
     }
 
-    if (!Out_ASIO_Start())
-    {
-        fprintf(stderr, "Failed to create ASIO output\n");
-        return false;
-    }
-
     for (size_t i = 0; i < fe.instances_in_use; ++i)
     {
         FE_Instance& inst = fe.instances[i];
@@ -422,6 +416,12 @@ bool FE_OpenASIOAudio(FE_Application& fe, const AudioOutputParameters& params, c
         }
         fprintf(
             stderr, "#%02zu: allocated %zu bytes for audio\n", i, inst.sample_buffer.GetByteLength());
+    }
+
+    if (!Out_ASIO_Start())
+    {
+        fprintf(stderr, "Failed to create ASIO output\n");
+        return false;
     }
 
     return true;
