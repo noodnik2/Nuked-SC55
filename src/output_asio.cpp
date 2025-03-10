@@ -428,6 +428,22 @@ inline void Deinterleave32(void* dst_a, void* dst_b, const void* src, size_t cou
     }
 }
 
+inline void Deinterleave(void* dst_a, void* dst_b, const void* src, size_t count, size_t word_size)
+{
+    switch (word_size)
+    {
+    case 2:
+        Deinterleave16(dst_a, dst_b, src, count);
+        break;
+    case 4:
+        Deinterleave32(dst_a, dst_b, src, count);
+        break;
+    default:
+        fprintf(stderr, "PANIC: Deinterleave not implemented for word size %zu\n", word_size);
+        exit(1);
+    }
+}
+
 template <typename FrameT>
 inline void MixBuffer(GenericBuffer& dst, const GenericBuffer& src)
 {
@@ -492,24 +508,11 @@ static ASIOTime* bufferSwitchTimeInfo(ASIOTime* params, long index, ASIOBool dir
     }
 
     // unpack final buffer and send it to ASIO driver
-    switch (Out_ASIO_GetFormatSampleSizeBytes())
-    {
-    case 4:
-        Deinterleave32(g_output.buffer_info[0].buffers[index],
-                       g_output.buffer_info[1].buffers[index],
-                       g_output.mix_buffers[1].DataFirst(),
-                       g_output.buffer_size_frames);
-        break;
-    case 2:
-        Deinterleave16(g_output.buffer_info[0].buffers[index],
-                       g_output.buffer_info[1].buffers[index],
-                       g_output.mix_buffers[1].DataFirst(),
-                       g_output.buffer_size_frames);
-        break;
-    default:
-        fprintf(stderr, "PANIC: Deinterleave not implemented for this sample size\n");
-        exit(1);
-    }
+    Deinterleave(g_output.buffer_info[0].buffers[index],
+                 g_output.buffer_info[1].buffers[index],
+                 g_output.mix_buffers[1].DataFirst(),
+                 g_output.buffer_size_frames,
+                 Out_ASIO_GetFormatSampleSizeBytes());
 
     ASIOOutputReady();
 
