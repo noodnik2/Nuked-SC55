@@ -464,23 +464,24 @@ static ASIOTime* bufferSwitchTimeInfo(ASIOTime* params, long index, ASIOBool dir
     (void)params;
     (void)directProcess;
 
-    size_t renderable_frames = (size_t)g_output.buffer_size_frames;
+    size_t renderable_frames = g_output.buffer_size_frames;
     for (size_t i = 0; i < g_output.stream_count; ++i)
     {
         renderable_frames = Min(
             renderable_frames, (size_t)SDL_AudioStreamAvailable(g_output.streams[i]) / sizeof(AudioFrame<int32_t>));
     }
 
-    if (renderable_frames < (size_t)g_output.buffer_size_frames)
+    if (renderable_frames < g_output.buffer_size_frames || g_output.stream_count == 0)
     {
         memset(g_output.buffer_info[0].buffers[index], 0, g_output.buffer_size_bytes);
         memset(g_output.buffer_info[1].buffers[index], 0, g_output.buffer_size_bytes);
         return 0;
     }
 
-    memset(g_output.mix_buffers[1].DataFirst(), 0, g_output.mix_buffers[1].GetByteLength());
+    SDL_AudioStreamGet(
+        g_output.streams[0], g_output.mix_buffers[1].DataFirst(), (int)g_output.mix_buffers[1].GetByteLength());
 
-    for (size_t i = 0; i < g_output.stream_count; ++i)
+    for (size_t i = 1; i < g_output.stream_count; ++i)
     {
         // read from stream into staging buffer
         SDL_AudioStreamGet(
