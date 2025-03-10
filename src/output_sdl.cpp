@@ -1,5 +1,6 @@
 #include "output_sdl.h"
 
+#include "audio_sdl.h"
 #include "cast.h"
 #include <SDL.h>
 
@@ -43,34 +44,6 @@ void AudioCallback(void* userdata, Uint8* stream, int len)
             g_output.views[i]->UncheckedFinishRead<Frame>(g_output.create_params.buffer_size);
         }
     }
-}
-
-static const char* AudioFormatToString(SDL_AudioFormat format)
-{
-    switch (format)
-    {
-    case AUDIO_S8:
-        return "S8";
-    case AUDIO_U8:
-        return "U8";
-    case AUDIO_S16MSB:
-        return "S16MSB";
-    case AUDIO_S16LSB:
-        return "S16LSB";
-    case AUDIO_U16MSB:
-        return "U16MSB";
-    case AUDIO_U16LSB:
-        return "U16LSB";
-    case AUDIO_S32MSB:
-        return "S32MSB";
-    case AUDIO_S32LSB:
-        return "S32LSB";
-    case AUDIO_F32MSB:
-        return "F32MSB";
-    case AUDIO_F32LSB:
-        return "F32LSB";
-    }
-    return "Unknown";
 }
 
 bool Out_SDL_QueryOutputs(AudioOutputList& list)
@@ -136,14 +109,14 @@ bool Out_SDL_Create(const char* device_name, const AudioOutputParameters& params
 
     fprintf(stderr,
             "Audio requested: format=%s, channels=%d, frequency=%d, frames=%d\n",
-            AudioFormatToString(spec.format),
+            SDLAudioFormatToString(spec.format),
             spec.channels,
             spec.freq,
             spec.samples);
 
     fprintf(stderr,
             "Audio actual: format=%s, channels=%d, frequency=%d, frames=%d\n",
-            AudioFormatToString(spec_actual.format),
+            SDLAudioFormatToString(spec_actual.format),
             spec_actual.channels,
             spec_actual.freq,
             spec_actual.samples);

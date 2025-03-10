@@ -37,6 +37,7 @@
 #include "path_util.h"
 #include "command_line.h"
 #include "audio.h"
+#include "audio_sdl.h"
 #include "cast.h"
 #include "pcm.h"
 #include <SDL.h>
@@ -362,22 +363,6 @@ bool FE_OpenSDLAudio(FE_Application& fe, const AudioOutputParameters& params, co
     return true;
 }
 
-SDL_AudioFormat FE_ToSDLFormat(AudioFormat internal)
-{
-    switch (internal)
-    {
-    case AudioFormat::S16:
-        return AUDIO_S16;
-    case AudioFormat::S32:
-        return AUDIO_S32;
-    case AudioFormat::F32:
-        return AUDIO_F32;
-    default:
-        fprintf(stderr, "Invalid audio format conversion\n");
-        exit(1);
-    }
-}
-
 #ifdef NUKED_ENABLE_ASIO
 bool FE_OpenASIOAudio(FE_Application& fe, const AudioOutputParameters& params, const char* name)
 {
@@ -391,7 +376,7 @@ bool FE_OpenASIOAudio(FE_Application& fe, const AudioOutputParameters& params, c
     {
         FE_Instance& inst = fe.instances[i];
 
-        inst.stream = SDL_NewAudioStream(FE_ToSDLFormat(inst.format),
+        inst.stream = SDL_NewAudioStream(AudioFormatToSDLAudioFormat(inst.format),
                                          2,
                                          (int)PCM_GetOutputFrequency(inst.emu.GetPCM()),
                                          Out_ASIO_GetFormat(),

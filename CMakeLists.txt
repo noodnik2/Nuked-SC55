@@ -106,6 +106,7 @@ target_sources(nuked-sc55
     PRIVATE
     src/midi.h
     src/output_sdl.cpp src/output_sdl.h
+    src/audio_sdl.cpp src/audio_sdl.h
     src/main_frontend.cpp # main() is here!
 )
 
