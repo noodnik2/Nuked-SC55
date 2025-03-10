@@ -51,7 +51,7 @@ struct ASIOOutput
 
     // Contains interleaved frames received from individual `streams`.
     // This is necessarily 2 * `buffer_size_bytes` long.
-    GenericBuffer mix_buffer;
+    GenericBuffer mix_buffers[2]{};
 
     // Parameters requested by the user
     AudioOutputParameters create_params;
@@ -291,8 +291,9 @@ bool Out_ASIO_Create(const char* driver_name, const AudioOutputParameters& param
     g_output.buffer_size_bytes = g_output.buffer_size_frames * Out_ASIO_GetFormatSampleSizeBytes();
 
     // *2 because an ASIO buffer only represents one channel, but our mix buffer will hold 2 channels
-    g_output.mix_buffer.Free();
-    if (!g_output.mix_buffer.Init(2 * g_output.buffer_size_bytes))
+    const size_t mb_size = 2 * g_output.buffer_size_bytes;
+
+    if (!g_output.mix_buffers[0].Init(mb_size) || !g_output.mix_buffers[1].Init(mb_size))
     {
         fprintf(stderr, "Failed to allocate mix buffer for ASIO output.\n");
         ASIOExit();
@@ -427,6 +428,37 @@ inline void Deinterleave32(void* dst_a, void* dst_b, const void* src, size_t cou
     }
 }
 
+template <typename FrameT>
+inline void MixBuffer(GenericBuffer& dst, const GenericBuffer& src)
+{
+    auto dst_span = std::span<FrameT>((FrameT*)dst.DataFirst(), dst.GetByteLength() / sizeof(FrameT));
+    auto src_span = std::span<FrameT>((FrameT*)src.DataFirst(), src.GetByteLength() / sizeof(FrameT));
+    assert(src_span.size() == dst_span.size());
+    for (size_t samp = 0; samp < dst_span.size(); ++samp)
+    {
+        MixFrame(dst_span[samp], src_span[samp]);
+    }
+}
+
+inline void MixBuffer(GenericBuffer& dst, const GenericBuffer& src, SDL_AudioFormat format)
+{
+    switch (format)
+    {
+    case AUDIO_S16SYS:
+        MixBuffer<AudioFrame<int16_t>>(dst, src);
+        break;
+    case AUDIO_S32SYS:
+        MixBuffer<AudioFrame<int32_t>>(dst, src);
+        break;
+    case AUDIO_F32SYS:
+        MixBuffer<AudioFrame<float>>(dst, src);
+        break;
+    default:
+        fprintf(stderr, "PANIC: MixBuffer called for unsupported format %d\n", format);
+        exit(1);
+    }
+}
+
 static ASIOTime* bufferSwitchTimeInfo(ASIOTime* params, long index, ASIOBool directProcess)
 {
     (void)params;
@@ -439,36 +471,43 @@ static ASIOTime* bufferSwitchTimeInfo(ASIOTime* params, long index, ASIOBool dir
             renderable_frames, (size_t)SDL_AudioStreamAvailable(g_output.streams[i]) / sizeof(AudioFrame<int32_t>));
     }
 
-    memset(g_output.buffer_info[0].buffers[index], 0, g_output.buffer_size_bytes);
-    memset(g_output.buffer_info[1].buffers[index], 0, g_output.buffer_size_bytes);
-
-    if (renderable_frames >= (size_t)g_output.buffer_size_frames)
+    if (renderable_frames < (size_t)g_output.buffer_size_frames)
     {
-        for (size_t i = 0; i < g_output.stream_count; ++i)
-        {
-            SDL_AudioStreamGet(g_output.streams[i],
-                               g_output.mix_buffer.DataFirst(),
-                               (int)g_output.mix_buffer.GetByteLength());
+        memset(g_output.buffer_info[0].buffers[index], 0, g_output.buffer_size_bytes);
+        memset(g_output.buffer_info[1].buffers[index], 0, g_output.buffer_size_bytes);
+        return 0;
+    }
 
-            switch (Out_ASIO_GetFormatSampleSizeBytes())
-            {
-            case 4:
-                Deinterleave32(g_output.buffer_info[0].buffers[index],
-                               g_output.buffer_info[1].buffers[index],
-                               g_output.mix_buffer.DataFirst(),
-                               g_output.buffer_size_frames);
-                break;
-            case 2:
-                Deinterleave16(g_output.buffer_info[0].buffers[index],
-                               g_output.buffer_info[1].buffers[index],
-                               g_output.mix_buffer.DataFirst(),
-                               g_output.buffer_size_frames);
-                break;
-            default:
-                fprintf(stderr, "PANIC: Deinterleave not implemented for this sample size\n");
-                exit(1);
-            }
-        }
+    memset(g_output.mix_buffers[1].DataFirst(), 0, g_output.mix_buffers[1].GetByteLength());
+
+    for (size_t i = 0; i < g_output.stream_count; ++i)
+    {
+        // read from stream into staging buffer
+        SDL_AudioStreamGet(
+            g_output.streams[i], g_output.mix_buffers[0].DataFirst(), (int)g_output.mix_buffers[0].GetByteLength());
+
+        // mix staging buffer into final buffer
+        MixBuffer(g_output.mix_buffers[1], g_output.mix_buffers[0], Out_ASIO_GetFormat());
+    }
+
+    // unpack final buffer and send it to ASIO driver
+    switch (Out_ASIO_GetFormatSampleSizeBytes())
+    {
+    case 4:
+        Deinterleave32(g_output.buffer_info[0].buffers[index],
+                       g_output.buffer_info[1].buffers[index],
+                       g_output.mix_buffers[1].DataFirst(),
+                       g_output.buffer_size_frames);
+        break;
+    case 2:
+        Deinterleave16(g_output.buffer_info[0].buffers[index],
+                       g_output.buffer_info[1].buffers[index],
+                       g_output.mix_buffers[1].DataFirst(),
+                       g_output.buffer_size_frames);
+        break;
+    default:
+        fprintf(stderr, "PANIC: Deinterleave not implemented for this sample size\n");
+        exit(1);
     }
 
     ASIOOutputReady();
