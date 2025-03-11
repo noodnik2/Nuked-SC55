@@ -8,6 +8,7 @@
 #include "asiodrivers.h"
 
 #include "audio.h"
+#include "audio_sdl.h"
 #include "math_util.h"
 #include "ringbuffer.h"
 #include <atomic>
@@ -388,13 +389,13 @@ bool Out_ASIO_Reset()
 
     if (!Out_ASIO_Create(g_output.driver_info.name, g_output.create_params))
     {
-        fprintf(stderr, "ASIO reset: failed to re-initialize ASIO");
+        fprintf(stderr, "ASIO reset: failed to re-initialize ASIO\n");
         return false;
     }
 
     if (!Out_ASIO_Start())
     {
-        fprintf(stderr, "ASIO reset: failed to restart ASIO playback");
+        fprintf(stderr, "ASIO reset: failed to restart ASIO playback\n");
         return false;
     }
 
@@ -470,7 +471,8 @@ inline void MixBuffer(GenericBuffer& dst, const GenericBuffer& src, SDL_AudioFor
         MixBuffer<AudioFrame<float>>(dst, src);
         break;
     default:
-        fprintf(stderr, "PANIC: MixBuffer called for unsupported format %d\n", format);
+        fprintf(
+            stderr, "PANIC: MixBuffer called for unsupported format %s (%x)\n", SDLAudioFormatToString(format), format);
         exit(1);
     }
 }
