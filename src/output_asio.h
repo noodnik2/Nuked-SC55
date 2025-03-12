@@ -7,6 +7,7 @@
 bool Out_ASIO_QueryOutputs(AudioOutputList& list);
 
 bool Out_ASIO_Create(const char* driver_name, const AudioOutputParameters& params);
+// Implies Out_ASIO_Stop()
 void Out_ASIO_Destroy();
 
 bool Out_ASIO_Start();

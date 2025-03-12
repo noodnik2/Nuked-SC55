@@ -130,6 +130,8 @@ bool Out_SDL_Create(const char* device_name, const AudioOutputParameters& params
 
 void Out_SDL_Destroy()
 {
+    Out_SDL_Stop();
+    SDL_CloseAudioDevice(g_output.device);
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
@@ -142,7 +144,7 @@ bool Out_SDL_Start()
 
 void Out_SDL_Stop()
 {
-    SDL_CloseAudioDevice(g_output.device);
+    SDL_PauseAudioDevice(g_output.device, 1);
 }
 
 void Out_SDL_AddSource(RingbufferView& view)

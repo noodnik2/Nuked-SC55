@@ -7,6 +7,7 @@
 bool Out_SDL_QueryOutputs(AudioOutputList& list);
 
 bool Out_SDL_Create(const char* device_name, const AudioOutputParameters& params);
+// Implies Out_SDL_Stop()
 void Out_SDL_Destroy();
 
 bool Out_SDL_Start();
