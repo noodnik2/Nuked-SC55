@@ -70,6 +70,33 @@ static void      bufferSwitch(long index, ASIOBool processNow);
 static void      sampleRateDidChange(ASIOSampleRate sRate);
 static long      asioMessage(long selector, long value, void* message, double* opt);
 
+static const char* ErrorToString(ASIOError err)
+{
+    switch (err)
+    {
+    case ASE_OK:
+        return "ASE_OK";
+    case ASE_SUCCESS:
+        return "ASE_SUCCESS";
+    case ASE_NotPresent:
+        return "ASE_NotPresent";
+    case ASE_HWMalfunction:
+        return "ASE_HWMalfunction";
+    case ASE_InvalidParameter:
+        return "ASE_InvalidParameter";
+    case ASE_InvalidMode:
+        return "ASE_InvalidMode";
+    case ASE_SPNotAdvancing:
+        return "ASE_SPNotAdvancing";
+    case ASE_NoClock:
+        return "ASE_NoClock";
+    case ASE_NoMemory:
+        return "ASE_NoMemory";
+    default:
+        return "Unknown error code";
+    }
+}
+
 static const char* SampleTypeToString(ASIOSampleType type)
 {
     switch (type)
@@ -166,7 +193,7 @@ bool Out_ASIO_Create(const char* driver_name, const AudioOutputParameters& param
     err = ASIOInit(&g_output.driver_info);
     if (err != ASE_OK)
     {
-        fprintf(stderr, "ASIOInit failed\n");
+        fprintf(stderr, "ASIOInit failed with %s: %s\n", ErrorToString(err), g_output.driver_info.errorMessage);
         return false;
     }
 
@@ -183,7 +210,7 @@ bool Out_ASIO_Create(const char* driver_name, const AudioOutputParameters& param
     err = ASIOGetBufferSize(&g_output.min_size, &g_output.max_size, &g_output.preferred_size, &g_output.granularity);
     if (err != ASE_OK)
     {
-        fprintf(stderr, "ASIOGetBufferSize failed\n");
+        fprintf(stderr, "ASIOGetBufferSize failed with %s\n", ErrorToString(err));
         ASIOExit();
         return false;
     }
@@ -202,13 +229,16 @@ bool Out_ASIO_Create(const char* driver_name, const AudioOutputParameters& param
     err = ASIOSetSampleRate((ASIOSampleRate)params.frequency);
     if (err != ASE_OK)
     {
-        fprintf(stderr, "ASIOSetSampleRate(%d) failed; trying to continue anyways\n", params.frequency);
+        fprintf(stderr,
+                "ASIOSetSampleRate(%d) failed with %s; trying to continue anyways\n",
+                params.frequency,
+                ErrorToString(err));
     }
 
     err = ASIOGetSampleRate(&g_output.actual_freq);
     if (err != ASE_OK)
     {
-        fprintf(stderr, "ASIOGetSampleRate failed\n");
+        fprintf(stderr, "ASIOGetSampleRate failed with %s\n", ErrorToString(err));
         return false;
     }
 
@@ -217,7 +247,7 @@ bool Out_ASIO_Create(const char* driver_name, const AudioOutputParameters& param
     err = ASIOGetChannels(&g_output.input_channel_count, &g_output.output_channel_count);
     if (err != ASE_OK)
     {
-        fprintf(stderr, "ASIOGetChannels failed\n");
+        fprintf(stderr, "ASIOGetChannels failed with %s\n", ErrorToString(err));
         ASIOExit();
         return false;
     }
@@ -252,7 +282,7 @@ bool Out_ASIO_Create(const char* driver_name, const AudioOutputParameters& param
     err = ASIOCreateBuffers(g_output.buffer_info, N_BUFFERS, (long)g_output.buffer_size_frames, &g_output.callbacks);
     if (err != ASE_OK)
     {
-        fprintf(stderr, "ASIOCreateBuffers failed\n");
+        fprintf(stderr, "ASIOCreateBuffers failed with %s\n", ErrorToString(err));
         ASIOExit();
         return false;
     }
@@ -264,7 +294,7 @@ bool Out_ASIO_Create(const char* driver_name, const AudioOutputParameters& param
         err = ASIOGetChannelInfo(&g_output.channel_info[i]);
         if (err != ASE_OK)
         {
-            fprintf(stderr, "ASIOGetChannelInfo failed\n");
+            fprintf(stderr, "ASIOGetChannelInfo failed with %s\n", ErrorToString(err));
             ASIOExit();
             return false;
         }
@@ -315,9 +345,10 @@ void Out_ASIO_Destroy()
 
 bool Out_ASIO_Start()
 {
-    if (ASIOStart() != ASE_OK)
+    ASIOError err = ASIOStart();
+    if (err != ASE_OK)
     {
-        fprintf(stderr, "ASIOStart failed\n");
+        fprintf(stderr, "ASIOStart failed with %s\n", ErrorToString(err));
         return false;
     }
 
