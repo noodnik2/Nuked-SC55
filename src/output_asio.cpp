@@ -530,6 +530,7 @@ static void bufferSwitch(long index, ASIOBool processNow)
 
 static void sampleRateDidChange(ASIOSampleRate sRate)
 {
+    // TODO: host needs to be notified so it can update the SDL stream to use the new frequency...
     g_output.actual_freq = sRate;
     fprintf(stderr, "ASIO: sample rate changed to %f\n", sRate);
 }
