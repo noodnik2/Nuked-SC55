@@ -239,6 +239,7 @@ bool Out_ASIO_Create(const char* driver_name, const AudioOutputParameters& param
     if (err != ASE_OK)
     {
         fprintf(stderr, "ASIOGetSampleRate failed with %s\n", ErrorToString(err));
+        ASIOExit();
         return false;
     }
 
