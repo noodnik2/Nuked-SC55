@@ -132,7 +132,7 @@ struct FE_Parameters
     AudioFormat output_format = AudioFormat::S16;
     bool no_lcd = false;
     bool disable_oversampling = false;
-    uint32_t asio_sample_rate = 44100;
+    std::optional<uint32_t> asio_sample_rate;
 };
 
 bool FE_AllocateInstance(FE_Application& container, FE_Instance** result)
@@ -436,13 +436,17 @@ bool FE_OpenAudio(FE_Application& fe, const FE_Parameters& params)
     fe.audio_output = output;
 
     AudioOutputParameters out_params;
+    out_params.frequency = PCM_GetOutputFrequency(fe.instances[0].emu.GetPCM());
     switch (output.kind)
     {
     case AudioOutputKind::SDL:
-        out_params.frequency = PCM_GetOutputFrequency(fe.instances[0].emu.GetPCM());
+        // explicitly do nothing
         break;
     case AudioOutputKind::ASIO:
-        out_params.frequency = params.asio_sample_rate;
+        if (params.asio_sample_rate.has_value())
+        {
+            out_params.frequency = params.asio_sample_rate.value();
+        }
         break;
     }
     out_params.buffer_size = params.buffer_size;
@@ -965,10 +969,13 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
                 return FE_ParseError::UnexpectedEnd;
             }
 
-            if (!reader.TryParse(result.asio_sample_rate))
+            uint32_t asio_sample_rate = 0;
+            if (!reader.TryParse(asio_sample_rate))
             {
                 return FE_ParseError::ASIOSampleRateOutOfRange;
             }
+
+            result.asio_sample_rate = asio_sample_rate;
         }
 #endif
         else

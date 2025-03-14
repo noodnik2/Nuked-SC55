@@ -158,7 +158,8 @@ The following options are only enabled in ASIO builds.
 
 ### `--asio-sample-rate <rate>`
 
-Requests the ASIO driver to use `<rate>` frequency. Defaults to 44100.
+Requests the ASIO driver to use `<rate>` frequency. If no value is provided,
+nuked-sc55 will request the native frequency for your selected romset.
 
 The emulator natively produces audio at 64000hz or 66207hz depending on the
 romset. Some ASIO drivers cannot support these frequencies so resampling to
