@@ -70,8 +70,10 @@ struct FE_Instance
     void*          chunk_last  = nullptr;
 
     std::thread thread;
-    bool        running;
     AudioFormat format;
+
+    // read by instance thread, written by main thread
+    std::atomic<bool> running = false;
 
     uint32_t buffer_size;
     uint32_t buffer_count;
