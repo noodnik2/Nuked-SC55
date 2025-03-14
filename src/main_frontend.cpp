@@ -480,7 +480,7 @@ bool FE_OpenAudio(FE_Application& fe, const FE_Parameters& params)
         return FE_OpenSDLAudio(fe, out_params, output.name.c_str());
     }
 
-    return true;
+    return false;
 }
 
 template <typename SampleT>
