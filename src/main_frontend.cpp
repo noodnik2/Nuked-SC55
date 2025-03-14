@@ -1021,10 +1021,12 @@ ROM management options:
 
 )";
 
+#ifdef NUKED_ENABLE_ASIO
     constexpr const char* EXTRA_ASIO_STR = R"(ASIO options:
   --asio-sample-rate <freq>                     Request frequency from the ASIO driver.
 
 )";
+#endif
 
     std::string name = P_GetProcessPath().stem().generic_string();
     fprintf(stderr, USAGE_STR, name.c_str());
