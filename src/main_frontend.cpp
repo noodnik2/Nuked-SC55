@@ -705,19 +705,20 @@ void FE_DestroyInstance(FE_Instance& instance)
 
 void FE_Quit(FE_Application& container)
 {
-    if (container.audio_output.kind == AudioOutputKind::ASIO)
+    switch (container.audio_output.kind)
     {
+    case AudioOutputKind::ASIO:
 #ifdef NUKED_ENABLE_ASIO
         Out_ASIO_Stop();
         Out_ASIO_Destroy();
 #else
         fprintf(stderr, "Out_ASIO_Stop() called without ASIO support\n");
 #endif
-    }
-    else
-    {
+        break;
+    case AudioOutputKind::SDL:
         Out_SDL_Stop();
         Out_SDL_Destroy();
+        break;
     }
 
     for (size_t i = 0; i < container.instances_in_use; ++i)
