@@ -447,7 +447,15 @@ bool FE_OpenAudio(FE_Application& fe, const FE_Parameters& params)
     fe.audio_output = output;
 
     AudioOutputParameters out_params;
-    out_params.frequency   = PCM_GetOutputFrequency(fe.instances[0].emu.GetPCM());
+    switch (output.kind)
+    {
+    case AudioOutputKind::SDL:
+        out_params.frequency = PCM_GetOutputFrequency(fe.instances[0].emu.GetPCM());
+        break;
+    case AudioOutputKind::ASIO:
+        out_params.frequency = params.asio_sample_rate;
+        break;
+    }
     out_params.buffer_size = params.buffer_size;
     out_params.format      = params.output_format;
 
@@ -461,8 +469,6 @@ bool FE_OpenAudio(FE_Application& fe, const FE_Parameters& params)
         else if (output.kind == AudioOutputKind::ASIO)
         {
 #ifdef NUKED_ENABLE_ASIO
-            // ASIO will probably not support the emulator's native sample rate
-            out_params.frequency = params.asio_sample_rate;
             return FE_OpenASIOAudio(fe, out_params, output.name.c_str());
 #else
             fprintf(stderr, "Attempted to open ASIO output without ASIO support\n");
