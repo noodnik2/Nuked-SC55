@@ -413,25 +413,14 @@ bool FE_OpenASIOAudio(FE_Application& fe, const AudioOutputParameters& params, c
 }
 #endif
 
-uint32_t FE_PickCloser(uint32_t to, uint32_t a, uint32_t b)
-{
-    if (abs((int32_t)(to - a)) < abs((int32_t)(to - b)))
-    {
-        return a;
-    }
-    else
-    {
-        return b;
-    }
-}
-
 void FE_FixupParameters(FE_Parameters& params)
 {
     if (!std::has_single_bit(params.buffer_size))
     {
         const uint32_t next_low  = std::bit_floor(params.buffer_size);
         const uint32_t next_high = std::bit_ceil(params.buffer_size);
-        const uint32_t closer    = FE_PickCloser(params.buffer_size, next_low, next_high);
+        const uint32_t closer =
+            (uint32_t)PickCloser<int64_t>((int64_t)params.buffer_size, (int64_t)next_low, (int64_t)next_high);
         fprintf(stderr, "WARNING: Audio buffer size must be a power-of-two; got %d\n", params.buffer_size);
         fprintf(stderr, "         The next valid values are %d and %d\n", next_low, next_high);
         fprintf(stderr, "         Continuing with the closer value %d\n", closer);
