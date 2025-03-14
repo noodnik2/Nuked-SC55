@@ -517,8 +517,8 @@ static ASIOTime* bufferSwitchTimeInfo(ASIOTime* params, long index, ASIOBool dir
     size_t renderable_frames = g_output.buffer_size_frames;
     for (size_t i = 0; i < g_output.stream_count; ++i)
     {
-        renderable_frames = Min(
-            renderable_frames, (size_t)SDL_AudioStreamAvailable(g_output.streams[i]) / sizeof(AudioFrame<int32_t>));
+        renderable_frames =
+            Min(renderable_frames, (size_t)SDL_AudioStreamAvailable(g_output.streams[i]) / sizeof(AudioFrame<int32_t>));
     }
 
     if (renderable_frames < g_output.buffer_size_frames || g_output.stream_count == 0)
