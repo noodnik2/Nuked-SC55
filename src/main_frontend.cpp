@@ -957,6 +957,7 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
             result.romset = Romset::SC155MK2;
             result.autodetect = false;
         }
+#ifdef NUKED_ENABLE_ASIO
         else if (reader.Any("--asio-sample-rate"))
         {
             if (!reader.Next())
@@ -969,6 +970,7 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
                 return FE_ParseError::ASIOSampleRateOutOfRange;
             }
         }
+#endif
         else
         {
             return FE_ParseError::UnknownArgument;
@@ -1009,8 +1011,16 @@ ROM management options:
 
 )";
 
+    constexpr const char* EXTRA_ASIO_STR = R"(ASIO options:
+  --asio-sample-rate <freq>                     Request frequency from the ASIO driver.
+
+)";
+
     std::string name = P_GetProcessPath().stem().generic_string();
     fprintf(stderr, USAGE_STR, name.c_str());
+#ifdef NUKED_ENABLE_ASIO
+    fprintf(stderr, EXTRA_ASIO_STR);
+#endif
     MIDI_PrintDevices();
     FE_PrintAudioDevices();
 }
