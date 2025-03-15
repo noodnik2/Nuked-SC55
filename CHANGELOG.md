@@ -7,6 +7,9 @@
 - The renderer frontend will now run the emulator for a bit before sending any
   MIDI events even if you don't specify a reset with `-r` or `--reset`. This
   should ensure it's ready to accept program changes. (#20)
+- The renderer will no longer ask the user to submit a bug report when the
+  instance count is set to a number that results in only some instances having
+  a midi track to render. (#19, #24)
 
 # Version 0.4.2 (2025-02-23)
 

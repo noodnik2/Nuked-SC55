@@ -626,12 +626,6 @@ public:
             if (m_queue_complete[queue_id] && cc == 0)
             {
                 // See comment in GetReadyChunkCount.
-                fprintf(stderr,
-                        "R_Mixer::MixFrames tried to mix a queue that is complete with no data.\n"
-                        "Please submit a bug report and attach the midi file that caused this:\n"
-                        "\n"
-                        "    https://github.com/jcmoyer/Nuked-SC55");
-                DebugPrintQueues();
                 continue;
             }
             m_queues[queue_id].Dequeue(chunks[queue_id]);
