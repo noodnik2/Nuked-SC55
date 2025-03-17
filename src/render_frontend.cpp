@@ -1151,6 +1151,8 @@ int main(int argc, char* argv[])
         // version information and we want to be able to support that use case
         // without requiring stream redirection
         fprintf(stdout, "%s\n", NUKED_VERSION);
+        fprintf(stdout, "Configuration:\n");
+        fprintf(stdout, "  NUKED_ENABLE_ASIO=%d\n", NUKED_ENABLE_ASIO);
         return 0;
     }
 

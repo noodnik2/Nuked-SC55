@@ -78,7 +78,7 @@ struct FE_Instance
     uint32_t buffer_size;
     uint32_t buffer_count;
 
-#ifdef NUKED_ENABLE_ASIO
+#if NUKED_ENABLE_ASIO
     // ASIO uses an SDL_AudioStream because it needs resampling to a more conventional frequency, but putting data into
     // the stream one frame at a time is *slow* so we buffer audio in `sample_buffer` and add it all at once.
     SDL_AudioStream* stream = nullptr;
@@ -212,7 +212,7 @@ void FE_ReceiveSampleSDL(void* userdata, const AudioFrame<int32_t>& in)
     }
 }
 
-#ifdef NUKED_ENABLE_ASIO
+#if NUKED_ENABLE_ASIO
 template <typename SampleT>
 void FE_ReceiveSampleASIO(void* userdata, const AudioFrame<int32_t>& in)
 {
@@ -295,7 +295,7 @@ void FE_QueryAllOutputs(AudioOutputList& outputs)
         return;
     }
 
-#ifdef NUKED_ENABLE_ASIO
+#if NUKED_ENABLE_ASIO
     if (!Out_ASIO_QueryOutputs(outputs))
     {
         fprintf(stderr, "Failed to query ASIO outputs.\n");
@@ -365,7 +365,7 @@ bool FE_OpenSDLAudio(FE_Application& fe, const AudioOutputParameters& params, co
     return true;
 }
 
-#ifdef NUKED_ENABLE_ASIO
+#if NUKED_ENABLE_ASIO
 bool FE_OpenASIOAudio(FE_Application& fe, const AudioOutputParameters& params, const char* name)
 {
     if (!Out_ASIO_Create(name, params))
@@ -463,7 +463,7 @@ bool FE_OpenAudio(FE_Application& fe, const FE_Parameters& params)
         }
         else if (output.kind == AudioOutputKind::ASIO)
         {
-#ifdef NUKED_ENABLE_ASIO
+#if NUKED_ENABLE_ASIO
             return FE_OpenASIOAudio(fe, out_params, output.name.c_str());
 #else
             fprintf(stderr, "Attempted to open ASIO output without ASIO support\n");
@@ -501,7 +501,7 @@ void FE_RunInstanceSDL(FE_Instance& instance)
     }
 }
 
-#ifdef NUKED_ENABLE_ASIO
+#if NUKED_ENABLE_ASIO
 void FE_RunInstanceASIO(FE_Instance& instance)
 {
     while (instance.running)
@@ -539,7 +539,7 @@ void FE_EventLoop(FE_Application& fe)
 {
     while (fe.running)
     {
-#ifdef NUKED_ENABLE_ASIO
+#if NUKED_ENABLE_ASIO
         if (Out_ASIO_IsResetRequested())
         {
             Out_ASIO_Reset();
@@ -606,7 +606,7 @@ void FE_Run(FE_Application& fe)
         }
         else if (fe.audio_output.kind == AudioOutputKind::ASIO)
         {
-#ifdef NUKED_ENABLE_ASIO
+#if NUKED_ENABLE_ASIO
             fe.instances[i].thread = std::thread(FE_RunInstanceASIO, std::ref(fe.instances[i]));
 #else
             fprintf(stderr, "Attempted to start ASIO instance without ASIO support\n");
@@ -694,7 +694,7 @@ bool FE_CreateInstance(FE_Application& container, const std::filesystem::path& b
 
 void FE_DestroyInstance(FE_Instance& instance)
 {
-#ifdef NUKED_ENABLE_ASIO
+#if NUKED_ENABLE_ASIO
     if (instance.stream)
     {
         SDL_FreeAudioStream(instance.stream);
@@ -710,7 +710,7 @@ void FE_Quit(FE_Application& container)
     switch (container.audio_output.kind)
     {
     case AudioOutputKind::ASIO:
-#ifdef NUKED_ENABLE_ASIO
+#if NUKED_ENABLE_ASIO
         Out_ASIO_Stop();
         Out_ASIO_Destroy();
 #else
@@ -969,7 +969,7 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
             result.romset = Romset::SC155MK2;
             result.autodetect = false;
         }
-#ifdef NUKED_ENABLE_ASIO
+#if NUKED_ENABLE_ASIO
         else if (reader.Any("--asio-sample-rate"))
         {
             if (!reader.Next())
@@ -1027,7 +1027,7 @@ ROM management options:
 
 )";
 
-#ifdef NUKED_ENABLE_ASIO
+#if NUKED_ENABLE_ASIO
     constexpr const char* EXTRA_ASIO_STR = R"(ASIO options:
   --asio-sample-rate <freq>                     Request frequency from the ASIO driver.
 
@@ -1036,7 +1036,7 @@ ROM management options:
 
     std::string name = P_GetProcessPath().stem().generic_string();
     fprintf(stderr, USAGE_STR, name.c_str());
-#ifdef NUKED_ENABLE_ASIO
+#if NUKED_ENABLE_ASIO
     fprintf(stderr, EXTRA_ASIO_STR);
 #endif
     MIDI_PrintDevices();
@@ -1065,6 +1065,8 @@ int main(int argc, char *argv[])
         // version information and we want to be able to support that use case
         // without requiring stream redirection
         fprintf(stdout, "%s\n", NUKED_VERSION);
+        fprintf(stdout, "Configuration:\n");
+        fprintf(stdout, "  NUKED_ENABLE_ASIO=%d\n", NUKED_ENABLE_ASIO);
         return 0;
     }
 
