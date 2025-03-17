@@ -121,6 +121,7 @@ struct FE_Application {
 struct FE_Parameters
 {
     bool help = false;
+    bool version = false;
     std::string midi_device;
     std::string audio_device;
     uint32_t buffer_size = 512;
@@ -784,6 +785,11 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
             result.help = true;
             return FE_ParseError::Success;
         }
+        else if (reader.Any("-v", "--version"))
+        {
+            result.version = true;
+            return FE_ParseError::Success;
+        }
         else if (reader.Any("-p", "--port"))
         {
             if (!reader.Next())
@@ -995,6 +1001,7 @@ void FE_Usage()
 
 General options:
   -?, -h, --help                                Display this information.
+  -v, --version                                 Display version information.
 
 Audio options:
   -p, --port         <device_name_or_number>    Set MIDI input port.
@@ -1049,6 +1056,15 @@ int main(int argc, char *argv[])
     if (params.help)
     {
         FE_Usage();
+        return 0;
+    }
+
+    if (params.version)
+    {
+        // we'll explicitly use stdout for this - often tools want to parse
+        // version information and we want to be able to support that use case
+        // without requiring stream redirection
+        fprintf(stdout, "%s\n", NUKED_VERSION);
         return 0;
     }
 

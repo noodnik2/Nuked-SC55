@@ -1,3 +1,4 @@
+#include "config.h"
 #include "emu.h"
 #include "smf.h"
 #include "wav.h"
@@ -38,6 +39,7 @@ struct R_Parameters
     std::string_view input_filename;
     std::string_view output_filename;
     bool help = false;
+    bool version = false;
     size_t instances = 1;
     EMU_SystemReset reset = EMU_SystemReset::NONE;
     std::filesystem::path rom_directory;
@@ -109,6 +111,11 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
         else if (reader.Any("-h", "--help", "-?"))
         {
             result.help = true;
+            return R_ParseError::Success;
+        }
+        else if (reader.Any("-v", "--version"))
+        {
+            result.version = true;
             return R_ParseError::Success;
         }
         else if (reader.Any("--debug"))
@@ -1091,6 +1098,7 @@ Usage: %s [options] -o <output> <input>
 
 General options:
   -? -h, --help                Display this information.
+  -v, --version                Display version information.
   -o <filename>                Render WAVE file to filename.
   --stdout                     Render raw sample data to stdout. No header
 
@@ -1134,6 +1142,15 @@ int main(int argc, char* argv[])
     if (params.help)
     {
         R_Usage();
+        return 0;
+    }
+
+    if (params.version)
+    {
+        // we'll explicitly use stdout for this - often tools want to parse
+        // version information and we want to be able to support that use case
+        // without requiring stream redirection
+        fprintf(stdout, "%s\n", NUKED_VERSION);
         return 0;
     }
 

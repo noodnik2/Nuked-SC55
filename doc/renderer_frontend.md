@@ -6,6 +6,10 @@ Nuked-SC55](https://github.com/nukeykt/Nuked-SC55).
 
 ## Command line options
 
+### `-v, --version`
+
+Prints the version number to stdout and exits immediately.
+
 ### `-o <filename>`
 
 Writes a wave file to `filename`. Cannot be combined with `--stdout`.

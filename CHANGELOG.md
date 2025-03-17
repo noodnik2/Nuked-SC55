@@ -24,6 +24,8 @@
   with weaker memory models than x86. See [upstream
   #72](https://github.com/nukeykt/Nuked-SC55/pull/72) for some discussion about
   this.
+- Added `-v, --version` command line to both frontends to print the binary
+  version.
 
 # Version 0.4.2 (2025-02-23)
 

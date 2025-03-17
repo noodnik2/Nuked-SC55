@@ -15,6 +15,10 @@ differences are:
 
 ## Command line options
 
+### `-v, --version`
+
+Prints the version number to stdout and exits immediately.
+
 ### `-p, --port <device_name_or_number>`
 
 Sets the MIDI input port.
