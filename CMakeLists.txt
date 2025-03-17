@@ -3,6 +3,8 @@ project (NukedSC55 VERSION 0.4.2 LANGUAGES CXX)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+set(NUKED_SOURCE "unknown" CACHE STRING "Origin of this build")
+
 #==============================================================================
 # Tests
 #==============================================================================
