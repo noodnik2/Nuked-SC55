@@ -10,7 +10,8 @@
 - The renderer will no longer ask the user to submit a bug report when the
   instance count is set to a number that results in only some instances having
   a midi track to render. (#19, #24)
-- Added [documentation](doc/standard_frontend.md) for the standard frontend.
+- Added [standard frontend documentation](doc/standard_frontend.md) and
+  [renderer frontend documentation](doc/renderer_frontend.md) and 
 - Added ASIO support for Windows users who compile from source. See
   [BUILDING.md](BUILDING.md) for instructions. Precompiled ASIO builds cannot
   be provided because of the ASIO SDK license.
