@@ -76,6 +76,7 @@ endfunction()
 #==============================================================================
 # Backend
 #==============================================================================
+configure_file(src/config.h.in config.h @ONLY)
 add_library(nuked-sc55-backend)
 target_sources(nuked-sc55-backend
     PRIVATE
@@ -134,10 +135,6 @@ if(APPLE)
     target_link_libraries(nuked-sc55 PRIVATE ${LIBCoreAudio})
 endif()
 
-# This always needs to happen even if we don't use ASIO because it defines the
-# macro for asio support. This will probably change to a more general config
-# header in the future including version number etc.
-configure_file(src/asio_config.h.in asio_config.h @ONLY)
 target_include_directories(nuked-sc55 PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
 if(NUKED_ENABLE_ASIO)

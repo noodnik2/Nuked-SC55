@@ -1,7 +1,5 @@
 #include "output_asio.h"
 
-#include "asio_config.h"
-
 #include "asiosys.h"
 // asiosys *must* be included before these headers
 #include "asio.h"

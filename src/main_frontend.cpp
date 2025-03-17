@@ -48,7 +48,7 @@
 #include <Windows.h>
 #endif
 
-#include "asio_config.h"
+#include "config.h"
 
 #include "output_common.h"
 #include "output_sdl.h"
