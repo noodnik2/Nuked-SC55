@@ -655,6 +655,8 @@ bool FE_Init()
 
 bool FE_CreateInstance(FE_Application& container, const std::filesystem::path& base_path, const FE_Parameters& params)
 {
+    (void)base_path;
+
     FE_Instance* fe = nullptr;
 
     if (!FE_AllocateInstance(container, &fe))
@@ -672,8 +674,6 @@ bool FE_CreateInstance(FE_Application& container, const std::filesystem::path& b
         fprintf(stderr, "ERROR: Failed to init emulator.\n");
         return false;
     }
-
-    LCD_LoadBack(fe->emu.GetLCD(), base_path / "back.data");
 
     if (!fe->emu.LoadRoms(params.romset, *params.rom_directory))
     {

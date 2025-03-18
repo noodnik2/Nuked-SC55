@@ -26,6 +26,8 @@
   this.
 - Added `-v, --version` command line to both frontends to print the binary
   version and build configuration.
+- `back.data` is now embedded into the executable and no longer needs to be
+  located in a specific directory. (#7, #12, #25)
 
 # Version 0.4.2 (2025-02-23)
 

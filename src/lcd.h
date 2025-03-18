@@ -70,7 +70,6 @@ struct lcd_t {
     bool quit_requested = false;
 
     uint32_t buffer[lcd_height_max][lcd_width_max]{};
-    uint32_t background[268][741]{};
 
     SDL_Window *window = nullptr;
     SDL_Renderer *renderer = nullptr;
@@ -80,7 +79,6 @@ struct lcd_t {
 };
 
 
-void LCD_LoadBack(lcd_t& lcd, const std::filesystem::path& path);
 void LCD_Init(lcd_t& lcd, mcu_t& mcu);
 bool LCD_CreateWindow(lcd_t& lcd);
 void LCD_UnInit(lcd_t& lcd);

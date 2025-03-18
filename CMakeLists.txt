@@ -184,5 +184,4 @@ target_enable_conversion_warnings(nuked-sc55-render)
 #==============================================================================
 include(GNUInstallDirs)
 install(TARGETS nuked-sc55 nuked-sc55-render)
-install(FILES data/back.data DESTINATION ${CMAKE_INSTALL_DATADIR}/nuked-sc55)
 install(DIRECTORY doc/ DESTINATION ${CMAKE_INSTALL_DOCDIR})

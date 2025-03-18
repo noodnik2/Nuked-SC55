@@ -38,6 +38,7 @@
 #include "SDL.h"
 #include "SDL_mutex.h"
 #include "lcd.h"
+#include "lcd_back.h"
 #include "lcd_font.h"
 #include "mcu.h"
 #include "submcu.h"
@@ -196,17 +197,6 @@ const int button_map_jv880[][2] =
     {SDL_SCANCODE_F, MCU_BUTTON_COMPARE},
     {SDL_SCANCODE_G, MCU_BUTTON_ENTER},
 };
-
-
-void LCD_LoadBack(lcd_t& lcd, const std::filesystem::path& path)
-{
-    std::ifstream file(path, std::ios::binary);
-
-    if (!file)
-        return;
-
-    file.read((char*)lcd.background, sizeof(lcd.background));
-}
 
 void LCD_Init(lcd_t& lcd, mcu_t& mcu)
 {
@@ -446,7 +436,7 @@ void LCD_Update(lcd_t& lcd)
             {
                 for (size_t i = 0; i < lcd.height; i++) {
                     for (size_t j = 0; j < lcd.width; j++) {
-                        lcd.buffer[i][j] = lcd.background[i][j];
+                        lcd.buffer[i][j] = back_palette[back_data[i * lcd.width + j]];
                     }
                 }
             }
