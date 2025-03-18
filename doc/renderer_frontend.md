@@ -8,7 +8,8 @@ Nuked-SC55](https://github.com/nukeykt/Nuked-SC55).
 
 ### `-v, --version`
 
-Prints the version number to stdout and exits immediately.
+Prints the version number and build configuration to stdout then exits
+immediately.
 
 ### `-o <filename>`
 

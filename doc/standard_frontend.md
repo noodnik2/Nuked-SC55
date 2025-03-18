@@ -17,7 +17,8 @@ differences are:
 
 ### `-v, --version`
 
-Prints the version number to stdout and exits immediately.
+Prints the version number and build configuration to stdout then exits
+immediately.
 
 ### `-p, --port <device_name_or_number>`
 
