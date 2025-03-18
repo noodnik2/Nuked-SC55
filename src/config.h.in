@@ -2,3 +2,7 @@
 
 #define NUKED_VERSION "@CMAKE_PROJECT_VERSION@"
 #define NUKED_SOURCE  "@NUKED_SOURCE@"
+
+#include <cstdio>
+
+void Cfg_WriteVersionInfo(FILE* file);

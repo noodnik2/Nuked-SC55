@@ -95,6 +95,7 @@ target_sources(nuked-sc55-backend
     src/path_util.cpp src/path_util.h
     src/command_line.h
     src/cast.h
+    src/config.cpp "${CMAKE_CURRENT_BINARY_DIR}/config.h"
 )
 target_include_directories(nuked-sc55-backend PUBLIC "src" "${CMAKE_CURRENT_BINARY_DIR}")
 target_link_libraries(nuked-sc55-backend PRIVATE SDL2::SDL2)

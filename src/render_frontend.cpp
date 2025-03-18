@@ -1150,10 +1150,7 @@ int main(int argc, char* argv[])
         // we'll explicitly use stdout for this - often tools want to parse
         // version information and we want to be able to support that use case
         // without requiring stream redirection
-        fprintf(stdout, "%s\n", NUKED_VERSION);
-        fprintf(stdout, "Source: %s\n", NUKED_SOURCE);
-        fprintf(stdout, "Configuration:\n");
-        fprintf(stdout, "  NUKED_ENABLE_ASIO=%d\n", NUKED_ENABLE_ASIO);
+        Cfg_WriteVersionInfo(stdout);
         return 0;
     }
 
