@@ -1,4 +1,4 @@
-# Version 0.5.0 (TBD)
+# Version 0.5.0 (2025-03-21)
 
 The main addition in this release is ASIO support for Windows. For legal
 reasons, the emulator must be built from source to enable it. See
