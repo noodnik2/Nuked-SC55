@@ -3,10 +3,9 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
-#include <string_view>
-#include <span>
 #include <filesystem>
+#include <span>
+#include <vector>
 
 using SMF_ByteSpan = std::span<const uint8_t>;
 

@@ -31,19 +31,15 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include "SDL.h"
-#include "SDL_mutex.h"
 #include "lcd.h"
+#include "SDL.h"
+#include "emu.h"
 #include "lcd_back.h"
 #include "lcd_font.h"
 #include "mcu.h"
-#include "submcu.h"
-#include "emu.h"
-#include <fstream>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
 
 void LCD_Enable(lcd_t& lcd, uint32_t enable)
 {

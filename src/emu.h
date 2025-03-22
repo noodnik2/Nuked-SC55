@@ -33,11 +33,11 @@
  */
 #pragma once
 
-#include "mcu.h"
-#include "submcu.h"
-#include "mcu_timer.h"
 #include "lcd.h"
+#include "mcu.h"
+#include "mcu_timer.h"
 #include "pcm.h"
+#include "submcu.h"
 #include <filesystem>
 #include <memory>
 #include <span>

@@ -33,7 +33,9 @@
  */
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
+
+struct mcu_t;
 
 extern void (*MCU_Operand_Table[256])(mcu_t& mcu, uint8_t operand);
 extern void (*MCU_Opcode_Table[32])(mcu_t& mcu, uint8_t opcode, uint8_t opcode_reg);

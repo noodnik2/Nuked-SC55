@@ -31,28 +31,29 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-#include "emu.h"
-#include "midi.h"
-#include "ringbuffer.h"
-#include "path_util.h"
-#include "command_line.h"
 #include "audio.h"
 #include "audio_sdl.h"
 #include "cast.h"
+#include "command_line.h"
+#include "config.h"
+#include "emu.h"
+#include "mcu.h"
+#include "midi.h"
+#include "output_common.h"
+#include "path_util.h"
 #include "pcm.h"
+#include "ringbuffer.h"
 #include <SDL.h>
-#include <optional>
 #include <bit>
+#include <optional>
+#include <thread>
+
+#include "output_asio.h"
+#include "output_sdl.h"
 
 #ifdef _WIN32
 #include <Windows.h>
 #endif
-
-#include "config.h"
-
-#include "output_common.h"
-#include "output_sdl.h"
-#include "output_asio.h"
 
 template <typename ElemT>
 size_t FE_CalcRingbufferSizeBytes(uint32_t buffer_size, uint32_t buffer_count)

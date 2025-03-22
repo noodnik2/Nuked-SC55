@@ -1,27 +1,27 @@
-#include "config.h"
-#include "emu.h"
-#include "smf.h"
-#include "wav.h"
-#include "path_util.h"
-#include "command_line.h"
 #include "audio.h"
 #include "cast.h"
+#include "command_line.h"
+#include "config.h"
+#include "emu.h"
 #include "math_util.h"
+#include "path_util.h"
+#include "smf.h"
+#include "wav.h"
 #include <algorithm>
+#include <condition_variable>
 #include <cstddef>
+#include <cstdio>
+#include <cstring>
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <string>
-#include <cstdio>
 #include <source_location>
+#include <string>
 #include <thread>
-#include <condition_variable>
-#include <cstring>
 
 #ifdef _WIN32
-#include <io.h>
 #include <fcntl.h>
+#include <io.h>
 #endif
 
 using namespace std::chrono_literals;

@@ -31,12 +31,12 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
+#include "pcm.h"
 #include "mcu.h"
 #include "mcu_interrupt.h"
-#include "pcm.h"
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
 
 uint8_t PCM_ReadROM(pcm_t& pcm, uint32_t address)
 {

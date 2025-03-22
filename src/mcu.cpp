@@ -32,11 +32,12 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 #include "mcu.h"
-#include "mcu_timer.h"
-#include "mcu_opcodes.h"
-#include "submcu.h"
-#include "pcm.h"
 #include "lcd.h"
+#include "mcu_opcodes.h"
+#include "mcu_timer.h"
+#include "pcm.h"
+#include "submcu.h"
+#include <cstdio>
 
 void MCU_ErrorTrap(mcu_t& mcu)
 {

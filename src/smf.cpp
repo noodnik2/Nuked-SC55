@@ -3,9 +3,8 @@
 
 #include <algorithm>
 #include <cstdio>
-#include <string>
-#include <fstream>
 #include <cstring>
+#include <fstream>
 
 // security: do not call without verifying [ptr,ptr+1] is a readable range
 // performance: 16 bit load + rol in clang and gcc, worse in MSVC

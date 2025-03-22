@@ -1,8 +1,8 @@
 #pragma once
 
-#include <utility>
-#include <source_location>
 #include <cstdio>
+#include <source_location>
+#include <utility>
 
 template <typename R, typename T>
 [[nodiscard]]

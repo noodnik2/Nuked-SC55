@@ -1,10 +1,7 @@
-#include <stdio.h>
-#include "mcu.h"
-#include "emu.h"
 #include "midi.h"
-#include "cast.h"
 #include "command_line.h"
 #include <RtMidi.h>
+#include <cstdio>
 
 static RtMidiIn *s_midi_in = nullptr;
 

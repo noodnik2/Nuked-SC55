@@ -1,6 +1,6 @@
 #include "path_util.h"
-#include <string_view>
 #include <cstdio>
+#include <string_view>
 
 #if defined(_WIN32)
 #include <Windows.h>

@@ -33,12 +33,10 @@
  */
 #pragma once
 
-#include <cstdint>
-#include <atomic>
-#include <thread>
-#include "mcu_interrupt.h"
-#include "cast.h"
 #include "audio.h"
+#include "mcu_interrupt.h"
+#include <atomic>
+#include <cstdint>
 
 struct submcu_t;
 struct pcm_t;

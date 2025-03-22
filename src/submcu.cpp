@@ -33,6 +33,7 @@
  */
 #include "submcu.h"
 #include "mcu.h"
+#include <cstdio>
 
 enum {
     SM_VECTOR_UART3_TX = 0,

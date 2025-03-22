@@ -31,15 +31,18 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-#include <stdio.h>
+
+#include "midi.h"
+
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+
+#include "command_line.h"
+#include <cstdint>
+#include <cstdio>
 #include <mmsystem.h>
 #include <span>
-#include <cstdint>
 #include <string>
-#include "command_line.h"
-#include "midi.h"
 
 static HMIDIIN midi_handle;
 static MIDIHDR midi_buffer;

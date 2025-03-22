@@ -33,10 +33,10 @@
  */
 #pragma once
 
+#include <atomic>
 #include <cassert>
 #include <memory>
 #include <span>
-#include <atomic>
 
 // This type has reference semantics.
 class GenericBuffer

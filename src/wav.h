@@ -3,10 +3,10 @@
 
 #pragma once
 
-#include <cstdio>
-#include <cstdint>
-#include <filesystem>
 #include "audio.h"
+#include <cstdint>
+#include <cstdio>
+#include <filesystem>
 
 class WAV_Handle
 {

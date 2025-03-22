@@ -35,7 +35,6 @@
 
 #include <atomic>
 #include <cstdint>
-#include <filesystem>
 #include <mutex>
 
 struct mcu_t;
