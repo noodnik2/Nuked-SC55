@@ -1,3 +1,12 @@
+# Version 0.6.0 (TBD)
+
+## Breaking changes
+
+- The emulator backend no longer depends on SDL. `Emulator::Init` now accepts
+  an LCD backend pointer that can be used to customize the behavior of the LCD
+  on a per-application basis. The old SDL backend has been moved to the
+  standard frontend.
+
 # Version 0.5.0 (2025-03-21)
 
 The main addition in this release is ASIO support for Windows. For legal

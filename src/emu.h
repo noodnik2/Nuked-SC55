@@ -45,7 +45,9 @@
 
 struct EMU_Options
 {
-    bool enable_lcd;
+    // The backend provided here will receive callbacks from the emulator.
+    // If left null, LCD processing will be skipped.
+    LCD_Backend* lcd_backend = nullptr;
 };
 
 enum class EMU_SystemReset {
@@ -63,6 +65,11 @@ public:
     // Should be called after loading roms
     void Reset();
 
+    // Should be called after reset. Has no effect if the `lcd_backend` passed to `Init` was null.
+    bool StartLCD();
+
+    void StopLCD();
+
     void SetSampleCallback(mcu_sample_callback callback, void* userdata);
 
     bool LoadRoms(Romset romset, const std::filesystem::path& base_path);
@@ -75,8 +82,6 @@ public:
     mcu_t& GetMCU() { return *m_mcu; }
     pcm_t& GetPCM() { return *m_pcm; }
     lcd_t& GetLCD() { return *m_lcd; }
-
-    bool IsLCDEnabled() const { return m_options.enable_lcd; }
 
 private:
     std::unique_ptr<mcu_t>       m_mcu;

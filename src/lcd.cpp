@@ -32,13 +32,9 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 #include "lcd.h"
-#include "SDL.h"
 #include "emu.h"
 #include "lcd_back.h"
 #include "lcd_font.h"
-#include "mcu.h"
-#include <cstdint>
-#include <cstdio>
 #include <cstring>
 
 void LCD_Enable(lcd_t& lcd, uint32_t enable)
@@ -46,13 +42,14 @@ void LCD_Enable(lcd_t& lcd, uint32_t enable)
     lcd.enable = enable;
 }
 
-bool LCD_QuitRequested(lcd_t& lcd)
-{
-    return lcd.quit_requested;
-}
-
 void LCD_Write(lcd_t& lcd, uint32_t address, uint8_t data)
 {
+    // No point taking a lock and updating LCD state if there's no one to observe it.
+    if (!lcd.backend)
+    {
+        return;
+    }
+
     std::scoped_lock lock(lcd.mutex);
     if (address == 0)
     {
@@ -151,56 +148,15 @@ void LCD_Write(lcd_t& lcd, uint32_t address, uint8_t data)
     //    fprintf(stderr, "\n");
 }
 
-const int button_map_sc55[][2] =
-{
-    {SDL_SCANCODE_Q, MCU_BUTTON_POWER},
-    {SDL_SCANCODE_W, MCU_BUTTON_INST_ALL},
-    {SDL_SCANCODE_E, MCU_BUTTON_INST_MUTE},
-    {SDL_SCANCODE_R, MCU_BUTTON_PART_L},
-    {SDL_SCANCODE_T, MCU_BUTTON_PART_R},
-    {SDL_SCANCODE_Y, MCU_BUTTON_INST_L},
-    {SDL_SCANCODE_U, MCU_BUTTON_INST_R},
-    {SDL_SCANCODE_I, MCU_BUTTON_KEY_SHIFT_L},
-    {SDL_SCANCODE_O, MCU_BUTTON_KEY_SHIFT_R},
-    {SDL_SCANCODE_P, MCU_BUTTON_LEVEL_L},
-    {SDL_SCANCODE_LEFTBRACKET, MCU_BUTTON_LEVEL_R},
-    {SDL_SCANCODE_A, MCU_BUTTON_MIDI_CH_L},
-    {SDL_SCANCODE_S, MCU_BUTTON_MIDI_CH_R},
-    {SDL_SCANCODE_D, MCU_BUTTON_PAN_L},
-    {SDL_SCANCODE_F, MCU_BUTTON_PAN_R},
-    {SDL_SCANCODE_G, MCU_BUTTON_REVERB_L},
-    {SDL_SCANCODE_H, MCU_BUTTON_REVERB_R},
-    {SDL_SCANCODE_J, MCU_BUTTON_CHORUS_L},
-    {SDL_SCANCODE_K, MCU_BUTTON_CHORUS_R},
-    {SDL_SCANCODE_LEFT, MCU_BUTTON_PART_L},
-    {SDL_SCANCODE_RIGHT, MCU_BUTTON_PART_R},
-};
-
-const int button_map_jv880[][2] =
-{
-    {SDL_SCANCODE_P, MCU_BUTTON_PREVIEW},
-    {SDL_SCANCODE_LEFT, MCU_BUTTON_CURSOR_L},
-    {SDL_SCANCODE_RIGHT, MCU_BUTTON_CURSOR_R},
-    {SDL_SCANCODE_TAB, MCU_BUTTON_DATA},
-    {SDL_SCANCODE_Q, MCU_BUTTON_TONE_SELECT},
-    {SDL_SCANCODE_A, MCU_BUTTON_PATCH_PERFORM},
-    {SDL_SCANCODE_W, MCU_BUTTON_EDIT},
-    {SDL_SCANCODE_E, MCU_BUTTON_SYSTEM},
-    {SDL_SCANCODE_R, MCU_BUTTON_RHYTHM},
-    {SDL_SCANCODE_T, MCU_BUTTON_UTILITY},
-    {SDL_SCANCODE_S, MCU_BUTTON_MUTE},
-    {SDL_SCANCODE_D, MCU_BUTTON_MONITOR},
-    {SDL_SCANCODE_F, MCU_BUTTON_COMPARE},
-    {SDL_SCANCODE_G, MCU_BUTTON_ENTER},
-};
-
 void LCD_Init(lcd_t& lcd, mcu_t& mcu)
 {
     lcd.mcu = &mcu;
 }
 
-bool LCD_CreateWindow(lcd_t& lcd)
+bool LCD_Start(lcd_t& lcd)
 {
+    bool success = true;
+
     if (lcd.mcu->romset == Romset::JV880)
     {
         lcd.width = 820;
@@ -216,42 +172,22 @@ bool LCD_CreateWindow(lcd_t& lcd)
         lcd.color2 = 0x0050c8;
     }
 
-    std::string title = "Nuked SC-55: ";
+    if (lcd.backend)
+    {
+        if (!lcd.backend->Start(lcd))
+        {
+            success = false;
+        }
+    }
 
-    title += EMU_RomsetName(lcd.mcu->romset);
-
-    lcd.window = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, lcd.width, lcd.height, SDL_WINDOW_SHOWN);
-    if (!lcd.window)
-        return false;
-
-    lcd.renderer = SDL_CreateRenderer(lcd.window, -1, 0);
-    if (!lcd.renderer)
-        return false;
-
-    lcd.texture = SDL_CreateTexture(lcd.renderer, SDL_PIXELFORMAT_BGR888, SDL_TEXTUREACCESS_STREAMING, lcd.width, lcd.height);
-
-    if (!lcd.texture)
-        return false;
-
-    return true;
+    return success;
 }
 
-void LCD_UnInit(lcd_t& lcd)
+void LCD_Stop(lcd_t& lcd)
 {
-    if (lcd.texture)
+    if (lcd.backend)
     {
-        SDL_DestroyTexture(lcd.texture);
-        lcd.texture = nullptr;
-    }
-    if (lcd.renderer)
-    {
-        SDL_DestroyRenderer(lcd.renderer);
-        lcd.renderer = nullptr;
-    }
-    if (lcd.window)
-    {
-        SDL_DestroyWindow(lcd.window);
-        lcd.window = nullptr;
+        lcd.backend->Stop();
     }
 }
 
@@ -391,8 +327,13 @@ void LCD_FontRenderLR(lcd_t& lcd, uint8_t* LCD_CG, uint8_t ch)
     }
 }
 
-void LCD_Update(lcd_t& lcd)
+void LCD_Render(lcd_t& lcd)
 {
+    if (!lcd.backend)
+    {
+        return;
+    }
+
     if (!lcd.mcu->is_cm300 && !lcd.mcu->is_st && !lcd.mcu->is_scb55)
     {
         if (!lcd.mutex.try_lock())
@@ -510,170 +451,7 @@ void LCD_Update(lcd_t& lcd)
             }
         }
 
-        SDL_UpdateTexture(lcd.texture, NULL, lcd.buffer, lcd_width_max * 4);
-        SDL_RenderCopy(lcd.renderer, lcd.texture, NULL, NULL);
-        SDL_RenderPresent(lcd.renderer);
+        lcd.backend->Render();
     }
 }
 
-void LCD_HandleEvent(lcd_t& lcd, const SDL_Event& sdl_event)
-{
-    switch (sdl_event.type)
-    {
-        case SDL_KEYDOWN:
-        case SDL_KEYUP:
-            if (sdl_event.key.windowID != SDL_GetWindowID(lcd.window))
-            {
-                return;
-            }
-            break;
-        case SDL_WINDOWEVENT:
-            if (sdl_event.window.windowID != SDL_GetWindowID(lcd.window))
-            {
-                return;
-            }
-            break;
-        default:
-            break;
-    }
-
-    if (sdl_event.type == SDL_KEYDOWN)
-    {
-        if (sdl_event.key.keysym.scancode == SDL_SCANCODE_COMMA)
-            MCU_EncoderTrigger(*lcd.mcu, 0);
-        if (sdl_event.key.keysym.scancode == SDL_SCANCODE_PERIOD)
-            MCU_EncoderTrigger(*lcd.mcu, 1);
-    }
-
-    switch (sdl_event.type)
-    {
-        case SDL_WINDOWEVENT:
-            if (sdl_event.window.event == SDL_WINDOWEVENT_CLOSE)
-            {
-                lcd.quit_requested = true;
-            }
-            break;
-
-        case SDL_KEYDOWN:
-        case SDL_KEYUP:
-            {
-                if (sdl_event.key.repeat)
-                    break;
-
-                int mask = 0;
-                uint32_t button_pressed = lcd.mcu->button_pressed;
-
-                auto button_map = lcd.mcu->is_jv880 ? button_map_jv880 : button_map_sc55;
-                auto button_size = (lcd.mcu->is_jv880 ? sizeof(button_map_jv880) : sizeof(button_map_sc55)) / sizeof(button_map_sc55[0]);
-                for (size_t i = 0; i < button_size; i++)
-                {
-                    if (button_map[i][0] == sdl_event.key.keysym.scancode)
-                        mask |= (1 << button_map[i][1]);
-                }
-
-                if (sdl_event.type == SDL_KEYDOWN)
-                    button_pressed |= mask;
-                else
-                    button_pressed &= ~mask;
-
-                lcd.mcu->button_pressed = button_pressed;
-
-#if 0
-                if (sdl_event.key.keysym.scancode >= SDL_SCANCODE_1 && sdl_event.key.keysym.scancode < SDL_SCANCODE_0)
-                {
-#if 0
-                    int kk = sdl_event.key.keysym.scancode - SDL_SCANCODE_1;
-                    if (sdl_event.type == SDL_KEYDOWN)
-                    {
-                        MCU_PostUART(0xc0);
-                        MCU_PostUART(118);
-                        MCU_PostUART(0x90);
-                        MCU_PostUART(0x30 + kk);
-                        MCU_PostUART(0x7f);
-                    }
-                    else
-                    {
-                        MCU_PostUART(0x90);
-                        MCU_PostUART(0x30 + kk);
-                        MCU_PostUART(0);
-                    }
-#endif
-                    int kk = sdl_event.key.keysym.scancode - SDL_SCANCODE_1;
-                    const int patch = 47;
-                    if (sdl_event.type == SDL_KEYDOWN)
-                    {
-                        static int bend = 0x2000;
-                        if (kk == 4)
-                        {
-                            MCU_PostUART(0x99);
-                            MCU_PostUART(0x32);
-                            MCU_PostUART(0x7f);
-                        }
-                        else if (kk == 3)
-                        {
-                            bend += 0x100;
-                            if (bend > 0x3fff)
-                                bend = 0x3fff;
-                            MCU_PostUART(0xe1);
-                            MCU_PostUART(bend & 127);
-                            MCU_PostUART((bend >> 7) & 127);
-                        }
-                        else if (kk == 2)
-                        {
-                            bend -= 0x100;
-                            if (bend < 0)
-                                bend = 0;
-                            MCU_PostUART(0xe1);
-                            MCU_PostUART(bend & 127);
-                            MCU_PostUART((bend >> 7) & 127);
-                        }
-                        else if (kk)
-                        {
-                            MCU_PostUART(0xc1);
-                            MCU_PostUART(patch);
-                            MCU_PostUART(0xe1);
-                            MCU_PostUART(bend & 127);
-                            MCU_PostUART((bend >> 7) & 127);
-                            MCU_PostUART(0x91);
-                            MCU_PostUART(0x32);
-                            MCU_PostUART(0x7f);
-                        }
-                        else if (kk == 0)
-                        {
-                            //MCU_PostUART(0xc0);
-                            //MCU_PostUART(patch);
-                            MCU_PostUART(0xe0);
-                            MCU_PostUART(0x00);
-                            MCU_PostUART(0x40);
-                            MCU_PostUART(0x99);
-                            MCU_PostUART(0x37);
-                            MCU_PostUART(0x7f);
-                        }
-                    }
-                    else
-                    {
-                        if (kk == 1)
-                        {
-                            MCU_PostUART(0x91);
-                            MCU_PostUART(0x32);
-                            MCU_PostUART(0);
-                        }
-                        else if (kk == 0)
-                        {
-                            MCU_PostUART(0x99);
-                            MCU_PostUART(0x37);
-                            MCU_PostUART(0);
-                        }
-                        else if (kk == 4)
-                        {
-                            MCU_PostUART(0x99);
-                            MCU_PostUART(0x32);
-                            MCU_PostUART(0);
-                        }
-                    }
-                }
-#endif
-                break;
-            }
-    }
-}

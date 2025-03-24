@@ -98,7 +98,6 @@ target_sources(nuked-sc55-backend
     src/config.cpp "${CMAKE_CURRENT_BINARY_DIR}/config.h"
 )
 target_include_directories(nuked-sc55-backend PUBLIC "src" "${CMAKE_CURRENT_BINARY_DIR}")
-target_link_libraries(nuked-sc55-backend PRIVATE SDL2::SDL2)
 target_compile_features(nuked-sc55-backend PRIVATE cxx_std_23)
 target_enable_warnings(nuked-sc55-backend)
 
@@ -111,6 +110,7 @@ target_sources(nuked-sc55
     src/midi.h
     src/output_sdl.cpp src/output_sdl.h
     src/audio_sdl.cpp src/audio_sdl.h
+    src/lcd_sdl.cpp src/lcd_sdl.h
     src/main_frontend.cpp # main() is here!
 )
 

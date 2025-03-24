@@ -37,6 +37,7 @@
 #include "command_line.h"
 #include "config.h"
 #include "emu.h"
+#include "lcd_sdl.h"
 #include "mcu.h"
 #include "midi.h"
 #include "output_common.h"
@@ -64,6 +65,8 @@ size_t FE_CalcRingbufferSizeBytes(uint32_t buffer_size, uint32_t buffer_count)
 struct FE_Instance
 {
     Emulator emu;
+
+    std::unique_ptr<LCD_SDL_Backend> sdl_lcd;
 
     GenericBuffer  sample_buffer;
     RingbufferView view;
@@ -549,15 +552,14 @@ void FE_EventLoop(FE_Application& fe)
 
         for (size_t i = 0; i < fe.instances_in_use; ++i)
         {
-            if (fe.instances[i].emu.IsLCDEnabled())
+            if (fe.instances[i].sdl_lcd)
             {
-                if (LCD_QuitRequested(fe.instances[i].emu.GetLCD()))
+                if (fe.instances[i].sdl_lcd->IsQuitRequested())
                 {
                     fe.running = false;
                 }
-
-                LCD_Update(fe.instances[i].emu.GetLCD());
             }
+            LCD_Render(fe.instances[i].emu.GetLCD());
         }
 
         SDL_Event ev;
@@ -572,9 +574,9 @@ void FE_EventLoop(FE_Application& fe)
 
             for (size_t i = 0; i < fe.instances_in_use; ++i)
             {
-                if (fe.instances[i].emu.IsLCDEnabled())
+                if (fe.instances[i].sdl_lcd)
                 {
-                    LCD_HandleEvent(fe.instances[i].emu.GetLCD(), ev);
+                    fe.instances[i].sdl_lcd->HandleEvent(ev);
                 }
             }
         }
@@ -670,7 +672,12 @@ bool FE_CreateInstance(FE_Application& container, const std::filesystem::path& b
     fe->buffer_size  = params.buffer_size;
     fe->buffer_count = params.buffer_count;
 
-    if (!fe->emu.Init(EMU_Options { .enable_lcd = !params.no_lcd }))
+    if (!params.no_lcd)
+    {
+        fe->sdl_lcd = std::make_unique<LCD_SDL_Backend>();
+    }
+
+    if (!fe->emu.Init({.lcd_backend = fe->sdl_lcd.get()}))
     {
         fprintf(stderr, "ERROR: Failed to init emulator.\n");
         return false;
@@ -684,9 +691,9 @@ bool FE_CreateInstance(FE_Application& container, const std::filesystem::path& b
     fe->emu.Reset();
     fe->emu.GetPCM().disable_oversampling = params.disable_oversampling;
 
-    if (!params.no_lcd && !LCD_CreateWindow(fe->emu.GetLCD()))
+    if (!fe->emu.StartLCD())
     {
-        fprintf(stderr, "ERROR: Failed to create window.\n");
+        fprintf(stderr, "ERROR: Failed to start LCD.\n");
         return false;
     }
 
@@ -771,7 +778,7 @@ const char* FE_ParseErrorStr(FE_ParseError err)
             return "Output format invalid";
         case FE_ParseError::ASIOSampleRateOutOfRange:
             return "ASIO sample rate out of range";
-    }
+        }
     return "Unknown error";
 }
 

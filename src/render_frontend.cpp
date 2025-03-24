@@ -966,9 +966,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     R_TrackRenderState render_states[SMF_CHANNEL_COUNT];
     for (size_t i = 0; i < instances; ++i)
     {
-        render_states[i].emu.Init(EMU_Options {
-            .enable_lcd = false,
-        });
+        render_states[i].emu.Init({});
 
         if (!render_states[i].emu.LoadRoms(rs, params.rom_directory))
         {

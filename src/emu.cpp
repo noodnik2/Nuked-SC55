@@ -61,6 +61,7 @@ bool Emulator::Init(const EMU_Options& options)
     PCM_Init(*m_pcm, *m_mcu);
     TIMER_Init(*m_timer, *m_mcu);
     LCD_Init(*m_lcd, *m_mcu);
+    m_lcd->backend = options.lcd_backend;
 
     return true;
 }
@@ -70,6 +71,16 @@ void Emulator::Reset()
     MCU_PatchROM(*m_mcu);
     MCU_Reset(*m_mcu);
     SM_Reset(*m_sm);
+}
+
+bool Emulator::StartLCD()
+{
+    return LCD_Start(*m_lcd);
+}
+
+void Emulator::StopLCD()
+{
+    LCD_Stop(*m_lcd);
 }
 
 void Emulator::SetSampleCallback(mcu_sample_callback callback, void* userdata)
