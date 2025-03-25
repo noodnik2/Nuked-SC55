@@ -142,7 +142,7 @@ void LCD_SDL_Backend::HandleEvent(const SDL_Event& sdl_event)
         if (sdl_event.key.repeat)
             break;
 
-        int      mask           = 0;
+        uint32_t mask           = 0;
         uint32_t button_pressed = m_lcd->mcu->button_pressed;
 
         auto button_map = m_lcd->mcu->is_jv880 ? button_map_jv880 : button_map_sc55;
