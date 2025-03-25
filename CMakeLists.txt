@@ -86,50 +86,56 @@ endfunction()
 #==============================================================================
 # Backend
 #==============================================================================
-configure_file(src/config.h.in config.h @ONLY)
+configure_file(src/backend/config.h.in config.h @ONLY)
 add_library(nuked-sc55-backend)
 target_sources(nuked-sc55-backend
     PRIVATE
-    src/mcu.cpp src/mcu.h
-    src/lcd.cpp src/lcd.h src/lcd_font.h
-    src/mcu_interrupt.cpp src/mcu_interrupt.h
-    src/mcu_opcodes.cpp src/mcu_opcodes.h
-    src/mcu_timer.cpp src/mcu_timer.h
-    src/pcm.cpp src/pcm.h
-    src/submcu.cpp src/submcu.h
-    src/emu.cpp src/emu.h
-    src/ringbuffer.h
-    src/math_util.h
-    src/path_util.cpp src/path_util.h
-    src/command_line.h
-    src/cast.h
-    src/config.cpp "${CMAKE_CURRENT_BINARY_DIR}/config.h"
+    src/backend/mcu.cpp src/backend/mcu.h
+    src/backend/lcd.cpp src/backend/lcd.h
+    src/backend/lcd_font.h
+    src/backend/lcd_back.h
+    src/backend/mcu_interrupt.cpp src/backend/mcu_interrupt.h
+    src/backend/mcu_opcodes.cpp src/backend/mcu_opcodes.h
+    src/backend/mcu_timer.cpp src/backend/mcu_timer.h
+    src/backend/pcm.cpp src/backend/pcm.h
+    src/backend/submcu.cpp src/backend/submcu.h
+    src/backend/emu.cpp src/backend/emu.h
+    src/backend/ringbuffer.h
+    src/backend/math_util.h
+    src/backend/path_util.cpp src/backend/path_util.h
+    src/backend/command_line.h
+    src/backend/cast.h
+    src/backend/config.cpp "${CMAKE_CURRENT_BINARY_DIR}/config.h"
 )
-target_include_directories(nuked-sc55-backend PUBLIC "src" "${CMAKE_CURRENT_BINARY_DIR}")
+target_include_directories(nuked-sc55-backend PUBLIC "src/backend" "${CMAKE_CURRENT_BINARY_DIR}")
 target_compile_features(nuked-sc55-backend PRIVATE cxx_std_23)
 target_enable_warnings(nuked-sc55-backend)
 
 #==============================================================================
-# Main Frontend
+# Standard frontend
 #==============================================================================
 if(SDL2_FOUND)
     add_executable(nuked-sc55)
     target_sources(nuked-sc55
         PRIVATE
-        src/midi.h
-        src/output_sdl.cpp src/output_sdl.h
-        src/audio_sdl.cpp src/audio_sdl.h
-        src/lcd_sdl.cpp src/lcd_sdl.h
-        src/main_frontend.cpp # main() is here!
+        src/standard/midi.h
+        src/standard/output_sdl.cpp src/standard/output_sdl.h
+        src/standard/audio_sdl.cpp src/standard/audio_sdl.h
+        src/standard/lcd_sdl.cpp src/standard/lcd_sdl.h
+        src/standard/main.cpp
     )
 
     if(USE_RTMIDI)
-        target_sources(nuked-sc55 PRIVATE src/midi_rtmidi.cpp)
+        target_sources(nuked-sc55 PRIVATE src/standard/midi_rtmidi.cpp)
     elseif(WIN32)
-        target_sources(nuked-sc55 PRIVATE src/midi_win32.cpp)
+        target_sources(nuked-sc55 PRIVATE src/standard/midi_win32.cpp)
     endif()
 
-    target_link_libraries(nuked-sc55 PRIVATE SDL2::SDL2 SDL2::SDL2main nuked-sc55-backend)
+    if(TARGET SDL2::SDL2main)
+        target_link_libraries(nuked-sc55 PRIVATE SDL2::SDL2main)
+    endif()
+
+    target_link_libraries(nuked-sc55 PRIVATE SDL2::SDL2 nuked-sc55-backend)
     target_compile_features(nuked-sc55 PRIVATE cxx_std_23)
     target_enable_warnings(nuked-sc55)
     target_enable_conversion_warnings(nuked-sc55)
@@ -167,7 +173,7 @@ if(SDL2_FOUND)
 
         target_sources(nuked-sc55
             PRIVATE
-            src/output_asio.cpp src/output_asio.h
+            src/standard/output_asio.cpp src/standard/output_asio.h
         )
         target_link_libraries(nuked-sc55 PRIVATE asio_sdk)
     endif()
@@ -181,9 +187,9 @@ endif()
 add_executable(nuked-sc55-render)
 target_sources(nuked-sc55-render
     PRIVATE
-    src/render_frontend.cpp
-    src/smf.cpp src/smf.h
-    src/wav.cpp src/wav.h
+    src/renderer/main.cpp
+    src/renderer/smf.cpp src/renderer/smf.h
+    src/renderer/wav.cpp src/renderer/wav.h
 )
 
 target_link_libraries(nuked-sc55-render PRIVATE nuked-sc55-backend)
