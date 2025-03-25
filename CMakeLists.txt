@@ -3,6 +3,8 @@ project (nuked-sc55 VERSION 0.5.0 LANGUAGES CXX)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+include(GNUInstallDirs)
+
 set(NUKED_SOURCE "unknown" CACHE STRING "Origin of this build")
 
 #==============================================================================
@@ -20,7 +22,13 @@ endif()
 #==============================================================================
 # Dependencies
 #==============================================================================
-find_package(SDL2 REQUIRED)
+find_package(SDL2)
+
+if(SDL2_FOUND)
+    message(STATUS "SDL2 FOUND - building standard frontend")
+else()
+    message(STATUS "SDL2 NOT FOUND - the standard frontend will not be built!")
+endif()
 
 if(NOT WIN32)
     set(USE_RTMIDI TRUE)
@@ -104,63 +112,67 @@ target_enable_warnings(nuked-sc55-backend)
 #==============================================================================
 # Main Frontend
 #==============================================================================
-add_executable(nuked-sc55)
-target_sources(nuked-sc55
-    PRIVATE
-    src/midi.h
-    src/output_sdl.cpp src/output_sdl.h
-    src/audio_sdl.cpp src/audio_sdl.h
-    src/lcd_sdl.cpp src/lcd_sdl.h
-    src/main_frontend.cpp # main() is here!
-)
-
-if(USE_RTMIDI)
-    target_sources(nuked-sc55 PRIVATE src/midi_rtmidi.cpp)
-elseif(WIN32)
-    target_sources(nuked-sc55 PRIVATE src/midi_win32.cpp)
-endif()
-
-target_link_libraries(nuked-sc55 PRIVATE SDL2::SDL2 SDL2::SDL2main nuked-sc55-backend)
-target_compile_features(nuked-sc55 PRIVATE cxx_std_23)
-target_enable_warnings(nuked-sc55)
-target_enable_conversion_warnings(nuked-sc55)
-
-if(USE_RTMIDI)
-    target_link_libraries(nuked-sc55 PRIVATE RtMidi::rtmidi)
-endif()
-
-if(WIN32)
-    target_link_libraries(nuked-sc55 PRIVATE shlwapi winmm)
-endif()
-
-if(APPLE)
-    find_library(LIBCoreAudio CoreAudio)
-    target_link_libraries(nuked-sc55 PRIVATE ${LIBCoreAudio})
-endif()
-
-if(NUKED_ENABLE_ASIO)
-    if (NOT IS_DIRECTORY "${NUKED_ASIO_SDK_DIR}")
-        message(FATAL_ERROR "Since NUKED_ENABLE_ASIO is ON, NUKED_ASIO_SDK_DIR"
-            " must point to a directory containing the ASIO SDK.")
-    endif()
-
-    add_library(asio_sdk)
-    target_sources(asio_sdk
-        PRIVATE
-        "${NUKED_ASIO_SDK_DIR}/common/asio.cpp"
-        "${NUKED_ASIO_SDK_DIR}/host/asiodrivers.cpp"
-        "${NUKED_ASIO_SDK_DIR}/host/pc/asiolist.cpp"
-    )
-    target_include_directories(asio_sdk PUBLIC "${NUKED_ASIO_SDK_DIR}/common")
-    target_include_directories(asio_sdk PUBLIC "${NUKED_ASIO_SDK_DIR}/host")
-    target_include_directories(asio_sdk PUBLIC "${NUKED_ASIO_SDK_DIR}/host/pc")
-    target_disable_warnings(asio_sdk)
-
+if(SDL2_FOUND)
+    add_executable(nuked-sc55)
     target_sources(nuked-sc55
         PRIVATE
-        src/output_asio.cpp src/output_asio.h
+        src/midi.h
+        src/output_sdl.cpp src/output_sdl.h
+        src/audio_sdl.cpp src/audio_sdl.h
+        src/lcd_sdl.cpp src/lcd_sdl.h
+        src/main_frontend.cpp # main() is here!
     )
-    target_link_libraries(nuked-sc55 PRIVATE asio_sdk)
+
+    if(USE_RTMIDI)
+        target_sources(nuked-sc55 PRIVATE src/midi_rtmidi.cpp)
+    elseif(WIN32)
+        target_sources(nuked-sc55 PRIVATE src/midi_win32.cpp)
+    endif()
+
+    target_link_libraries(nuked-sc55 PRIVATE SDL2::SDL2 SDL2::SDL2main nuked-sc55-backend)
+    target_compile_features(nuked-sc55 PRIVATE cxx_std_23)
+    target_enable_warnings(nuked-sc55)
+    target_enable_conversion_warnings(nuked-sc55)
+
+    if(USE_RTMIDI)
+        target_link_libraries(nuked-sc55 PRIVATE RtMidi::rtmidi)
+    endif()
+
+    if(WIN32)
+        target_link_libraries(nuked-sc55 PRIVATE shlwapi winmm)
+    endif()
+
+    if(APPLE)
+        find_library(LIBCoreAudio CoreAudio)
+        target_link_libraries(nuked-sc55 PRIVATE ${LIBCoreAudio})
+    endif()
+
+    if(NUKED_ENABLE_ASIO)
+        if (NOT IS_DIRECTORY "${NUKED_ASIO_SDK_DIR}")
+            message(FATAL_ERROR "Since NUKED_ENABLE_ASIO is ON, NUKED_ASIO_SDK_DIR"
+                " must point to a directory containing the ASIO SDK.")
+        endif()
+
+        add_library(asio_sdk)
+        target_sources(asio_sdk
+            PRIVATE
+            "${NUKED_ASIO_SDK_DIR}/common/asio.cpp"
+            "${NUKED_ASIO_SDK_DIR}/host/asiodrivers.cpp"
+            "${NUKED_ASIO_SDK_DIR}/host/pc/asiolist.cpp"
+        )
+        target_include_directories(asio_sdk PUBLIC "${NUKED_ASIO_SDK_DIR}/common")
+        target_include_directories(asio_sdk PUBLIC "${NUKED_ASIO_SDK_DIR}/host")
+        target_include_directories(asio_sdk PUBLIC "${NUKED_ASIO_SDK_DIR}/host/pc")
+        target_disable_warnings(asio_sdk)
+
+        target_sources(nuked-sc55
+            PRIVATE
+            src/output_asio.cpp src/output_asio.h
+        )
+        target_link_libraries(nuked-sc55 PRIVATE asio_sdk)
+    endif()
+
+    install(TARGETS nuked-sc55)
 endif()
 
 #==============================================================================
@@ -182,6 +194,5 @@ target_enable_conversion_warnings(nuked-sc55-render)
 #==============================================================================
 # Installables
 #==============================================================================
-include(GNUInstallDirs)
-install(TARGETS nuked-sc55 nuked-sc55-render)
+install(TARGETS nuked-sc55-render)
 install(DIRECTORY doc/ DESTINATION ${CMAKE_INSTALL_DOCDIR})
