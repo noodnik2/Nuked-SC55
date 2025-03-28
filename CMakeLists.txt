@@ -49,28 +49,45 @@ endif()
 #==============================================================================
 # Backend
 #==============================================================================
-configure_file(src/backend/config.h.in config.h @ONLY)
+configure_file(src/backend/config.h.in backend/config.h @ONLY)
 add_library(nuked-sc55-backend)
 target_sources(nuked-sc55-backend
     PRIVATE
-    src/backend/mcu.cpp src/backend/mcu.h
-    src/backend/lcd.cpp src/backend/lcd.h
-    src/backend/lcd_font.h
-    src/backend/lcd_back.h
-    src/backend/mcu_interrupt.cpp src/backend/mcu_interrupt.h
-    src/backend/mcu_opcodes.cpp src/backend/mcu_opcodes.h
-    src/backend/mcu_timer.cpp src/backend/mcu_timer.h
-    src/backend/pcm.cpp src/backend/pcm.h
-    src/backend/submcu.cpp src/backend/submcu.h
-    src/backend/emu.cpp src/backend/emu.h
-    src/backend/ringbuffer.h
-    src/backend/math_util.h
-    src/backend/path_util.cpp src/backend/path_util.h
-    src/backend/command_line.h
+    src/backend/config.cpp
+    src/backend/emu.cpp
+    src/backend/lcd.cpp
+    src/backend/mcu.cpp
+    src/backend/mcu_interrupt.cpp
+    src/backend/mcu_opcodes.cpp
+    src/backend/mcu_timer.cpp
+    src/backend/path_util.cpp
+    src/backend/pcm.cpp
+    src/backend/submcu.cpp
+
+    PUBLIC
+    FILE_SET public_headers
+    TYPE HEADERS
+    BASE_DIRS src "${CMAKE_CURRENT_BINARY_DIR}"
+    FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/backend/config.h"
+    src/backend/audio.h
     src/backend/cast.h
-    src/backend/config.cpp "${CMAKE_CURRENT_BINARY_DIR}/config.h"
+    src/backend/command_line.h
+    src/backend/emu.h
+    src/backend/lcd.h
+    src/backend/lcd_back.h
+    src/backend/lcd_font.h
+    src/backend/math_util.h
+    src/backend/mcu.h
+    src/backend/mcu_interrupt.h
+    src/backend/mcu_opcodes.h
+    src/backend/mcu_timer.h
+    src/backend/path_util.h
+    src/backend/pcm.h
+    src/backend/ringbuffer.h
+    src/backend/submcu.h
 )
-target_include_directories(nuked-sc55-backend PUBLIC "src/backend" "${CMAKE_CURRENT_BINARY_DIR}")
+target_include_directories(nuked-sc55-backend PUBLIC "src/backend" "${CMAKE_CURRENT_BINARY_DIR}/backend")
 target_compile_features(nuked-sc55-backend PRIVATE cxx_std_23)
 target_enable_warnings(nuked-sc55-backend)
 
@@ -81,11 +98,16 @@ if(SDL2_FOUND)
     add_executable(nuked-sc55)
     target_sources(nuked-sc55
         PRIVATE
-        src/standard/midi.h
-        src/standard/output_sdl.cpp src/standard/output_sdl.h
-        src/standard/audio_sdl.cpp src/standard/audio_sdl.h
-        src/standard/lcd_sdl.cpp src/standard/lcd_sdl.h
+        src/standard/audio_sdl.cpp
+        src/standard/lcd_sdl.cpp
         src/standard/main.cpp
+        src/standard/midi.h
+        src/standard/output_sdl.cpp
+
+        PRIVATE FILE_SET headers TYPE HEADERS FILES
+        src/standard/audio_sdl.h
+        src/standard/lcd_sdl.h
+        src/standard/output_sdl.h
     )
 
     if(USE_RTMIDI)
@@ -151,8 +173,12 @@ add_executable(nuked-sc55-render)
 target_sources(nuked-sc55-render
     PRIVATE
     src/renderer/main.cpp
-    src/renderer/smf.cpp src/renderer/smf.h
-    src/renderer/wav.cpp src/renderer/wav.h
+    src/renderer/smf.cpp
+    src/renderer/wav.cpp
+
+    PRIVATE FILE_SET headers TYPE HEADERS FILES
+    src/renderer/smf.h
+    src/renderer/wav.h
 )
 
 target_link_libraries(nuked-sc55-render PRIVATE nuked-sc55-backend)
