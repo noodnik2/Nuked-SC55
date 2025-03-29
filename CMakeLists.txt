@@ -53,6 +53,7 @@ configure_file(src/backend/config.h.in backend/config.h @ONLY)
 add_library(nuked-sc55-backend)
 target_sources(nuked-sc55-backend
     PRIVATE
+    src/backend/c_api.cpp
     src/backend/config.cpp
     src/backend/emu.cpp
     src/backend/lcd.cpp
@@ -67,9 +68,10 @@ target_sources(nuked-sc55-backend
     PUBLIC
     FILE_SET public_headers
     TYPE HEADERS
-    BASE_DIRS src "${CMAKE_CURRENT_BINARY_DIR}"
+    BASE_DIRS include src "${CMAKE_CURRENT_BINARY_DIR}"
     FILES
     "${CMAKE_CURRENT_BINARY_DIR}/backend/config.h"
+    include/nuked-sc55/nuked-sc55.h
     src/backend/audio.h
     src/backend/cast.h
     src/backend/command_line.h

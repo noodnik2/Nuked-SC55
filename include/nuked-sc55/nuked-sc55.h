@@ -13,6 +13,14 @@ struct SC55_Emulator;
 
 typedef enum {
     SC55_OK = 0,
+    SC55_ALLOC_FAILED,
+
+    // Caller provided a parameter that is out of range.
+    SC55_INVALID_PARAM,
+
+    // TODO: more specific error codes. C++ API needs to return something other than bool.
+    SC55_LOADROM_FAILED,
+
     // TODO: all error codes
 } SC55_Error;
 
