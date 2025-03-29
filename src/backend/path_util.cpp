@@ -15,7 +15,7 @@ std::filesystem::path P_GetProcessPath()
 {
 #if defined(_WIN32)
     wchar_t path[MAX_PATH];
-    DWORD actual_size = GetModuleFileNameW(NULL, path, sizeof(path));
+    DWORD actual_size = GetModuleFileNameW(NULL, path, MAX_PATH);
     if (actual_size == 0)
     {
         // TODO: handle error
@@ -24,7 +24,7 @@ std::filesystem::path P_GetProcessPath()
     }
 #elif defined(__APPLE__)
     char path[1024];
-    uint32_t actual_size = sizeof(path);
+    uint32_t actual_size = 1024;
     if (_NSGetExecutablePath(path, &actual_size) != 0)
     {
         // TODO: handle error
@@ -33,7 +33,7 @@ std::filesystem::path P_GetProcessPath()
     }
 #else
     char path[PATH_MAX];
-    ssize_t actual_size = readlink("/proc/self/exe", path, sizeof(path));
+    ssize_t actual_size = readlink("/proc/self/exe", path, PATH_MAX);
     if (actual_size == -1)
     {
         // TODO: handle error
