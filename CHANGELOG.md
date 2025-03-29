@@ -7,6 +7,11 @@
   on a per-application basis. The old SDL backend has been moved to the
   standard frontend.
 
+## Bugfixes
+
+- Fixed crash on startup when the directory containing the executable had
+  non-English characters. (#30)
+
 # Version 0.5.0 (2025-03-21)
 
 The main addition in this release is ASIO support for Windows. For legal

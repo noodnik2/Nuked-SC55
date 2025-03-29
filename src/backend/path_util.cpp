@@ -14,8 +14,8 @@
 std::filesystem::path P_GetProcessPath()
 {
 #if defined(_WIN32)
-    char path[MAX_PATH];
-    DWORD actual_size = GetModuleFileNameA(NULL, path, sizeof(path));
+    wchar_t path[MAX_PATH];
+    DWORD actual_size = GetModuleFileNameW(NULL, path, sizeof(path));
     if (actual_size == 0)
     {
         // TODO: handle error
@@ -41,5 +41,5 @@ std::filesystem::path P_GetProcessPath()
         exit(1);
     }
 #endif
-    return std::filesystem::path(std::string_view(path, (size_t)actual_size));
+    return std::filesystem::path(path, path + (size_t)actual_size);
 }
