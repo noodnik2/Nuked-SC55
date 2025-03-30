@@ -2,6 +2,7 @@
 #include "command_line.h"
 #include <RtMidi.h>
 #include <cstdio>
+#include <span>
 
 static RtMidiIn *s_midi_in = nullptr;
 
