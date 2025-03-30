@@ -3,6 +3,10 @@
 #include "emu.h"
 #include "nuked-sc55/nuked-sc55.h"
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 extern "C" struct SC55_Emulator
 {
     Emulator emu;
@@ -18,6 +22,12 @@ extern "C" SC55_Error SC55_Create(SC55_Emulator** out_emu)
 {
     *out_emu = new SC55_Emulator();
     if (!*out_emu)
+    {
+        return SC55_ALLOC_FAILED;
+    }
+
+    // TODO: C API should probably also support passing emu options
+    if (!(*out_emu)->emu.Init({}))
     {
         return SC55_ALLOC_FAILED;
     }
@@ -39,14 +49,32 @@ static SC55_Error LoadRomsTypeToRomset(SC55_LoadRomsType type, Romset& out)
     {
     case SC55_LOADROMS_AUTODETECT:
         return SC55_INVALID_PARAM;
-    case SC55_LOADROMS_SC55:
+    case SC55_LOADROMS_SC55MK1:
         out = Romset::MK1;
         return SC55_OK;
     case SC55_LOADROMS_SC55MK2:
         out = Romset::MK2;
         return SC55_OK;
+    case SC55_LOADROMS_ST:
+        out = Romset::ST;
+        return SC55_OK;
+    case SC55_LOADROMS_CM300:
+        out = Romset::CM300;
+        return SC55_OK;
     case SC55_LOADROMS_JV880:
         out = Romset::JV880;
+        return SC55_OK;
+    case SC55_LOADROMS_SCB55:
+        out = Romset::SCB55;
+        return SC55_OK;
+    case SC55_LOADROMS_RLP3237:
+        out = Romset::RLP3237;
+        return SC55_OK;
+    case SC55_LOADROMS_SC155:
+        out = Romset::SC155;
+        return SC55_OK;
+    case SC55_LOADROMS_SC155MK2:
+        out = Romset::SC155MK2;
         return SC55_OK;
     }
     return SC55_INVALID_PARAM;
@@ -58,7 +86,30 @@ extern "C" SC55_Error SC55_LoadRoms(SC55_Emulator* emu, const char* directory, S
 
     try
     {
+#ifdef _WIN32
+        // On Windows we need to convert the UTF-8 string to UTF-16.
+        const size_t in_size = strlen(directory);
+
+        int out_size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, directory, (int)in_size, nullptr, 0);
+        if (out_size == 0)
+        {
+            return SC55_INVALID_PARAM;
+        }
+
+        std::wstring out_utf16;
+        out_utf16.resize(out_size);
+
+        int cvt_err =
+            MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, directory, (int)in_size, out_utf16.data(), out_size);
+        if (cvt_err == 0)
+        {
+            return SC55_INVALID_PARAM;
+        }
+
+        dir_path = out_utf16;
+#else
         dir_path = directory;
+#endif
     }
     catch (...)
     {
@@ -82,7 +133,7 @@ extern "C" SC55_Error SC55_LoadRoms(SC55_Emulator* emu, const char* directory, S
 
     if (!emu->emu.LoadRoms(rs, dir_path))
     {
-        return SC55_LOADROM_FAILED;
+        return SC55_LOADROMS_FAILED;
     }
 
     return SC55_OK;
@@ -103,13 +154,16 @@ extern "C" void SC55_SetSampleCallback(SC55_Emulator* emu, SC55_SampleCallback c
 
 extern "C" void SC55_Step(SC55_Emulator* emu)
 {
-    // TODO: This should probably be wrapped in the emulator class.
-    MCU_Step(emu->emu.GetMCU());
+    emu->emu.Step();
 }
 
-extern "C" void SC55_PostMIDI(void* ptr, size_t count)
+extern "C" void SC55_PostMIDI(SC55_Emulator* emu, const void* ptr, size_t count)
 {
-    (void)ptr;
-    (void)count;
-    // TODO
+    const uint8_t* as_u8 = (const uint8_t*)ptr;
+    emu->emu.PostMIDI(std::span<const uint8_t>(as_u8, count));
+}
+
+extern "C" uint32_t SC55_GetOutputFrequency(SC55_Emulator* emu)
+{
+    return PCM_GetOutputFrequency(emu->emu.GetPCM());
 }

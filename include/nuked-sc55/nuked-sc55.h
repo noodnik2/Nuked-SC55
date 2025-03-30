@@ -19,7 +19,7 @@ typedef enum {
     SC55_INVALID_PARAM,
 
     // TODO: more specific error codes. C++ API needs to return something other than bool.
-    SC55_LOADROM_FAILED,
+    SC55_LOADROMS_FAILED,
 
     // TODO: all error codes
 } SC55_Error;
@@ -29,13 +29,21 @@ void       SC55_Destroy(SC55_Emulator* emu);
 
 typedef enum {
     SC55_LOADROMS_AUTODETECT,
-    SC55_LOADROMS_SC55,
+    SC55_LOADROMS_SC55MK1,
     SC55_LOADROMS_SC55MK2,
+    SC55_LOADROMS_ST,
+    SC55_LOADROMS_CM300,
     SC55_LOADROMS_JV880,
-    // TODO: all romsets
+    SC55_LOADROMS_SCB55,
+    SC55_LOADROMS_RLP3237,
+    SC55_LOADROMS_SC155,
+    SC55_LOADROMS_SC155MK2,
 } SC55_LoadRomsType;
 
-/* Load roms from a directory. This should be called after SC55_Create and before any other functions. */
+/**
+ * Load roms from a directory. This should be called after SC55_Create and before any other functions.
+ * `directory` is expected to be a UTF-8 encoded string.
+ */
 SC55_Error SC55_LoadRoms(SC55_Emulator* emu, const char* directory, SC55_LoadRomsType type);
 
 typedef void(*SC55_SampleCallback)(void* userdata, int32_t left, int32_t right);
@@ -47,7 +55,12 @@ void SC55_SetSampleCallback(SC55_Emulator* emu, SC55_SampleCallback callback, vo
 void SC55_Step(SC55_Emulator* emu);
 
 /* Post MIDI data to the emulator. This function is threadsafe. */
-void SC55_PostMIDI(void* ptr, size_t count);
+void SC55_PostMIDI(SC55_Emulator* emu, const void* ptr, size_t count);
+
+/**
+ * Returns the output frequency in hz. This value varies depending on the romset.
+ */
+uint32_t SC55_GetOutputFrequency(SC55_Emulator* emu);
 
 #ifdef __cplusplus
 }
