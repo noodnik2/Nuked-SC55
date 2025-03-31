@@ -46,11 +46,23 @@ bool Emulator::Init(const EMU_Options& options)
 {
     m_options = options;
 
-    m_mcu   = std::make_unique<mcu_t>();
-    m_sm    = std::make_unique<submcu_t>();
-    m_timer = std::make_unique<mcu_timer_t>();
-    m_lcd   = std::make_unique<lcd_t>();
-    m_pcm   = std::make_unique<pcm_t>();
+    try
+    {
+        m_mcu   = std::make_unique<mcu_t>();
+        m_sm    = std::make_unique<submcu_t>();
+        m_timer = std::make_unique<mcu_timer_t>();
+        m_lcd   = std::make_unique<lcd_t>();
+        m_pcm   = std::make_unique<pcm_t>();
+    }
+    catch (const std::bad_alloc&)
+    {
+        m_mcu.reset();
+        m_sm.reset();
+        m_timer.reset();
+        m_lcd.reset();
+        m_pcm.reset();
+        return false;
+    }
 
     MCU_Init(*m_mcu, *m_sm, *m_pcm, *m_timer, *m_lcd);
     SM_Init(*m_sm, *m_mcu);
