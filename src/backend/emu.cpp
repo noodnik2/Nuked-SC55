@@ -76,7 +76,6 @@ bool Emulator::Init(const EMU_Options& options)
 
 void Emulator::Reset()
 {
-    MCU_PatchROM(*m_mcu);
     MCU_Reset(*m_mcu);
     SM_Reset(*m_sm);
 }
@@ -461,6 +460,8 @@ bool Emulator::LoadRoms(Romset romset, const std::filesystem::path& base_path)
             return false;
         }
     }
+
+    MCU_PatchROM(*m_mcu);
 
     return true;
 }
