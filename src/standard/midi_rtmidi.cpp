@@ -1,8 +1,12 @@
 #include "midi.h"
 #include "command_line.h"
 #include <RtMidi.h>
+#include <cstdint>
 #include <cstdio>
+#include <memory>
 #include <span>
+#include <string>
+#include <vector>
 
 static RtMidiIn *s_midi_in = nullptr;
 
