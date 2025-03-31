@@ -79,6 +79,8 @@ public:
 
     void PostSystemReset(EMU_SystemReset reset);
 
+    void Step();
+
     mcu_t& GetMCU() { return *m_mcu; }
     pcm_t& GetPCM() { return *m_pcm; }
     lcd_t& GetLCD() { return *m_lcd; }

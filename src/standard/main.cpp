@@ -501,7 +501,7 @@ void FE_RunInstanceSDL(FE_Instance& instance)
             SDL_Delay(1);
         }
 
-        MCU_Step(instance.emu.GetMCU());
+        instance.emu.Step();
     }
 }
 
@@ -522,7 +522,7 @@ void FE_RunInstanceASIO(FE_Instance& instance)
             SDL_Delay(1);
         }
 
-        MCU_Step(instance.emu.GetMCU());
+        instance.emu.Step();
     }
 }
 #endif

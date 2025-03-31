@@ -521,3 +521,7 @@ void Emulator::PostSystemReset(EMU_SystemReset reset)
     }
 }
 
+void Emulator::Step()
+{
+    MCU_Step(*m_mcu);
+}

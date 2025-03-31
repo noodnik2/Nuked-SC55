@@ -754,7 +754,7 @@ void R_RunReset(Emulator& emu, EMU_SystemReset reset)
 
     for (size_t i = 0; i < 24'000'000; ++i)
     {
-        MCU_Step(emu.GetMCU());
+        emu.Step();
     }
 }
 
@@ -831,7 +831,7 @@ void R_RenderOne(const SMF_Data& data, R_TrackRenderState& state)
 
         while (state.ns_simulated < this_event_time_ns)
         {
-            MCU_Step(state.emu.GetMCU());
+            state.emu.Step();
             state.ns_simulated += ns_per_step;
         }
 
@@ -856,7 +856,7 @@ void R_RenderOne(const SMF_Data& data, R_TrackRenderState& state)
         const size_t silence_time = frequency / 10;
         while (state.num_silent_frames < silence_time)
         {
-            MCU_Step(state.emu.GetMCU());
+            state.emu.Step();
         }
     }
     state.elapsed = std::chrono::high_resolution_clock::now() - t_start;
