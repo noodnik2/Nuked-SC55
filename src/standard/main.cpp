@@ -1058,6 +1058,7 @@ int main(int argc, char *argv[])
     if (result != FE_ParseError::Success)
     {
         fprintf(stderr, "error: %s\n", FE_ParseErrorStr(result));
+        FE_Usage();
         return 1;
     }
 
