@@ -52,11 +52,7 @@ bool Emulator::Init(const EMU_Options& options)
     m_lcd   = std::make_unique<lcd_t>();
     m_pcm   = std::make_unique<pcm_t>();
 
-    if (!MCU_Init(*m_mcu, *m_sm, *m_pcm, *m_timer, *m_lcd))
-    {
-        return false;
-    }
-
+    MCU_Init(*m_mcu, *m_sm, *m_pcm, *m_timer, *m_lcd);
     SM_Init(*m_sm, *m_mcu);
     PCM_Init(*m_pcm, *m_mcu);
     TIMER_Init(*m_timer, *m_mcu);

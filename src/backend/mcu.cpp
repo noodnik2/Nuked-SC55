@@ -768,13 +768,12 @@ void MCU_DefaultSampleCallback(void* userdata, const AudioFrame<int32_t>& frame)
     (void)frame;
 }
 
-bool MCU_Init(mcu_t& mcu, submcu_t& sm, pcm_t& pcm, mcu_timer_t& timer, lcd_t& lcd)
+void MCU_Init(mcu_t& mcu, submcu_t& sm, pcm_t& pcm, mcu_timer_t& timer, lcd_t& lcd)
 {
     mcu.sm = &sm;
     mcu.pcm = &pcm;
     mcu.timer = &timer;
     mcu.lcd = &lcd;
-    return true;
 }
 
 void MCU_Deinit(mcu_t& mcu)

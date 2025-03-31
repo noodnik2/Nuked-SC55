@@ -285,7 +285,7 @@ struct mcu_t {
     mcu_sample_callback sample_callback = MCU_DefaultSampleCallback;
 };
 
-bool MCU_Init(mcu_t& mcu, submcu_t& sm, pcm_t& pcm, mcu_timer_t& timer, lcd_t& lcd);
+void MCU_Init(mcu_t& mcu, submcu_t& sm, pcm_t& pcm, mcu_timer_t& timer, lcd_t& lcd);
 void MCU_Reset(mcu_t& mcu);
 void MCU_PatchROM(mcu_t& mcu);
 void MCU_Step(mcu_t& mcu);
