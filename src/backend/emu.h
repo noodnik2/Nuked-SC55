@@ -57,6 +57,23 @@ enum class EMU_SystemReset {
     GM_RESET,
 };
 
+// Where a file should be mapped to once loaded
+enum class EMU_RomDestination
+{
+    ROM1,
+    ROM2,
+    WAVEROM1,
+    WAVEROM2,
+    WAVEROM3,
+    SMROM,
+
+    // do not reorder these
+    COUNT,
+    NONE = COUNT,
+};
+
+struct EMU_AllRomsetMaps;
+
 struct Emulator {
 public:
     Emulator() = default;
@@ -75,6 +92,9 @@ public:
 
     bool LoadRoms(Romset romset, const std::filesystem::path& base_path);
 
+    // pre: EMU_IsCompleteRomset(romset_maps, romset)
+    bool LoadRomsAuto(Romset romset, const EMU_AllRomsetMaps& romset_maps);
+
     void PostMIDI(uint8_t data_byte);
     void PostMIDI(std::span<const uint8_t> data);
 
@@ -87,6 +107,9 @@ public:
     lcd_t& GetLCD() { return *m_lcd; }
 
 private:
+    std::span<uint8_t> MapBuffer(EMU_RomDestination romdest);
+
+private:
     std::unique_ptr<mcu_t>       m_mcu;
     std::unique_ptr<submcu_t>    m_sm;
     std::unique_ptr<mcu_timer_t> m_timer;
@@ -95,26 +118,12 @@ private:
     EMU_Options                  m_options;
 };
 
-// Where a file should be mapped to once loaded
-enum class EMU_RomDestination
-{
-    ROM1,
-    ROM2,
-    WAVEROM1,
-    WAVEROM2,
-    WAVEROM3,
-    SMROM,
-
-    // do not reorder these
-    COUNT,
-    NONE = COUNT,
-};
-
-// Maps rom destinations to filenames on disk
+// Maps rom destinations to filenames and their contents on disk
 struct EMU_RomFilenameMap
 {
     // Array indexed by EMU_RomDestination
     std::filesystem::path rom_paths[(size_t)EMU_RomDestination::COUNT]{};
+    std::vector<uint8_t>  rom_data[(size_t)EMU_RomDestination::COUNT]{};
 };
 
 // Maps romsets to filename maps
@@ -134,7 +143,11 @@ bool EMU_GetRomsets(const std::filesystem::path& base_path, EMU_AllRomsetMaps& a
 
 // Returns true if `all_maps` contains all the files required to load `romset`. Missing roms will be reported in
 // `missing`.
+bool EMU_IsCompleteRomset(const EMU_AllRomsetMaps& all_maps, Romset romset);
 bool EMU_IsCompleteRomset(const EMU_AllRomsetMaps& all_maps, Romset romset, std::vector<EMU_RomDestination>& missing);
+
+// Returns true if `destination` represents a waverom destination.
+bool EMU_IsWaverom(EMU_RomDestination destination);
 
 // Returns `destination` as a string.
 const char* EMU_RomDestinationToString(EMU_RomDestination destination);
