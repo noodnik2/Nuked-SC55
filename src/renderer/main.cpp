@@ -172,7 +172,7 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
                 return R_ParseError::RomDirectoryNotFound;
             }
         }
-        else if (reader.Any("-d", "--romset"))
+        else if (reader.Any("--romset"))
         {
             if (!reader.Next())
             {
