@@ -908,3 +908,19 @@ void Emulator::Step()
 {
     MCU_Step(*m_mcu);
 }
+
+void EMU_RomsetInfo::PurgeRomData()
+{
+    for (auto& vec : rom_data)
+    {
+        vec = {};
+    }
+}
+
+void EMU_AllRomsetInfo::PurgeRomData()
+{
+    for (auto& romset : romsets)
+    {
+        romset.PurgeRomData();
+    }
+}
