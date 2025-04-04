@@ -945,7 +945,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     }
     else
     {
-        rs = EMU_DetectRomset(params.rom_directory);
+        rs = EMU_DetectRomsetByFilename(params.rom_directory);
         fprintf(stderr, "Detected romset: %s\n", EMU_RomsetName(rs));
     }
 
@@ -968,7 +968,7 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     {
         render_states[i].emu.Init({});
 
-        if (!render_states[i].emu.LoadRoms(rs, params.rom_directory))
+        if (!render_states[i].emu.LoadRomsByFilename(rs, params.rom_directory))
         {
             return false;
         }
