@@ -49,6 +49,7 @@ struct R_Parameters
     std::string_view romset_name;
     bool debug = false;
     R_EndBehavior end_behavior = R_EndBehavior::Cut;
+    bool legacy_romset_detection = false;
 };
 
 enum class R_ParseError
@@ -212,6 +213,10 @@ R_ParseError R_ParseCommandLine(int argc, char* argv[], R_Parameters& result)
         else if (reader.Any("--disable-oversampling"))
         {
             result.disable_oversampling = true;
+        }
+        else if (reader.Any("--legacy-romset-detection"))
+        {
+            result.legacy_romset_detection = true;
         }
         else if (reader.Any("--end"))
         {
@@ -931,6 +936,17 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     // Then create a track specifically for each emulator instance
     const R_TrackList split_tracks = R_SplitTrackModulo(merged_track, instances);
 
+    EMU_AllRomsetInfo romset_info;
+
+    if (!params.legacy_romset_detection)
+    {
+        if (!EMU_DetectRomsetsByHash(params.rom_directory, romset_info))
+        {
+            fprintf(stderr, "Failed to detect romsets\n");
+            return false;
+        }
+    }
+
     Romset rs;
     if (params.romset_name.size())
     {
@@ -943,10 +959,15 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
         }
         fprintf(stderr, "Using romset: %s\n", EMU_RomsetName(rs));
     }
-    else
+    else if (params.legacy_romset_detection)
     {
         rs = EMU_DetectRomsetByFilename(params.rom_directory);
         fprintf(stderr, "Detected romset: %s\n", EMU_RomsetName(rs));
+    }
+    else if (!EMU_PickCompleteRomset(romset_info, rs))
+    {
+        fprintf(stderr, "FATAL: Couldn't find any romsets in rom directory\n");
+        return 1;
     }
 
     R_Mixer mixer;
@@ -968,9 +989,21 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     {
         render_states[i].emu.Init({});
 
-        if (!render_states[i].emu.LoadRomsByFilename(rs, params.rom_directory))
+        if (params.legacy_romset_detection)
         {
-            return false;
+            if (!render_states[i].emu.LoadRomsByFilename(rs, params.rom_directory))
+            {
+                fprintf(stderr, "FATAL: Failed to load roms for instance #%02zu\n", i);
+                return false;
+            }
+        }
+        else
+        {
+            if (!render_states[i].emu.LoadRomsByInfo(rs, romset_info))
+            {
+                fprintf(stderr, "FATAL: Failed to load roms for instance #%02zu\n", i);
+                return false;
+            }
         }
 
         render_states[i].emu.Reset();
@@ -999,6 +1032,8 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
 
         render_states[i].thread = std::thread(R_RenderOne, std::cref(data), std::ref(render_states[i]));
     }
+
+    romset_info.PurgeRomData();
 
     WAV_Handle render_output;
     if (params.output_stdout)
@@ -1116,6 +1151,7 @@ ROM management options:
   -d, --rom-directory <dir>    Sets the directory to load roms from. Romset will be autodetected when
                                not also passing --romset.
   --romset <name>              Sets the romset to load.
+  --legacy-romset-detection    Load roms using specific filenames like upstream.
 
 )";
 
