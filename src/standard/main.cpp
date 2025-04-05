@@ -1067,7 +1067,7 @@ void FE_PrintRomsets()
     {
         fprintf(stderr, "%s ", name);
     }
-    fprintf(stderr, "\n");
+    fprintf(stderr, "\n\n");
 }
 
 void FE_Usage()
@@ -1097,8 +1097,6 @@ ROM management options:
 
 )";
 
-    FE_PrintRomsets();
-
 #if NUKED_ENABLE_ASIO
     constexpr const char* EXTRA_ASIO_STR = R"(ASIO options:
   --asio-sample-rate <freq>                     Request frequency from the ASIO driver.
@@ -1108,6 +1106,7 @@ ROM management options:
 
     std::string name = P_GetProcessPath().stem().generic_string();
     fprintf(stderr, USAGE_STR, name.c_str());
+    FE_PrintRomsets();
 #if NUKED_ENABLE_ASIO
     fprintf(stderr, EXTRA_ASIO_STR);
 #endif
