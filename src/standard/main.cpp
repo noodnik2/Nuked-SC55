@@ -126,7 +126,7 @@ struct FE_Application {
 
 struct FE_AdvancedParameters
 {
-    std::filesystem::path rom_destinations[(size_t)EMU_RomDestination::COUNT];
+    std::filesystem::path rom_overrides[(size_t)EMU_RomMapLocation::COUNT];
 };
 
 struct FE_Parameters
@@ -702,7 +702,7 @@ bool FE_CreateInstance(FE_Application& container, const std::filesystem::path& b
     }
     else
     {
-        std::vector<EMU_RomDestination> missing;
+        std::vector<EMU_RomMapLocation> missing;
         if (EMU_IsCompleteRomset(container.romset_info, params.romset, &missing))
         {
             if (!fe->emu.LoadRomsByInfo(params.romset, container.romset_info))
@@ -714,9 +714,9 @@ bool FE_CreateInstance(FE_Application& container, const std::filesystem::path& b
         else
         {
             fprintf(stderr, "ERROR: Requested romset is incomplete. Missing:\n");
-            for (EMU_RomDestination m : missing)
+            for (EMU_RomMapLocation m : missing)
             {
-                fprintf(stderr, "  - %s\n", EMU_RomDestinationToString(m));
+                fprintf(stderr, "  - %s\n", EMU_RomMapLocationToString(m));
             }
             return false;
         }
@@ -986,7 +986,7 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
                 return FE_ParseError::UnexpectedEnd;
             }
 
-            result.adv.rom_destinations[(size_t)EMU_RomDestination::ROM1] = reader.Arg();
+            result.adv.rom_overrides[(size_t)EMU_RomMapLocation::ROM1] = reader.Arg();
         }
         else if (reader.Any("--override-rom2"))
         {
@@ -995,7 +995,7 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
                 return FE_ParseError::UnexpectedEnd;
             }
 
-            result.adv.rom_destinations[(size_t)EMU_RomDestination::ROM2] = reader.Arg();
+            result.adv.rom_overrides[(size_t)EMU_RomMapLocation::ROM2] = reader.Arg();
         }
         else if (reader.Any("--override-smrom"))
         {
@@ -1004,7 +1004,7 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
                 return FE_ParseError::UnexpectedEnd;
             }
 
-            result.adv.rom_destinations[(size_t)EMU_RomDestination::SMROM] = reader.Arg();
+            result.adv.rom_overrides[(size_t)EMU_RomMapLocation::SMROM] = reader.Arg();
         }
         else if (reader.Any("--override-waverom1"))
         {
@@ -1013,7 +1013,7 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
                 return FE_ParseError::UnexpectedEnd;
             }
 
-            result.adv.rom_destinations[(size_t)EMU_RomDestination::WAVEROM1] = reader.Arg();
+            result.adv.rom_overrides[(size_t)EMU_RomMapLocation::WAVEROM1] = reader.Arg();
         }
         else if (reader.Any("--override-waverom2"))
         {
@@ -1022,7 +1022,7 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
                 return FE_ParseError::UnexpectedEnd;
             }
 
-            result.adv.rom_destinations[(size_t)EMU_RomDestination::WAVEROM2] = reader.Arg();
+            result.adv.rom_overrides[(size_t)EMU_RomMapLocation::WAVEROM2] = reader.Arg();
         }
         else if (reader.Any("--override-waverom3"))
         {
@@ -1031,7 +1031,7 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
                 return FE_ParseError::UnexpectedEnd;
             }
 
-            result.adv.rom_destinations[(size_t)EMU_RomDestination::WAVEROM3] = reader.Arg();
+            result.adv.rom_overrides[(size_t)EMU_RomMapLocation::WAVEROM3] = reader.Arg();
         }
         else if (reader.Any("--override-waverom-card"))
         {
@@ -1040,7 +1040,7 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
                 return FE_ParseError::UnexpectedEnd;
             }
 
-            result.adv.rom_destinations[(size_t)EMU_RomDestination::WAVEROM_CARD] = reader.Arg();
+            result.adv.rom_overrides[(size_t)EMU_RomMapLocation::WAVEROM_CARD] = reader.Arg();
         }
         else if (reader.Any("--override-waverom-exp"))
         {
@@ -1049,7 +1049,7 @@ FE_ParseError FE_ParseCommandLine(int argc, char* argv[], FE_Parameters& result)
                 return FE_ParseError::UnexpectedEnd;
             }
 
-            result.adv.rom_destinations[(size_t)EMU_RomDestination::WAVEROM_EXP] = reader.Arg();
+            result.adv.rom_overrides[(size_t)EMU_RomMapLocation::WAVEROM_EXP] = reader.Arg();
         }
 #if NUKED_ENABLE_ASIO
         else if (reader.Any("--asio-sample-rate"))
@@ -1179,9 +1179,9 @@ int main(int argc, char *argv[])
     // for simplicity, apply overrides to all romsets
     for (size_t i = 0; i < ROMSET_COUNT; ++i)
     {
-        for (size_t j = 0; j < (size_t)EMU_RomDestination::COUNT; ++j)
+        for (size_t j = 0; j < (size_t)EMU_RomMapLocation::COUNT; ++j)
         {
-            frontend.romset_info.romsets[i].rom_paths[j] = params.adv.rom_destinations[j];
+            frontend.romset_info.romsets[i].rom_paths[j] = params.adv.rom_overrides[j];
         }
     }
 
