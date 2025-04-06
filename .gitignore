@@ -82,3 +82,6 @@ CMakeSettings.json
 
 # Vendored assets packages shouldn't appear at the GIT history
 /assets/
+
+# Shared stuff not part of this repo (e.g., copyrighted stuff, etc.)
+share/
