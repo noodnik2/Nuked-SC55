@@ -46,14 +46,15 @@ echo "started '${full_batch_name}'"
 
 for wavFilePath in "${wav_files[@]}"; do
   wavFileName="${wavFilePath##*/}"
-  m4aFileName="${wavFileName%.*}.m4a"
+  fileName="${wavFileName%.*}"
+  m4aFileName="${fileName}.m4a"
   m4aFilePath="$output_dir/$m4aFileName"
   echo "rendering '$m4aFilePath' from '$wavFilePath'"
-  $FFMPEG_CMD -i "$wavFilePath" -c:a aac -b:a 256k -y \
-    -metadata title="$wavFileName" \
+  $FFMPEG_CMD -i "$wavFilePath" -c:a aac -b:a 256k -ar 44100 -strict -2 -y \
+    -metadata title="$fileName" \
     -metadata album="$full_batch_name" \
     -metadata track="$track_no" \
-    "$m4aFilePath" || fatal "rendering error"
+    -f ipod "$m4aFilePath" || fatal "rendering error"
   track_no=$((track_no + 1))
 done
 
