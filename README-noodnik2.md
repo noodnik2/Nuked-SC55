@@ -57,16 +57,18 @@ into `.wav` files, then compressed those (using `ffmpeg`) before opening them in
 the `build` folder:
 
 ```shell
-$ ../scripts/render-list.sh
-$ ../scripts/compress.sh 'Favorite MIDI Files'
-$ mkdir favorites.album
-$ mv *.m4a favorites.album
+$ ../scripts/create-m4a-album.sh favorites.album ~/midis/favorites/*.mid
 $ open favorites.album
 ```
 
 After selecting and opening all the files with "Apple Music", I had a new album!
 
-It's pretty cool to be able to play these now anywhere I go - on my iPhone, in my car, etc!
+Next, after selecting them all in Apple Music and clicking on "Add to Album", I saw all
+the song being synchronized to the Cloud, after which I was able to find them in my phone
+and in my Sonos' Apple Music (synchronization) folder!
+
+It's pretty cool to be able to play these now anywhere I go - on my iPhone, at home, in
+my car, etc!
 
 
 [BUILDING]: ./BUILDING.md
