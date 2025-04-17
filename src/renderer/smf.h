@@ -78,6 +78,9 @@ struct SMF_Data
     SMF_Header header;
     std::vector<uint8_t> bytes;
     std::vector<SMF_Track> tracks;
+    std::vector<std::string> textEvents;
+    std::vector<std::string> trackNames;
+    std::vector<std::string> copyrights;
 };
 
 const size_t SMF_CHANNEL_COUNT = 16;

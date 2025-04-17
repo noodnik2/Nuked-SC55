@@ -8,6 +8,13 @@
 #include <cstdio>
 #include <filesystem>
 
+struct WavMetadata {
+    std::string title;      // INAM
+    std::string artist;     // IART
+    std::string copyright;  // ICOP
+    std::string comment;    // ICMT
+};
+
 class WAV_Handle
 {
 public:
@@ -29,7 +36,7 @@ public:
     void Write(const AudioFrame<int16_t>& frame);
     void Write(const AudioFrame<int32_t>& frame);
     void Write(const AudioFrame<float>& frame);
-    void Finish();
+    void Finish(const WavMetadata &meta);
 
 private:
     FILE*       m_output = nullptr;

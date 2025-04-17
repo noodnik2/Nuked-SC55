@@ -15,6 +15,37 @@ enum class WaveFormat : uint16_t
     IEEE_FLOAT = 0x0003,
 };
 
+void writeMetaTag(FILE* out, const char* tagID, const std::string& value) {
+    if (value.empty()) return;
+    assert(strlen(tagID) == 4);
+    fwrite(tagID, 1, 4, out);
+    size_t valueSize = value.size();
+    uint32_t size = static_cast<uint32_t>(valueSize);
+    fwrite(&size, 1, 4, out);
+    fwrite(value.c_str(), 1, valueSize, out);
+    if (valueSize % 2 != 0) fputc('\0', out); // Pad byte if needed
+}
+
+void writeInfoChunk(FILE* out, const WavMetadata& meta) {
+    fwrite("LIST", 1, 4, out);
+    uint32_t listSize = 0; // Placeholder
+    long sizePos = ftell(out);
+    fwrite(&listSize, 1, 4, out);
+    fwrite("INFO", 1, 4, out);
+
+    writeMetaTag(out, "INAM", meta.title);
+    writeMetaTag(out, "IART", meta.artist);
+    writeMetaTag(out, "ICOP", meta.copyright);
+    writeMetaTag(out, "ICMT", meta.comment);
+
+    long listEnd = ftell(out);
+    listSize = static_cast<uint32_t>(listEnd - sizePos - 4);
+    fseek(out, sizePos, SEEK_SET);
+    // update with correct (calculated) size of the "LIST" section
+    fwrite(&listSize, 1, 4, out);
+    fseek(out, listEnd, SEEK_SET);
+}
+
 void WAV_WriteBytes(FILE* output, const char* bytes, size_t len)
 {
     fwrite(bytes, 1, len, output);
@@ -128,7 +159,7 @@ void WAV_Handle::Write(const AudioFrame<float>& frame)
     ++m_frames_written;
 }
 
-void WAV_Handle::Finish()
+void WAV_Handle::Finish(const WavMetadata& meta)
 {
     // we wrote raw samples, nothing to do
     if (m_output == stdout)
@@ -157,11 +188,11 @@ void WAV_Handle::Finish()
         WAV_WriteU32LE(m_output, m_sample_rate * sizeof(AudioFrame<int16_t>));
         WAV_WriteU16LE(m_output, sizeof(AudioFrame<int16_t>));
         WAV_WriteU16LE(m_output, 8 * sizeof(int16_t));
+        // meta
+        writeInfoChunk(m_output, meta);
         // data
         WAV_WriteCString(m_output, "data");
         WAV_WriteU32LE(m_output, data_size);
-
-        assert(ftell(m_output) == 44);
 
         break;
     }
@@ -181,6 +212,8 @@ void WAV_Handle::Finish()
         WAV_WriteU32LE(m_output, m_sample_rate * sizeof(AudioFrame<int32_t>));
         WAV_WriteU16LE(m_output, sizeof(AudioFrame<int32_t>));
         WAV_WriteU16LE(m_output, 8 * sizeof(int32_t));
+        // meta
+        writeInfoChunk(m_output, meta);
         // data
         WAV_WriteCString(m_output, "data");
         WAV_WriteU32LE(m_output, data_size);
@@ -206,6 +239,8 @@ void WAV_Handle::Finish()
         WAV_WriteU16LE(m_output, sizeof(AudioFrame<float>));
         WAV_WriteU16LE(m_output, 8 * sizeof(float));
         WAV_WriteU16LE(m_output, 0);
+        // meta
+        writeInfoChunk(m_output, meta);
         // fact
         WAV_WriteCString(m_output, "fact");
         WAV_WriteU32LE(m_output, 4);
