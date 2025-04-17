@@ -880,6 +880,8 @@ struct R_MixOutState
 
     // Eventually we need to abstract over this to stream to other outputs.
     WAV_Handle* output = nullptr;
+
+    WavMetadata meta;
 };
 
 void R_Mix(int16_t* dest, int16_t* src_first, int16_t* src_last)
@@ -918,7 +920,34 @@ void R_MixOut(R_MixOutState& state)
         }
     }
 
-    state.output->Finish();
+    state.output->Finish(state.meta);
+}
+
+std::string trim(std::string s) {
+    // Trim left
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }));
+
+    // Trim right
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }).base(), s.end());
+
+    return s;
+}
+
+std::string joinWithSpaces(const std::vector<std::string>& parts) {
+    std::string result;
+    
+    for (size_t i = 0; i < parts.size(); ++i) {
+        std::string next(trim(parts[i]));
+        if (next.size() == 0) continue;
+        if (i > 0) result += ' ';
+        result += next;
+    }
+
+    return result;
 }
 
 bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
@@ -1018,6 +1047,26 @@ bool R_RenderTrack(const SMF_Data& data, const R_Parameters& params)
     R_MixOutState mix_out_state;
     mix_out_state.mixer = &mixer;
     mix_out_state.output = &render_output;
+    
+    if (data.copyrights.size() > 0) {
+        std::string copyright(trim(data.copyrights.at(0)));
+        if (copyright.size() > 0) {
+            mix_out_state.meta.copyright = copyright;    
+        }
+    }
+
+    if (data.trackNames.size() > 0) {
+        std::string title(trim(data.trackNames.at(0)));
+        if (title.size() > 0) {
+            mix_out_state.meta.title = title;    
+        }
+    }
+
+    std::string joinedTextEvents(joinWithSpaces(data.textEvents));
+    if (joinedTextEvents.size() > 0) {
+        mix_out_state.meta.comment = joinedTextEvents;
+    }
+
     std::thread mix_out_thread;
 
     switch (params.output_format)

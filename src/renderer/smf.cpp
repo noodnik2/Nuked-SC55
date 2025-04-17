@@ -215,6 +215,47 @@ inline bool SMF_IsStatusByte(uint8_t byte)
     return (byte & 0x80) != 0;
 }
 
+void addToVector(std::vector<std::string>& vec, uint8_t* str) {
+    // Convert uint8_t* to std::string
+    std::string strValue(reinterpret_cast<char*>(str));
+
+    // Add to vector
+    vec.push_back(strValue);
+}
+
+const int eventTypeText = 0x01; // e.g., Arbitrary text
+const int eventTypeCopyright = 0x02; // e.g., "© 2024 Me"
+const int eventTypeTrackName = 0x03; // e.g., "Piano"
+
+void processMeta(SMF_Reader& reader, SMF_Data& result, uint8_t meta_type, uint32_t meta_len) {
+    switch(meta_type) {
+        case eventTypeText:
+        case eventTypeCopyright:
+        case eventTypeTrackName:
+            break;  // these types are handled below
+        default:
+            // all other types are skipped
+            CHECK(reader.Skip(meta_len));
+            return;
+    }
+
+    uint8_t *buffer = new uint8_t[meta_len+1];
+    CHECK(reader.ReadBytes(buffer, meta_len));
+    buffer[meta_len] = '\0';
+
+    switch(meta_type) {
+        case eventTypeText:
+            addToVector(result.textEvents, buffer);
+            break;
+        case eventTypeCopyright:
+            addToVector(result.copyrights, buffer);
+            break;
+        case eventTypeTrackName:
+            addToVector(result.trackNames, buffer);
+            break;
+    }
+}
+
 bool SMF_ReadTrack(SMF_Reader& reader, SMF_Data& result, uint64_t expected_end)
 {
     uint8_t running_status = 0;
@@ -291,7 +332,7 @@ bool SMF_ReadTrack(SMF_Reader& reader, SMF_Data& result, uint64_t expected_end)
                         uint8_t meta_type;
                         CHECK(reader.ReadU8(meta_type));
                         CHECK(SMF_ReadVarint(reader, meta_len));
-                        CHECK(reader.Skip(meta_len));
+                        processMeta(reader, result, meta_type, meta_len);
                         new_event.data_last = reader.GetOffset();
 
                         // End of track: stop reading events and skip to where the next track would be
@@ -397,4 +438,3 @@ SMF_Data SMF_LoadEvents(const std::filesystem::path& filename)
 
     return data;
 }
-
