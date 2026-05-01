@@ -1,35 +1,106 @@
-# Nuked SC-55
+# `noodnik2`'s Fork of [Nuked-SC55](https://github.com/jcmoyer/Nuked-SC55)
 
-Fork of [nukeykt/Nuked-SC55](https://github.com/nukeykt/Nuked-SC55) with the
-goal of extracting the emulator backend so that it can be used in other
-programs. This fork aims to be 100% behavior-compatible with upstream
-(including bugs). For bugs that occur in both this fork and upstream, do not
-open an issue here; report it upstream instead.
+Here are my notes related to this great and inspirational upstream project which I've become
+aware of in my search for useful MIDI tooling across the Gitosphere.  I feel much appreciation
+for the original works on which this personalized variant is based!
 
-Differences from upstream:
-
-- Produces a library for the emulator.
-- Standard frontend supports routing to multiple emulators to raise polyphony
-  limits.
-- Includes a MIDI-to-WAVE rendererer.
-- Adds tests so that the backend can be modified without worrying about
-  breaking things.
-- Command line is handled slightly differently. Pass `--help` to a binary to
-  see what arguments it accepts.
-- Improved performance without sacrificing accuracy.
+For more context, take a look at [this repo's copy of the upstream project's `README` file](./README-upstream.md).
 
 ## Building
 
-See [BUILDING.md](BUILDING.md).
+Here are my notes about building from the source code - mostly an addendum to the (original) [BUILDING](./BUILDING.md) doc.
 
-## Contributing
+Note that I've only been using MacOS, so my changes here will likely not work on - and are likely to have broken 
+support for - other platforms.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+### Requirements
 
-## License
+- [rtmidi](https://github.com/thestk/rtmidi)
 
-Nuked SC-55 can be distributed and used under the original MAME license (see
-LICENSE file). Non-commercial license was chosen to prevent making and selling
-SC-55 emulation boxes using (or around) this code, as well as preventing from
-using it in the commercial music production.
+#### MacOS
 
+The `rtmidi` library was missing when I first attempted to build.  I was able to fix that using HomeBrew, e.g.:
+
+```shell
+$ brew install rtmidi
+```
+
+### Full Build
+
+The `build` target of the [Makefile](./Makefile) should be sufficient to build the project. 
+
+See the basic build procedure described in [BUILDING]; e.g.:
+
+```shell
+$ mkdir -p build
+$ cd build
+$ cmake -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_CXX_FLAGS="-march=native -mtune=native" \
+  -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+  ..
+$ cmake --build .  
+```
+
+## Running
+
+### Installing the ROMs
+
+I see that the tool supports reading the ROMs it needs from the `./share/nuked-sc55` folder,
+so I added that to the `.gitignore` and put my files there.
+
+### Use Cases
+
+#### Playing
+
+##### Routing MIDI Signals to the SC55
+
+Before Nuked-SC55 can play MIDI through the MacOS sound system, MIDI signals need to be routed to it,
+and a MIDI controller (such as 'playmidi' CLI) needs to be (virtually) connected.
+
+Because Nuked-SC55 is a MIDI synthesizer, it depends upon a MIDI input device to be connected.
+This can be done using the "Audio MIDI Setup" app native to MacOS.
+
+If the MIDI Server crashes, try restarting it by exiting the "Audio MIDI Setup" app, then killing
+the `MIDIServer` process, e.g.:
+
+```shell
+$ sudo killall MIDIServer
+```
+
+##### Playing MIDI Files
+
+After starting the Nuked-SC55 in "server" (interactive) mode, send the MIDI signals to it using a MIDI controller
+or program such as `playmidi`, taking care to route the signals to the same MIDI port as the Nuked-SC55
+server is running on; e.g.:
+
+```shell
+$ playmidi midis/gs/55sex.mid 1
+```
+
+#### Rendering
+
+My first foray into using the tools available in this repo was to render some of my favorite
+MIDIs so that I can add them into albums with my Apple Music account.  Using a pair of scripts,
+I was able to produce several albums and simple `open` the "album" folders I copied the resulting
+`.m4a` (Apple AAC) files into.
+
+For example, after preparing a list of (the names of) my favorite MIDI files, I rendered them first
+into `.wav` files, then compressed those (using `ffmpeg`) before opening them in Apple Music.  From
+the `build` folder:
+
+```shell
+$ ../scripts/create-m4a-album.sh favorites.album ~/midis/favorites/*.mid
+$ open favorites.album
+```
+
+After selecting and opening all the files with "Apple Music", I had a new album!
+
+Next, after selecting them all in Apple Music and clicking on "Add to Album", I saw all
+the song being synchronized to the Cloud, after which I was able to find them in my phone
+and in my Sonos' Apple Music (synchronization) folder!
+
+It's pretty cool to be able to play these now anywhere I go - on my iPhone, at home, in
+my car, etc!
+
+
+[BUILDING]: ./BUILDING.md
