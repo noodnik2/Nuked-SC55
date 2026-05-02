@@ -40,5 +40,9 @@ std::filesystem::path P_GetProcessPath()
         exit(1);
     }
 #endif
+#if defined(__APPLE__)
+    return std::filesystem::path(path);
+#else
     return std::filesystem::path(path, path + (size_t)actual_size);
+#endif
 }

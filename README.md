@@ -102,10 +102,9 @@ responding to MIDI events it receives on the input Buses it's listening to.
 An example command that can be used to start the Nuked-SC55 in interactive mode:
 
 ```shell
-$ ./build/nuked-sc55 -d build --mk2 -p 2 -a 2
+$ ./build/nuked-sc55 --mk2 -p 2 -a 2
 ```
 
-- `-d` - is used in this example because the ROMs are located in the `build` folder in my set up.
 - `-p` - listens for MIDI events on the input Bus `2`.
 - `-a` - routes the sound to the Macbook's speakers.
 
