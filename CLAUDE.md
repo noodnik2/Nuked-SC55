@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A noodnik2 fork of [nukeykt/Nuked-SC55](https://github.com/nukeykt/Nuked-SC55) — a Roland SC-55 MIDI synthesizer emulator. C++23, CMake build, two executable frontends sharing a common backend library. ROMs from real hardware are required at runtime (not included).
+A noodnik2 fork of [jcmoyer/Nuked-SC55](https://github.com/jcmoyer/Nuked-SC55) — a Roland SC-55 MIDI synthesizer emulator. C++23, CMake build, two executable frontends sharing a common backend library. ROMs from real hardware are required at runtime (not included).
 
 ## Build
 
