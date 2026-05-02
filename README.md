@@ -158,6 +158,14 @@ Next, by using the "Add to Album" feature of Apple Music, I was able to create a
 created in the step depicted above.  After watching these files get synchronized to the Cloud within my Apple Music
 account, I was then able to find and play from my phone and in my Sonos' Apple Music (synchronization) folder!
 
+#### Locating the ROMs When Rendering
+
+Note that the renderer (e.g., the `nuked-sc55-render` executable produced by the `build` target) doesn't support the
+"default" ROM directory lookup which the "interactive" mode does.  Rather, it expects to find ROMs in the same folder
+as the renderer executable (e.g., in the folder it's started in - typically the `build` folder).  So, when running the
+renderer, you'll need to have the ROMs in that folder.  As in the case of running in the "interactive" mode, you should
+be able to change that by passing the `-d` (or `--rom-directory`) argument to the renderer.
+
 
 [BUILDING]: ./BUILDING.md
 [playmidi]: https://github.com/nitinseshadri/playmidi
