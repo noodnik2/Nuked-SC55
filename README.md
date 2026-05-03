@@ -1,32 +1,86 @@
 # `noodnik2`'s Fork of [Nuked-SC55](https://github.com/jcmoyer/Nuked-SC55)
 
-Here are my notes related to this great and inspiring upstream project which I've become
-aware of in my search for useful MIDI tooling across the Gitosphere.  I feel much appreciation
-for the original works on which this personalized variant is based!
+Below are my notes related to this great and inspiring upstream project which I've become aware of in my search
+for useful MIDI tooling across the Gitosphere.  
 
-For more context, take a look at [this repo's copy of the upstream project's `README` file](./README-upstream.md).
+What differentiates _my_ fork from its predecessors (i.e. [J.C. Moyer's fork](https://github.com/jcmoyer/Nuked-SC55)
+of [`nukeykt`'s original Nuked-SC55](https://github.com/nukeykt/Nuked-SC55) project) is the focus on rendering
+MIDI files so that they can be played later through an audio player such as the Apple Music app or iTunes.  While
+J.C. Moyer's fork gets me part of the way there (e.g., to `.wav` files), I'm working on orchestrating the rendering
+of a large number of MIDI files into a single album of `.m4a` files, so they can be optimized for playback by a
+larger set of audio players, and in particular uploaded into the Apple Music app or iTunes so that I can enjoy my
+MIDI music from my phone, computer, or Sonos speakers.
+
+I feel much appreciation for the original works on which this personalized variant is based!
+
+### Folder Structure
+
+To help orient the reader, here's a quick overview of the folder structure of the project: 
+
+- `src` - C++ source code.  If you modify the code, you'll be touching the files in this folder.
+- `doc` - Some more documentation worth checking out.
+- `build` - When you "build" the Nuked-SC55 code, its executables will be written into this folder.
+- `scripts` - Contains some utility scripts, e.g. for rendering MIDI files into audio files.
+- `dist` - Folder into which executables and scripts are collected to make it easy to run everything
+           from one place (aka "distribution" folder).
+- `share` - User-managed folder containing files that are needed to run the project.
+  - `midis` - Source collection of MIDI files (e.g., symbolic link).
+  - `lists` - Managed list of MIDI files (e.g., favorites, etc.)
+    - `favorites.list` (example)
+  - `nuked-sc55` - SC55 ROM files (see below)
+    - `rom1.bin`
+    - `rom2.bin`
+    - `rom_sm.bin`
+    - `waverom1.bin`
+    - `waverom2.bin`
+  - `output` - Folder used for (intermediate) output files (e.g., rendered output)
+    - `favorites.album` (example)
+
+#### NOTES
+
+- You (the user) will need to create and manage the contents of the `share` folder, using the structure depicted
+  above as a guide.
+- The [make] tool can be used to advance the workflow from building to running the Nuked-SC55 application. 
+  Type `make` to see the available targets and their descriptions.
+- The [BUILDING] doc contains more technical information about building the Nuked-SC55 executables.
 
 ## Building
 
-Here are my notes about building from the source code - mostly an addendum to the (original) [BUILDING](./BUILDING.md) doc.
+Here are my notes below about building from the source code - mostly an addendum to the (original) [BUILDING](./BUILDING.md) doc.
 
 Note that I've only been using macOS, so my changes here will likely not work on - and are likely to have broken 
 support for - other platforms.
 
 ### Requirements
 
-Some prerequisite tools, resources or libraries are either required or otherwise recommended to have on-hand
-for building or using this project in macOS, as described below and elsewhere across the repository:
+The minimum set of prerequisite tools, resources, and libraries needed for building and using this project in macOS,
+as described in the subsequent sections and elsewhere across the repository, is:
 
+- [make] - Automates building software from code; installs with `brew install make`.
+- [cmake] - Cross-platform build system generator; installs with `brew install cmake`.
 - [rtmidi] - A C++ library for MIDI I/O, needed when building the application; installs with `brew install rtmidi`.
 - [playmidi] - Command line MIDI file player for macOS; copy or build from source repository.
 - [ffmpeg] - Audio converter toolkit; follow installation instructions at website. 
 
 ### Full Build
 
-The `build` target of the [Makefile](./Makefile) should be enough to build the project. 
+The `build` and `dist` targets of the [Makefile](./Makefile) should be enough to build the project and create the
+distribution folder from where the application can be invoked using [make] on macOS; e.g.:
 
-See the more basic build procedure described in [BUILDING]; e.g.:
+```shell
+$ make build dist
+```
+
+If the command above completes successfully, you should be able to run the application through the commands found
+in the `dist` folder.  For example, to run Nuked-SC55 in its "interactive" mode:
+
+```shell
+$ ./dist/nuked-sc55
+```
+
+#### Under the Hood
+
+Also check out the more basic build procedure described in [BUILDING]; e.g.:
 
 ```shell
 $ mkdir -p build
@@ -57,8 +111,9 @@ the [BUILDING] doc (e.g., using the `shasum -a 256 share/nuked-sc55/*.bin` comma
 
 #### MIDI Player
 
-Because Nuked-SC55 is a MIDI synthesizer, when used "interactively", it relies upon a separate MIDI player
-(such as [playmidi], [SendMIDI] or [MidiPipe]), controller, or sequencer to generate & send MIDI events to it.
+Because Nuked-SC55 is a MIDI synthesizer, when used "interactively" (i.e., after having started Nuked-SC55 in
+"interactive mode" as described in the section below), it relies upon a separate MIDI player (such as [playmidi],
+[SendMIDI] or [MidiPipe]), controller, or sequencer to generate & send MIDI events to it.
 
 I've had luck using the [playmidi] (thank you, Nitin!) CLI to read MIDI files and reliably send their sequence
 of events to Nuked-SC55, but any other standard MIDI source should work, provided the routing is set up correctly.
@@ -73,7 +128,7 @@ In my most recent experience, I've found that querying to discover the available
 using the preferred input and output as listed there is generally effective.  For example:
 
 ```shell
-$ ./build/nuked-sc55 --help
+$ dist/nuked-sc55 --help
 ...
 Known midi devices:
 
@@ -102,11 +157,13 @@ responding to MIDI events it receives on the input Buses it's listening to.
 An example command that can be used to start the Nuked-SC55 in interactive mode:
 
 ```shell
-$ ./build/nuked-sc55 --mk2 -p 2 -a 2
+$ dist/nuked-sc55 --mk2 -p 2 -a 2
 ```
 
 - `-p` - listens for MIDI events on the input Bus `2`.
-- `-a` - routes the sound to the Macbook's speakers.
+- `-a` - routes the sound to the MacBook's speakers.
+
+See the [documentation for running in this mode](./doc/standard_frontend.md) in the `doc` folder.
 
 ##### Playing MIDI Files
 
@@ -138,36 +195,55 @@ help you diagnose the problem - at least, that's what's helped me in the past!
 
 #### Rendering
 
-An interesting use case for me is to _render_ MIDI files into audio files so that I can enjoy them on my phone,
-through Sonos, or in my car.
+The "rendering" use case supports the transcoding of MIDI files so they can be played later through an audio player
+such as the Apple Music app or iTunes, Sonos, etc.
 
-Using a pair of scripts, I was able to produce several "albums" comprising sets of `.m4a` (Apple AAC) files for easy
-distribution to Apple Music (e.g., for playback via my personal account), or via SSD or cloud storage.
+##### Rendering to `.wav` Files
 
-For example, after preparing a list of (the names of) my favorite MIDI files, I rendered them first into `.wav` files,
-then compressed those into `.m4a` format using [ffmpeg] before opening them in Apple Music.
+An extended functionality of Nuked-SC55 provided by [this upstream fork](https://github.com/jcmoyer/Nuked-SC55)
+(of the [original Nuked-SC55](https://github.com/nukeykt/Nuked-SC55) project)
+is to render MIDI files into `.wav` files.
 
-From the `build` folder:
+See the [documentation for running in `renderer` mode](./doc/renderer_frontend.md) in the `doc` folder.
+
+##### Enhanced Rendering 
+
+Scripts are used to facilitate additional rendering of MIDI files to `.m4a` files, which can be played by Apple Music
+and a large variety of other audio players.
+
+Check out the following scripts:
+
+- [mid2wav.sh](./scripts/mid2wav.sh) - Renders a single MIDI file into `.wav` format.
+- [wav2m4a.sh](./scripts/wav2m4a.sh) - Renders a `.wav` file into `.m4a` format using [ffmpeg].
+- [create-m4a-album.sh](./scripts/create-m4a-album.sh) - Creates an album of `.m4a` files from a list of MIDI files
+
+For example, I was able to create a playable "album" of my favorite MIDI files on Apple Music after preparing a list
+of their file names, then using the scripts above to transcode them into a folder of `.m4a` files which I uploaded
+to Apple Music.
+
+How I did this:
 
 ```shell
-$ ../scripts/create-m4a-album.sh favorites.album ~/midis/favorites/*.mid
+$ # create a list of all my MIDI files
+$ find share/midis/ -type f -name "*.mid" > favorites.list
+$ # edit the list to remove any files I don't want to include in the album
+$ edit favorites.list
+$ # create the "album" folder into which to write the `.m4a` files to be created
+$ mkdir -p favorites.album
+$ # transcode the MIDI files into `.m4a` files 
+$ scripts/create-m4a-album.sh favorites.album $(cat favorites.list)
+$ # open the "album" folder in Finder and click on one, or upload them all to Apple Music, etc. 
 $ open favorites.album
 ```
 
 Next, by using the "Add to Album" feature of Apple Music, I was able to create a new album containing the `.m4a` files
 created in the step depicted above.  After watching these files get synchronized to the Cloud within my Apple Music
-account, I was then able to find and play from my phone and in my Sonos' Apple Music (synchronization) folder!
-
-#### Locating the ROMs When Rendering
-
-Note that the renderer (e.g., the `nuked-sc55-render` executable produced by the `build` target) doesn't support the
-"default" ROM directory lookup which the "interactive" mode does.  Rather, it expects to find ROMs in the same folder
-as the renderer executable (e.g., in the folder it's started in - typically the `build` folder).  So, when running the
-renderer, you'll need to have the ROMs in that folder.  As in the case of running in the "interactive" mode, you should
-be able to change that by passing the `-d` (or `--rom-directory`) argument to the renderer.
+account, I was then able to enjoy playing them through my phone, computer, and Sonos speakers!
 
 
 [BUILDING]: ./BUILDING.md
+[make]: https://formulae.brew.sh/formula/make
+[cmake]: https://formulae.brew.sh/formula/cmake
 [playmidi]: https://github.com/nitinseshadri/playmidi
 [SendMIDI]: https://github.com/gbevin/SendMIDI
 [MidiPipe]: http://www.subtlesoft.square7.net/MidiPipe.html

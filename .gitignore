@@ -62,6 +62,7 @@ Thumbs.db
 build-*
 
 build/
+dist/
 
 # MinGW generated files
 *.Debug
