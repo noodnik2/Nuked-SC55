@@ -1201,6 +1201,15 @@ int main(int argc, char* argv[])
         return 0;
     }
 
+    if (params.rom_directory.empty())
+    {
+        std::filesystem::path base_path = P_GetProcessPath().parent_path();
+        if (std::filesystem::exists(base_path / "../share/nuked-sc55"))
+            base_path = base_path / "../share/nuked-sc55";
+        params.rom_directory = base_path;
+    }
+    fprintf(stderr, "ROM directory is: %s\n", params.rom_directory.generic_string().c_str());
+
     SMF_Data data;
     data = SMF_LoadEvents(params.input_filename);
 
