@@ -100,10 +100,30 @@ the ASIO driver requests when handed off for output.
 Disables oversampling, halving output frequency. Normally the emulator produces
 two frames at a time. When you set this option, the second one will be dropped.
 
-### `-r, --reset gs|gm`
+### `--gain <amount>`
 
-Sends a reset message to the emulator on startup. This is necessary to correct
-pitch with some roms.
+Applies gain to the output. This can be used to increase or decrease the
+volume. If `<amount>` ends in `db` the preceding number will be interpreted as
+decibels.
+
+Examples:
+
+- `--gain 2`: double volume
+- `--gain 0.5`: half volume
+- `--gain +6db`: double volume
+- `--gain -6db`: half volume
+
+The exact formula used for decibel to scalar conversion is `scale = pow(10, db / 20)`
+
+### `-r, --reset none|gs|gm`
+
+Sends a reset message to the emulator on startup.
+
+This will default to `gs` when using a SC-55mk2 romset in order to work around
+a firmware issue that causes incorrect instrument pitch. For all other romsets,
+this defaults to `none`.
+
+This behavior differs from upstream which always defaults to `none`.
 
 ### `-n, --instances <count>`
 
@@ -118,6 +138,12 @@ Don't create an LCD window. This is useful if you're using the emulator with
 DOOM or a DAW and don't want to spend resources rendering it. When this option
 is set you will not be able to control the emulator with your keyboard.
 
+### `--nvram <filename>`
+
+Saves and loads NVRAM to/from disk. JV-880 only. An instance number will be
+appended to the filename so that when running multiple instances they do not
+clobber each other's NVRAM.
+
 ### `-d, --rom-directory <dir>`
 
 Sets the directory to load roms from. If no specific romset flag is passed, the
@@ -129,33 +155,125 @@ the emulator will look for roms in these locations:
 
 `<exe_dir>` is the directory containing this executable.
 
-### `--mk2`
+### `--romset <name>`
 
-Use SC-55mk2 ROM set. This overrides autodetect.
+If provided, this will set the romset to load. Otherwise, the romset will be
+autodetected based on the contents of the rom directory.
 
-### `--st`
+By default, files in the rom directory will be hashed to determine which ones
+should be loaded automatically. This differs from upstream which requires each
+romset to have specific filenames. To enable the old behavior, pass
+`--legacy-romset-detection`.
 
-Use SC-55st ROM set. This overrides autodetect.
+### `--legacy-romset-detection`
 
-### `--mk1`
+Behave like upstream when choosing files to load. With this option, you must
+rename roms in the rom directory as follows:
 
-Use SC-55mk1 ROM set. This overrides autodetect.
+```
+SC-55mk2/SC-155mk2 (v1.01):
+R15199858 (H8/532 mcu) -> rom1.bin
+R00233567 (H8/532 extra code) -> rom2.bin
+R15199880 (M37450M2 mcu) -> rom_sm.bin
+R15209359 (WAVE 16M) -> waverom1.bin
+R15279813 (WAVE 8M) -> waverom2.bin
 
-### `--cm300`
+SC-55st (v1.01):
+R15199858 (H8/532 mcu) -> rom1.bin
+R00561413 (H8/532 extra code) -> rom2_st.bin
+R15199880 (M37450M2 mcu) -> rom_sm.bin
+R15209359 (WAVE 16M) -> waverom1.bin
+R15279813 (WAVE 8M) -> waverom2.bin
 
-Use CM-300/SCC-1 ROM set. This overrides autodetect.
+SC-55 (v1.00):
+R15199748 (H8/532 mcu) -> sc55_rom1.bin
+R1544925800 (H8/532 extra code) -> sc55_rom2.bin
+R15209276 (WAVE A) -> sc55_waverom1.bin
+R15209277 (WAVE B) -> sc55_waverom2.bin
+R15209281 (WAVE C) -> sc55_waverom3.bin
 
-### `--jv880` 
+SC-55 (v1.10):
+R15199736 (H8/532 mcu) -> sc55_rom1.bin
+R15209275 (H8/532 extra code) -> sc55_rom2.bin
+R15209276 (WAVE A) -> sc55_waverom1.bin
+R15209277 (WAVE B) -> sc55_waverom2.bin
+R15209281 (WAVE C) -> sc55_waverom3.bin
 
-Use JV-880 ROM set. This overrides autodetect.
+SC-55 (v1.20):
+R15199778 (H8/532 mcu) -> sc55_rom1.bin
+R15209337 (H8/532 extra code) -> sc55_rom2.bin
+R15209276 (WAVE A) -> sc55_waverom1.bin
+R15209277 (WAVE B) -> sc55_waverom2.bin
+R15209281 (WAVE C) -> sc55_waverom3.bin
 
-### `--scb55`
+SC-55 (v1.21):
+R15199778 (H8/532 mcu) -> sc55_rom1.bin
+R15209363 (H8/532 extra code) -> sc55_rom2.bin
+R15209276 (WAVE A) -> sc55_waverom1.bin
+R15209277 (WAVE B) -> sc55_waverom2.bin
+R15209281 (WAVE C) -> sc55_waverom3.bin
 
-Use SCB-55 ROM set. This overrides autodetect.
+SC-55 (v2.0):
+R15199799 (H8/532 mcu) -> sc55_rom1.bin
+R15209387 (H8/532 extra code) -> sc55_rom2.bin
+R15209276 (WAVE A) -> sc55_waverom1.bin
+R15209277 (WAVE B) -> sc55_waverom2.bin
+R15209281 (WAVE C) -> sc55_waverom3.bin
 
-### `--rlp3237`
+CM-300/SCC-1 (v1.10):
+R15199774 (H8/532 mcu) -> cm300_rom1.bin
+R15279809 (H8/532 extra code) -> cm300_rom2.bin
+R15279806 (WAVE A) -> cm300_waverom1.bin
+R15279807 (WAVE B) -> cm300_waverom2.bin
+R15279808 (WAVE C) -> cm300_waverom3.bin
 
-Use RLP-3237 ROM set. This overrides autodetect.
+CM-300/SCC-1 (v1.20):
+R15199774 (H8/532 mcu) -> cm300_rom1.bin
+R15279812 (H8/532 extra code) -> cm300_rom2.bin
+R15279806 (WAVE A) -> cm300_waverom1.bin
+R15279807 (WAVE B) -> cm300_waverom2.bin
+R15279808 (WAVE C) -> cm300_waverom3.bin
+
+SCC-1A:
+R00128523 (H8/532 mcu) -> cm300_rom1.bin
+R00128567 (H8/532 extra code) -> cm300_rom2.bin
+R15279806 (WAVE A) -> cm300_waverom1.bin
+R15279807 (WAVE B) -> cm300_waverom2.bin
+R15279808 (WAVE C) -> cm300_waverom3.bin
+
+JV-880 (v1.0.0):
+R15199810 (H8/532 mcu) -> jv880_rom1.bin
+R15209386 (H8/532 extra code) -> jv880_rom2.bin
+R15209312 (WAVE A) -> jv880_waverom1.bin
+R15209313 (WAVE B) -> jv880_waverom2.bin
+PCM Cards -> jv880_waverom_pcmcard.bin (optional)
+Expansion PCBs -> jv880_waverom_expansion.bin (optional)
+
+SCB-55/RLP-3194:
+R15199827 (H8/532 mcu) -> scb55_rom1.bin
+R15279828 (H8/532 extra code) -> scb55_rom2.bin
+R15209359 (WAVE 16M) -> scb55_waverom1.bin
+R15279813 (WAVE 8M) -> scb55_waverom2.bin
+
+RLP-3237:
+R15199827 (H8/532 mcu) -> rlp3237_rom1.bin
+R15209486 (H8/532 extra code) -> rlp3237_rom2.bin
+R15279824 (WAVE 16M) -> rlp3237_waverom1.bin
+
+SC-155 (rev 1):
+R15199799 (H8/532 mcu) -> sc155_rom1.bin
+R15209361 (H8/532 extra code) -> sc155_rom2.bin
+R15209276 (WAVE A) -> sc155_waverom1.bin
+R15209277 (WAVE B) -> sc155_waverom2.bin
+R15209281 (WAVE C) -> sc155_waverom3.bin
+
+SC-155 (rev 2):
+R15199799 (H8/532 mcu) -> sc155_rom1.bin
+R15209400 (H8/532 extra code) -> sc155_rom2.bin
+R15209276 (WAVE A) -> sc155_waverom1.bin
+R15209277 (WAVE B) -> sc155_waverom2.bin
+R15209281 (WAVE C) -> sc155_waverom3.bin
+```
 
 ## ASIO specific parameters
 
@@ -169,3 +287,40 @@ nuked-sc55 will request the native frequency for your selected romset.
 The emulator natively produces audio at 64000hz or 66207hz depending on the
 romset. Some ASIO drivers cannot support these frequencies so resampling to
 `<rate>` is necessary.
+
+### `--asio-left-channel <channel_name_or_number>`
+
+Routes audio from the emulator's left channel to ASIO channel
+`<channel_name_or_number>`.
+
+### `--asio-right-channel <channel_name_or_number>`
+
+Routes audio from the emulator's right channel to ASIO channel
+`<channel_name_or_number>`.
+
+## Advanced parameters
+
+### `--override-* <path>`
+
+Overrides the path for a specific rom. This bypasses the default methods of
+locating roms.
+
+Each romset consists of multiple roms that are individually loaded into
+different locations within the emulator. These rom locations are named:
+
+- `rom1`
+- `rom2`
+- `smrom`
+- `waverom1`
+- `waverom2`
+- `waverom3`
+- `waverom-card`
+- `waverom-exp`
+
+A romset does not necessarily use all of these rom locations. For example, the
+mk2 will only use `rom1`, `rom2`, `smrom`, `waverom1`, and `waverom2`.
+
+To override a specific rom path you can replace the `*` in `--override-*
+<path>` with the name of the rom location you would like to load instead, e.g.
+`--override-rom2 ctf-patched-rom2.bin`. This is useful in case you have a
+patched rom that the emulator does not recognize.
