@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.19)
-project (nuked-sc55 VERSION 0.5.0 LANGUAGES CXX)
+project (nuked-sc55 VERSION 0.7.0 LANGUAGES C CXX)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -14,6 +14,8 @@ set(NUKED_SOURCE "unknown" CACHE STRING "Origin of this build")
 option(NUKED_ENABLE_TESTS "Enable tests" OFF)
 set(NUKED_TEST_ROMDIR "" CACHE PATH
     "Directory the test runner should look for roms in")
+set(NUKED_TEST_JV880_NVRAM "" CACHE PATH
+    "Path to file containing JV-880 factory preset nvram")
 
 if(NUKED_ENABLE_TESTS)
     enable_testing()
@@ -54,15 +56,21 @@ add_library(nuked-sc55-backend)
 target_sources(nuked-sc55-backend
     PRIVATE
     src/backend/config.cpp
+    src/backend/diagnostics.cpp
     src/backend/emu.cpp
     src/backend/lcd.cpp
     src/backend/mcu.cpp
     src/backend/mcu_interrupt.cpp
     src/backend/mcu_opcodes.cpp
     src/backend/mcu_timer.cpp
-    src/backend/path_util.cpp
     src/backend/pcm.cpp
+    src/backend/rom.cpp
+    src/backend/rom_io.cpp
     src/backend/submcu.cpp
+
+    src/backend/sha/sha-private.h
+    src/backend/sha/sha.h
+    src/backend/sha/sha224-256.c
 
     PUBLIC
     FILE_SET public_headers
@@ -71,8 +79,9 @@ target_sources(nuked-sc55-backend
     FILES
     "${CMAKE_CURRENT_BINARY_DIR}/backend/config.h"
     src/backend/audio.h
+    src/backend/bounded_ordered_bitset.h
     src/backend/cast.h
-    src/backend/command_line.h
+    src/backend/diagnostics.h
     src/backend/emu.h
     src/backend/lcd.h
     src/backend/lcd_back.h
@@ -82,14 +91,32 @@ target_sources(nuked-sc55-backend
     src/backend/mcu_interrupt.h
     src/backend/mcu_opcodes.h
     src/backend/mcu_timer.h
-    src/backend/path_util.h
     src/backend/pcm.h
     src/backend/ringbuffer.h
+    src/backend/rom.h
+    src/backend/rom_io.h
     src/backend/submcu.h
 )
 target_include_directories(nuked-sc55-backend PUBLIC "src/backend" "${CMAKE_CURRENT_BINARY_DIR}/backend")
 target_compile_features(nuked-sc55-backend PRIVATE cxx_std_23)
 target_enable_warnings(nuked-sc55-backend)
+target_enable_conversion_warnings(nuked-sc55-backend)
+
+#==============================================================================
+# Frontend shared code
+#==============================================================================
+add_library(nuked-sc55-common)
+target_sources(nuked-sc55-common
+    PRIVATE
+    src/common/gain.cpp
+    src/common/rom_loader.cpp
+    src/common/path_util.cpp
+)
+target_compile_features(nuked-sc55-common PRIVATE cxx_std_23)
+target_enable_warnings(nuked-sc55-common)
+target_enable_conversion_warnings(nuked-sc55-common)
+target_link_libraries(nuked-sc55-common PRIVATE nuked-sc55-backend)
+target_include_directories(nuked-sc55-common PRIVATE "src/common")
 
 #==============================================================================
 # Standard frontend
@@ -98,15 +125,23 @@ if(SDL2_FOUND)
     add_executable(nuked-sc55)
     target_sources(nuked-sc55
         PRIVATE
+        src/standard/application_cli.cpp
+        src/standard/application.cpp
         src/standard/audio_sdl.cpp
+        src/standard/instance.cpp
         src/standard/lcd_sdl.cpp
         src/standard/main.cpp
-        src/standard/midi.h
+        src/standard/output_common.cpp
         src/standard/output_sdl.cpp
 
         PRIVATE FILE_SET headers TYPE HEADERS FILES
+        src/standard/application.h
         src/standard/audio_sdl.h
+        src/standard/bounded_vector.h
+        src/standard/instance.h
         src/standard/lcd_sdl.h
+        src/standard/midi.h
+        src/standard/output_common.h
         src/standard/output_sdl.h
     )
 
@@ -120,7 +155,7 @@ if(SDL2_FOUND)
         target_link_libraries(nuked-sc55 PRIVATE SDL2::SDL2main)
     endif()
 
-    target_link_libraries(nuked-sc55 PRIVATE SDL2::SDL2 nuked-sc55-backend)
+    target_link_libraries(nuked-sc55 PRIVATE SDL2::SDL2 nuked-sc55-backend nuked-sc55-common)
     target_compile_features(nuked-sc55 PRIVATE cxx_std_23)
     target_enable_warnings(nuked-sc55)
     target_enable_conversion_warnings(nuked-sc55)
@@ -181,7 +216,7 @@ target_sources(nuked-sc55-render
     src/renderer/wav.h
 )
 
-target_link_libraries(nuked-sc55-render PRIVATE nuked-sc55-backend)
+target_link_libraries(nuked-sc55-render PRIVATE nuked-sc55-backend nuked-sc55-common)
 target_compile_features(nuked-sc55-render PRIVATE cxx_std_23)
 target_enable_warnings(nuked-sc55-render)
 target_enable_conversion_warnings(nuked-sc55-render)

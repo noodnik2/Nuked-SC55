@@ -32,15 +32,21 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 #include "emu.h"
-#include "mcu.h"
-#include "submcu.h"
-#include "mcu_timer.h"
+#include "diagnostics.h"
 #include "lcd.h"
+#include "mcu.h"
+#include "mcu_timer.h"
 #include "pcm.h"
-#include <string>
+#include "submcu.h"
+#include <bit>
 #include <fstream>
 #include <span>
 #include <vector>
+
+Emulator::~Emulator()
+{
+    SaveNVRAM();
+}
 
 bool Emulator::Init(const EMU_Options& options)
 {
@@ -96,397 +102,47 @@ void Emulator::SetSampleCallback(mcu_sample_callback callback, void* userdata)
     m_mcu->sample_callback = callback;
 }
 
-const char* rs_name[(size_t)ROMSET_COUNT] = {
-    "SC-55mk2",
-    "SC-55st",
-    "SC-55mk1",
-    "CM-300/SCC-1",
-    "JV-880",
-    "SCB-55",
-    "RLP-3237",
-    "SC-155",
-    "SC-155mk2"
-};
-
-const char* rs_name_simple[(size_t)ROMSET_COUNT] = {
-    "mk2",
-    "st",
-    "mk1",
-    "cm300",
-    "jv880",
-    "scb55",
-    "rlp3237",
-    "sc155",
-    "sc155mk2"
-};
-
-constexpr int ROM_SET_N_FILES = 6;
-
-const char* roms[(size_t)ROMSET_COUNT][ROM_SET_N_FILES] =
+bool Emulator::LoadRoms(Romset romset, const AllRomsetInfo& all_info, RomLocationSet* loaded)
 {
+    if (loaded)
     {
-        "rom1.bin",
-        "rom2.bin",
-        "waverom1.bin",
-        "waverom2.bin",
-        "rom_sm.bin",
-        "",
-    },
-
-    {
-        "rom1.bin",
-        "rom2_st.bin",
-        "waverom1.bin",
-        "waverom2.bin",
-        "rom_sm.bin",
-        "",
-    },
-
-    {
-        "sc55_rom1.bin",
-        "sc55_rom2.bin",
-        "sc55_waverom1.bin",
-        "sc55_waverom2.bin",
-        "sc55_waverom3.bin",
-        "",
-    },
-
-    {
-        "cm300_rom1.bin",
-        "cm300_rom2.bin",
-        "cm300_waverom1.bin",
-        "cm300_waverom2.bin",
-        "cm300_waverom3.bin",
-        "",
-    },
-
-    {
-        "jv880_rom1.bin",
-        "jv880_rom2.bin",
-        "jv880_waverom1.bin",
-        "jv880_waverom2.bin",
-        "jv880_waverom_expansion.bin",
-        "jv880_waverom_pcmcard.bin",
-    },
-
-    {
-        "scb55_rom1.bin",
-        "scb55_rom2.bin",
-        "scb55_waverom1.bin",
-        "scb55_waverom2.bin",
-        "",
-        "",
-    },
-
-    {
-        "rlp3237_rom1.bin",
-        "rlp3237_rom2.bin",
-        "rlp3237_waverom1.bin",
-        "",
-        "",
-        "",
-    },
-
-    {
-        "sc155_rom1.bin",
-        "sc155_rom2.bin",
-        "sc155_waverom1.bin",
-        "sc155_waverom2.bin",
-        "sc155_waverom3.bin",
-        "",
-    },
-
-    {
-        "rom1.bin",
-        "rom2.bin",
-        "waverom1.bin",
-        "waverom2.bin",
-        "rom_sm.bin",
-        "",
-    },
-};
-
-void unscramble(uint8_t *src, uint8_t *dst, int len)
-{
-    for (int i = 0; i < len; i++)
-    {
-        int address = i & ~0xfffff;
-        static const int aa[] = {
-            2, 0, 3, 4, 1, 9, 13, 10, 18, 17, 6, 15, 11, 16, 8, 5, 12, 7, 14, 19
-        };
-        for (int j = 0; j < 20; j++)
-        {
-            if (i & (1 << j))
-                address |= 1<<aa[j];
-        }
-        uint8_t srcdata = src[address];
-        uint8_t data = 0;
-        static const int dd[] = {
-            2, 0, 4, 5, 7, 6, 3, 1
-        };
-        for (int j = 0; j < 8; j++)
-        {
-            if (srcdata & (1 << dd[j]))
-                data |= 1<<j;
-        }
-        dst[i] = data;
-    }
-}
-
-Romset EMU_DetectRomset(const std::filesystem::path& base_path)
-{
-    for (size_t i = 0; i < (size_t)ROMSET_COUNT; i++)
-    {
-        bool good = true;
-        for (size_t j = 0; j < 5; j++)
-        {
-            if (roms[i][j][0] == '\0')
-                continue;
-            if (!std::filesystem::exists(base_path / roms[i][j]))
-            {
-                good = false;
-                break;
-            }
-        }
-        if (good)
-        {
-            return (Romset)i;
-        }
-    }
-    return Romset::MK2;
-}
-
-bool EMU_ReadStreamExact(std::ifstream& s, void* into, std::streamsize byte_count)
-{
-    if (s.read((char*)into, byte_count))
-    {
-        return s.gcount() == byte_count;
-    }
-    return false;
-}
-
-bool EMU_ReadStreamExact(std::ifstream& s, std::span<uint8_t> into, std::streamsize byte_count)
-{
-    return EMU_ReadStreamExact(s, into.data(), byte_count);
-}
-
-std::streamsize EMU_ReadStreamUpTo(std::ifstream& s, void* into, std::streamsize byte_count)
-{
-    s.read((char*)into, byte_count);
-    return s.gcount();
-}
-
-bool Emulator::LoadRoms(Romset romset, const std::filesystem::path& base_path)
-{
-    std::vector<uint8_t> tempbuf(0x800000);
-
-    std::ifstream s_rf[ROM_SET_N_FILES];
-
-    m_mcu->romset = romset;
-    m_mcu->is_mk1 = false;
-    m_mcu->is_cm300 = false;
-    m_mcu->is_st = false;
-    m_mcu->is_jv880 = false;
-    m_mcu->is_scb55 = false;
-    m_mcu->is_sc155 = false;
-    switch (romset)
-    {
-        case Romset::MK2:
-        case Romset::SC155MK2:
-            if (romset == Romset::SC155MK2)
-                m_mcu->is_sc155 = true;
-            break;
-        case Romset::ST:
-            m_mcu->is_st = true;
-            break;
-        case Romset::MK1:
-        case Romset::SC155:
-            m_mcu->is_mk1 = true;
-            m_mcu->is_st = false;
-            if (romset == Romset::SC155)
-                m_mcu->is_sc155 = true;
-            break;
-        case Romset::CM300:
-            m_mcu->is_mk1 = true;
-            m_mcu->is_cm300 = true;
-            break;
-        case Romset::JV880:
-            m_mcu->is_jv880 = true;
-            m_mcu->rom2_mask /= 2; // rom is half the size
-            break;
-        case Romset::SCB55:
-        case Romset::RLP3237:
-            m_mcu->is_scb55 = true;
-            break;
+        loaded->fill(false);
     }
 
-    std::filesystem::path rpaths[ROM_SET_N_FILES];
+    MCU_SetRomset(GetMCU(), romset);
 
-    bool r_ok = true;
-    std::string errors_list;
+    const RomsetInfo& info = all_info.romsets[(size_t)romset];
 
-    for(size_t i = 0; i < ROM_SET_N_FILES; ++i)
+    for (size_t i = 0; i < ROMLOCATION_COUNT; ++i)
     {
-        if (roms[(size_t)romset][i][0] == '\0')
+        const RomLocation location = (RomLocation)i;
+
+        // rom_data should be populated at this point
+        // if it isn't, then there isn't a rom for this location
+        if (info.rom_data[i].empty())
         {
             continue;
         }
-        rpaths[i] = base_path / roms[(size_t)romset][i];
-        s_rf[i] = std::ifstream(rpaths[i].c_str(), std::ios::binary);
-        bool optional = m_mcu->is_jv880 && i >= 4;
-        r_ok &= optional || s_rf[i];
-        if (!s_rf[i])
+
+        if (!LoadRom(location, info.rom_data[i]))
         {
-            if(!errors_list.empty())
-                errors_list.append(", ");
-
-            errors_list.append(rpaths[i].generic_string());
-        }
-    }
-
-    if (!r_ok)
-    {
-        fprintf(stderr, "FATAL ERROR: One of required data ROM files is missing: %s.\n", errors_list.c_str());
-        fflush(stderr);
-        return false;
-    }
-
-    if (!EMU_ReadStreamExact(s_rf[0], m_mcu->rom1, ROM1_SIZE))
-    {
-        fprintf(stderr, "FATAL ERROR: Failed to read the mcu ROM1.\n");
-        fflush(stderr);
-        return false;
-    }
-
-    std::streamsize rom2_read = EMU_ReadStreamUpTo(s_rf[1], m_mcu->rom2, ROM2_SIZE);
-
-    if (rom2_read == ROM2_SIZE || rom2_read == ROM2_SIZE / 2)
-    {
-        m_mcu->rom2_mask = rom2_read - 1;
-    }
-    else
-    {
-        fprintf(stderr, "FATAL ERROR: Failed to read the mcu ROM2.\n");
-        fflush(stderr);
-        return false;
-    }
-
-    if (m_mcu->is_mk1)
-    {
-        if (!EMU_ReadStreamExact(s_rf[2], tempbuf, 0x100000))
-        {
-            fprintf(stderr, "FATAL ERROR: Failed to read the WaveRom1.\n");
-            fflush(stderr);
             return false;
         }
 
-        unscramble(tempbuf.data(), m_pcm->waverom1, 0x100000);
-
-        if (!EMU_ReadStreamExact(s_rf[3], tempbuf, 0x100000))
+        if (loaded)
         {
-            fprintf(stderr, "FATAL ERROR: Failed to read the WaveRom2.\n");
-            fflush(stderr);
-            return false;
+            (*loaded)[i] = true;
         }
-
-        unscramble(tempbuf.data(), m_pcm->waverom2, 0x100000);
-
-        if (!EMU_ReadStreamExact(s_rf[4], tempbuf, 0x100000))
-        {
-            fprintf(stderr, "FATAL ERROR: Failed to read the WaveRom3.\n");
-            fflush(stderr);
-            return false;
-        }
-
-        unscramble(tempbuf.data(), m_pcm->waverom3, 0x100000);
     }
-    else if (m_mcu->is_jv880)
+
+    if (m_mcu->is_jv880)
     {
-        if (!EMU_ReadStreamExact(s_rf[2], tempbuf, 0x200000))
-        {
-            fprintf(stderr, "FATAL ERROR: Failed to read the WaveRom1.\n");
-            fflush(stderr);
-            return false;
-        }
-
-        unscramble(tempbuf.data(), m_pcm->waverom1, 0x200000);
-
-        if (!EMU_ReadStreamExact(s_rf[3], tempbuf, 0x200000))
-        {
-            fprintf(stderr, "FATAL ERROR: Failed to read the WaveRom2.\n");
-            fflush(stderr);
-            return false;
-        }
-
-        unscramble(tempbuf.data(), m_pcm->waverom2, 0x200000);
-
-        if (s_rf[4] && EMU_ReadStreamExact(s_rf[4], tempbuf, 0x800000))
-            unscramble(tempbuf.data(), m_pcm->waverom_exp, 0x800000);
-        else
-            fprintf(stderr, "WaveRom EXP not found, skipping it.\n");
-
-        if (s_rf[5] && EMU_ReadStreamExact(s_rf[5], tempbuf, 0x200000))
-            unscramble(tempbuf.data(), m_pcm->waverom_card, 0x200000);
-        else
-            fprintf(stderr, "WaveRom PCM not found, skipping it.\n");
-    }
-    else
-    {
-        if (!EMU_ReadStreamExact(s_rf[2], tempbuf, 0x200000))
-        {
-            fprintf(stderr, "FATAL ERROR: Failed to read the WaveRom1.\n");
-            fflush(stderr);
-            return false;
-        }
-
-        unscramble(tempbuf.data(), m_pcm->waverom1, 0x200000);
-
-        if (s_rf[3])
-        {
-            if (!EMU_ReadStreamExact(s_rf[3], tempbuf, 0x100000))
-            {
-                fprintf(stderr, "FATAL ERROR: Failed to read the WaveRom2.\n");
-                fflush(stderr);
-                return false;
-            }
-
-            unscramble(tempbuf.data(), m_mcu->is_scb55 ? m_pcm->waverom3 : m_pcm->waverom2, 0x100000);
-        }
-
-        if (s_rf[4] && !EMU_ReadStreamExact(s_rf[4], m_sm->rom, ROMSM_SIZE))
-        {
-            fprintf(stderr, "FATAL ERROR: Failed to read the sub mcu ROM.\n");
-            fflush(stderr);
-            return false;
-        }
+        LoadNVRAM();
     }
 
     MCU_PatchROM(*m_mcu);
 
     return true;
-}
-
-const char* EMU_RomsetName(Romset romset)
-{
-    return rs_name[(size_t)romset];
-}
-
-bool EMU_ParseRomsetName(std::string_view name, Romset& romset)
-{
-    for (size_t i = 0; i < ROMSET_COUNT; ++i)
-    {
-        if (rs_name_simple[i] == name)
-        {
-            romset = (Romset)i;
-            return true;
-        }
-    }
-    return false;
-}
-
-std::span<const char*> EMU_GetParsableRomsetNames()
-{
-    return rs_name_simple;
 }
 
 void Emulator::PostMIDI(uint8_t byte)
@@ -524,4 +180,81 @@ void Emulator::PostSystemReset(EMU_SystemReset reset)
 void Emulator::Step()
 {
     MCU_Step(*m_mcu);
+}
+
+void Emulator::SaveNVRAM()
+{
+    // emulator was constructed, but never init
+    if (!m_mcu)
+    {
+        return;
+    }
+
+    if (!m_options.nvram_filename.empty() && m_mcu->is_jv880)
+    {
+        std::ofstream file(m_options.nvram_filename, std::ios::binary);
+        file.write((const char*)m_mcu->nvram, NVRAM_SIZE);
+    }
+}
+
+void Emulator::LoadNVRAM()
+{
+    if (!m_options.nvram_filename.empty() && m_mcu->is_jv880)
+    {
+        std::ifstream file(m_options.nvram_filename, std::ios::binary);
+        file.read((char*)m_mcu->nvram, NVRAM_SIZE);
+    }
+}
+
+std::span<uint8_t> Emulator::MapBuffer(RomLocation location)
+{
+    switch (location)
+    {
+    case RomLocation::ROM1:
+        return GetMCU().rom1;
+    case RomLocation::ROM2:
+        return GetMCU().rom2;
+    case RomLocation::WAVEROM1:
+        return GetPCM().waverom1;
+    case RomLocation::WAVEROM2:
+        return GetPCM().waverom2;
+    case RomLocation::WAVEROM3:
+        return GetPCM().waverom3;
+    case RomLocation::WAVEROM_CARD:
+        return GetPCM().waverom_card;
+    case RomLocation::WAVEROM_EXP:
+        return GetPCM().waverom_exp;
+    case RomLocation::SMROM:
+        return m_sm->rom;
+    }
+    Diag_Printf(Diag_Category::Error, "MapBuffer called with invalid location %d\n", (int)location);
+    std::abort();
+}
+
+bool Emulator::LoadRom(RomLocation location, std::span<const uint8_t> source)
+{
+    auto buffer = MapBuffer(location);
+
+    if (buffer.size() < source.size())
+    {
+        Diag_Printf(Diag_Category::Error,
+                    "rom for %s is too large; max size is %d bytes\n",
+                    ToCString(location),
+                    (int)buffer.size());
+        return false;
+    }
+
+    if (location == RomLocation::ROM2)
+    {
+        if (!std::has_single_bit(source.size()))
+        {
+            Diag_Printf(Diag_Category::Error, "%s requires a power-of-2 size\n", ToCString(location));
+            return false;
+        }
+        GetMCU().rom2_mask = (uint32_t)source.size() - 1;
+    }
+
+    std::copy(source.begin(), source.end(), buffer.begin());
+
+    return true;
 }
