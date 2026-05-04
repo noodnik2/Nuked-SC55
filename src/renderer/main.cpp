@@ -51,7 +51,7 @@ struct R_Parameters
     bool version = false;
     size_t instances = 1;
     std::optional<EMU_SystemReset> reset;
-    std::filesystem::path rom_directory = std::filesystem::current_path();
+    std::filesystem::path rom_directory;
     AudioFormat output_format = AudioFormat::S16;
     bool output_stdout = false;
     bool disable_oversampling = false;
@@ -1553,6 +1553,18 @@ int main(int argc, char* argv[])
         Cfg_WriteVersionInfo(stdout);
         return 0;
     }
+
+	if (params.rom_directory.empty()) {
+		std::filesystem::path base_path = common::GetProcessPath().parent_path();
+		std::filesystem::path potential_path = (base_path / "../share/nuked-sc55").lexically_normal();
+
+		if (std::filesystem::exists(potential_path)) {
+			base_path = potential_path;
+		}
+
+		params.rom_directory = base_path;
+	}
+    fprintf(stderr, "ROM directory is: %s\n", params.rom_directory.generic_string().c_str());
 
     SMF_Data data;
     data = SMF_LoadEvents(params.input_filename);

@@ -28,8 +28,10 @@ bool Application::Initialize(const CliParameters& params)
 {
     std::filesystem::path base_path = common::GetProcessPath().parent_path();
 
-    if (std::filesystem::exists(base_path / "../share/nuked-sc55"))
-        base_path = base_path / "../share/nuked-sc55";
+	std::filesystem::path potential_path = (base_path / "../share/nuked-sc55").lexically_normal();
+    if (std::filesystem::exists(potential_path)) {
+        base_path = potential_path;
+	}
 
     fprintf(stderr, "Base path is: %s\n", base_path.generic_string().c_str());
 

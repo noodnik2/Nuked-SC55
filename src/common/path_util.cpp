@@ -43,7 +43,13 @@ std::filesystem::path GetProcessPath()
         exit(1);
     }
 #endif
+
+#if defined(__APPLE__)
+	// _NSGetExecutablePath doesn't return actual_size when its return value is 0
+    return std::filesystem::path(path);
+#else
     return std::filesystem::path(path, path + (size_t)actual_size);
+#endif
 }
 
 }

@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
-
 stderr() {
   echo "$@" 1>&2
 }
@@ -30,13 +28,20 @@ for file in "${inputs[@]}"; do
 done
 
 # Check dependencies
-RENDER_CMD=./nuked-sc55-render
-for cmd in $RENDER_CMD; do
-  which $cmd > /dev/null || fatal "$cmd not found"
-done
+RENDER_TOOL=nuked-sc55-render
+RENDER_CMD=$(command -v "$RENDER_TOOL")
+if [[ -z "$RENDER_CMD" || ! -x "$RENDER_CMD" ]]; then
+  SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+  RENDER_CMD="${SCRIPT_DIR}/${RENDER_TOOL}"
+fi
+
+[[ -x "$RENDER_CMD" ]] || fatal "${RENDER_TOOL} not found"
 
 # Confirm the output dir either exists and is empty, or is created
 [[ ! -d "$output_dir" || -z "$(ls -A "$output_dir")" ]] && mkdir -p "$output_dir" || fatal "error: '$output_dir' exists and is not empty"
+
+# Set up fast fail
+set -euo pipefail
 
 # Render the .mid(s) to .wav(s)
 for midFilePath in "${mid_files[@]}"; do
