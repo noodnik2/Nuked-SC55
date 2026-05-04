@@ -55,7 +55,7 @@ bool LCD_SDL_Backend::Start(const lcd_t& lcd)
 
     std::string title = "Nuked SC-55: ";
 
-    title += EMU_RomsetName(m_lcd->mcu->romset);
+    title += RomsetName(m_lcd->mcu->romset);
 
     m_window = SDL_CreateWindow(title.c_str(),
                                 SDL_WINDOWPOS_UNDEFINED,

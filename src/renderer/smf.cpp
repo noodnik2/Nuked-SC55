@@ -181,6 +181,12 @@ static bool SMF_ReadVarint(SMF_Reader& reader, uint32_t& value)
 
 void SMF_SetDeltasFromTimestamps(SMF_Track& track)
 {
+    if (track.events.size() == 0)
+    {
+        return;
+    }
+
+    track.events[0].delta_time = RangeCast<uint32_t>(track.events[0].timestamp);
     for (size_t i = 1; i < track.events.size(); ++i)
     {
         track.events[i].delta_time = RangeCast<uint32_t>(
@@ -220,6 +226,8 @@ bool SMF_ReadTrack(SMF_Reader& reader, SMF_Data& result, uint64_t expected_end)
     uint8_t running_status = 0;
     uint64_t total_time = 0;
 
+    const uint16_t this_track = RangeCast<uint16_t>(result.tracks.size());
+
     result.tracks.emplace_back();
     SMF_Track& new_track = result.tracks.back();
 
@@ -251,6 +259,7 @@ bool SMF_ReadTrack(SMF_Reader& reader, SMF_Data& result, uint64_t expected_end)
         new_event.delta_time = delta_time;
         new_event.timestamp = total_time;
         new_event.status = running_status;
+        new_event.track_id = this_track;
 
         switch (new_event.status & 0xF0)
         {

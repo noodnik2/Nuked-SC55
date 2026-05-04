@@ -34,7 +34,10 @@
 #pragma once
 
 #include "audio.h"
+#include "bounded_ordered_bitset.h"
 #include "mcu_interrupt.h"
+#include "rom.h"
+#include "mcu_opcodes.h"
 #include <atomic>
 #include <cstdint>
 
@@ -43,69 +46,100 @@ struct pcm_t;
 struct mcu_timer_t;
 struct lcd_t;
 
-enum {
-    DEV_P1DDR = 0x00,
-    DEV_P5DDR = 0x08,
-    DEV_P6DDR = 0x09,
-    DEV_P7DDR = 0x0c,
-    DEV_P7DR = 0x0e,
-    DEV_FRT1_TCR = 0x10,
-    DEV_FRT1_TCSR = 0x11,
-    DEV_FRT1_FRCH = 0x12,
-    DEV_FRT1_FRCL = 0x13,
+// Values are byte offsets from the start of register fields in memory
+// (ff80..ffff) to the field named by the enumeration item. This enumeration
+// also acts as an index type for mcu.dev_register. Not all of these indices
+// are used. Notably, timers are handled by the mcu_timer module instead and
+// their data in dev_register will hold an unspecified value.
+enum MCU_Register_Field : uint8_t
+{
+    DEV_P1DDR      = 0x00,
+    DEV_P2DDR      = 0x01,
+    DEV_P1DR       = 0x02,
+    DEV_P2DR       = 0x03,
+    DEV_P3DDR      = 0x04,
+    DEV_P4DDR      = 0x05,
+    DEV_P3DR       = 0x06,
+    DEV_P4DR       = 0x07,
+    DEV_P5DDR      = 0x08,
+    DEV_P6DDR      = 0x09,
+    DEV_P5DR       = 0x0a,
+    DEV_P6DR       = 0x0b,
+    DEV_P7DDR      = 0x0c,
+    DEV_P7DR       = 0x0e,
+    DEV_P8DR       = 0x0f,
+    DEV_FRT1_TCR   = 0x10,
+    DEV_FRT1_TCSR  = 0x11,
+    DEV_FRT1_FRCH  = 0x12,
+    DEV_FRT1_FRCL  = 0x13,
     DEV_FRT1_OCRAH = 0x14,
     DEV_FRT1_OCRAL = 0x15,
-    DEV_FRT2_TCR = 0x20,
-    DEV_FRT2_TCSR = 0x21,
-    DEV_FRT2_FRCH = 0x22,
-    DEV_FRT2_FRCL = 0x23,
+    DEV_FRT1_OCRBH = 0x16,
+    DEV_FRT1_OCRBL = 0x17,
+    DEV_FRT1_ICRH  = 0x18,
+    DEV_FRT1_ICRL  = 0x19,
+    DEV_FRT2_TCR   = 0x20,
+    DEV_FRT2_TCSR  = 0x21,
+    DEV_FRT2_FRCH  = 0x22,
+    DEV_FRT2_FRCL  = 0x23,
     DEV_FRT2_OCRAH = 0x24,
     DEV_FRT2_OCRAL = 0x25,
-    DEV_FRT3_TCR = 0x30,
-    DEV_FRT3_TCSR = 0x31,
-    DEV_FRT3_FRCH = 0x32,
-    DEV_FRT3_FRCL = 0x33,
+    DEV_FRT2_OCRBH = 0x26,
+    DEV_FRT2_OCRBL = 0x27,
+    DEV_FRT2_ICRH  = 0x28,
+    DEV_FRT2_ICRL  = 0x29,
+    DEV_FRT3_TCR   = 0x30,
+    DEV_FRT3_TCSR  = 0x31,
+    DEV_FRT3_FRCH  = 0x32,
+    DEV_FRT3_FRCL  = 0x33,
     DEV_FRT3_OCRAH = 0x34,
     DEV_FRT3_OCRAL = 0x35,
-    DEV_PWM1_TCR = 0x40,
-    DEV_PWM1_DTR = 0x41,
-    DEV_PWM2_TCR = 0x44,
-    DEV_PWM2_DTR = 0x45,
-    DEV_PWM3_TCR = 0x48,
-    DEV_PWM3_DTR = 0x49,
-    DEV_TMR_TCR = 0x50,
-    DEV_TMR_TCSR = 0x51,
-    DEV_TMR_TCORA = 0x52,
-    DEV_TMR_TCORB = 0x53,
-    DEV_TMR_TCNT = 0x54,
-    DEV_SMR = 0x58,
-    DEV_BRR = 0x59,
-    DEV_SCR = 0x5a,
-    DEV_TDR = 0x5b,
-    DEV_SSR = 0x5c,
-    DEV_RDR = 0x5d,
-    DEV_ADDRAH = 0x60,
-    DEV_ADDRAL = 0x61,
-    DEV_ADDRBH = 0x62,
-    DEV_ADDRBL = 0x63,
-    DEV_ADDRCH = 0x64,
-    DEV_ADDRCL = 0x65,
-    DEV_ADDRDH = 0x66,
-    DEV_ADDRDL = 0x67,
-    DEV_ADCSR = 0x68,
-    DEV_IPRA = 0x70,
-    DEV_IPRB = 0x71,
-    DEV_IPRC = 0x72,
-    DEV_IPRD = 0x73,
-    DEV_DTEA = 0x74,
-    DEV_DTEB = 0x75,
-    DEV_DTEC = 0x76,
-    DEV_DTED = 0x77,
-    DEV_WCR = 0x78,
-    DEV_RAME = 0x79,
-    DEV_P1CR = 0x7c,
-    DEV_P9DDR = 0x7e,
-    DEV_P9DR = 0x7f,
+    DEV_FRT3_OCRBH = 0x36,
+    DEV_FRT3_OCRBL = 0x37,
+    DEV_FRT3_ICRH  = 0x38,
+    DEV_FRT3_ICRL  = 0x39,
+    DEV_PWM1_TCR   = 0x40,
+    DEV_PWM1_DTR   = 0x41,
+    DEV_PWM1_TCNT  = 0x42,
+    DEV_PWM2_TCR   = 0x44,
+    DEV_PWM2_DTR   = 0x45,
+    DEV_PWM2_TCNT  = 0x46,
+    DEV_PWM3_TCR   = 0x48,
+    DEV_PWM3_DTR   = 0x49,
+    DEV_PWM3_TCNT  = 0x4a,
+    DEV_TMR_TCR    = 0x50,
+    DEV_TMR_TCSR   = 0x51,
+    DEV_TMR_TCORA  = 0x52,
+    DEV_TMR_TCORB  = 0x53,
+    DEV_TMR_TCNT   = 0x54,
+    DEV_SMR        = 0x58,
+    DEV_BRR        = 0x59,
+    DEV_SCR        = 0x5a,
+    DEV_TDR        = 0x5b,
+    DEV_SSR        = 0x5c,
+    DEV_RDR        = 0x5d,
+    DEV_ADDRAH     = 0x60,
+    DEV_ADDRAL     = 0x61,
+    DEV_ADDRBH     = 0x62,
+    DEV_ADDRBL     = 0x63,
+    DEV_ADDRCH     = 0x64,
+    DEV_ADDRCL     = 0x65,
+    DEV_ADDRDH     = 0x66,
+    DEV_ADDRDL     = 0x67,
+    DEV_ADCSR      = 0x68,
+    DEV_IPRA       = 0x70,
+    DEV_IPRB       = 0x71,
+    DEV_IPRC       = 0x72,
+    DEV_IPRD       = 0x73,
+    DEV_DTEA       = 0x74,
+    DEV_DTEB       = 0x75,
+    DEV_DTEC       = 0x76,
+    DEV_DTED       = 0x77,
+    DEV_WCR        = 0x78,
+    DEV_RAMCR      = 0x79,
+    DEV_P1CR       = 0x7c,
+    DEV_P9DDR      = 0x7e,
+    DEV_P9DR       = 0x7f,
 };
 
 const uint16_t sr_mask = 0x870f;
@@ -188,20 +222,6 @@ static const int ROMSM_SIZE = 0x1000;
 
 static const uint32_t uart_buffer_size = 8192;
 
-enum class Romset {
-    MK2,
-    ST,
-    MK1,
-    CM300,
-    JV880,
-    SCB55,
-    RLP3237,
-    SC155,
-    SC155MK2,
-};
-
-constexpr size_t ROMSET_COUNT = 9;
-
 typedef void(*mcu_sample_callback)(void* userdata, const AudioFrame<int32_t>& frame);
 
 void MCU_DefaultSampleCallback(void* userdata, const AudioFrame<int32_t>& frame);
@@ -213,9 +233,9 @@ struct mcu_t {
     uint8_t cp = 0, dp = 0, ep = 0, tp = 0, br = 0;
     uint8_t sleep = 0;
     uint8_t ex_ignore = 0;
-    int32_t exception_pending = 0;
-    uint8_t interrupt_pending[INTERRUPT_SOURCE_MAX]{};
-    uint8_t trapa_pending[16]{};
+    MCU_Exception_Source exception_pending{};
+    BoundedOrderedBitSet<INTERRUPT_SOURCE_MAX, MCU_Interrupt_Source> interrupt_pending;
+    BoundedOrderedBitSet<16> trapa_pending;
     uint64_t cycles = 0;
 
     uint8_t rom1[ROM1_SIZE]{};
@@ -247,19 +267,19 @@ struct mcu_t {
 
     Romset romset = Romset::MK2;
 
-    int is_mk1 = 0; // 0 - SC-55mkII, SC-55ST. 1 - SC-55, CM-300/SCC-1
-    int is_cm300 = 0; // 0 - SC-55, 1 - CM-300/SCC-1
-    int is_st = 0; // 0 - SC-55mk2, 1 - SC-55ST
-    int is_jv880 = 0; // 0 - SC-55, 1 - JV880
-    int is_scb55 = 0; // 0 - sub mcu (e.g SC-55mk2), 1 - no sub mcu (e.g SCB-55)
-    int is_sc155 = 0; // 0 - SC-55(MK2), 1 - SC-155(MK2)
+    bool is_mk1 = false; // 0 - SC-55mkII, SC-55ST. 1 - SC-55, CM-300/SCC-1
+    bool is_cm300 = false; // 0 - SC-55, 1 - CM-300/SCC-1
+    bool is_st = false; // 0 - SC-55mk2, 1 - SC-55ST
+    bool is_jv880 = false; // 0 - SC-55, 1 - JV880
+    bool is_scb55 = false; // 0 - sub mcu (e.g SC-55mk2), 1 - no sub mcu (e.g SCB-55)
+    bool is_sc155 = false; // 0 - SC-55(MK2), 1 - SC-155(MK2)
 
-    int rom2_mask = ROM2_SIZE - 1;
+    uint32_t rom2_mask = ROM2_SIZE - 1;
 
-    int ga_int[8]{};
-    int ga_int_enable = 0;
-    int ga_int_trigger = 0;
-    int ga_lcd_counter = 0;
+    bool ga_int[8]{};
+    uint8_t ga_int_enable = 0; // mask of ga_int indices
+    uint8_t ga_int_trigger = 0; // index into ga_int
+    int ga_lcd_counter = 0; // timer range 0..500, decrements to 0
 
     std::atomic<uint32_t> button_pressed;
 
@@ -275,7 +295,7 @@ struct mcu_t {
     uint32_t operand_type = 0;
     uint16_t operand_ea = 0;
     uint8_t operand_ep = 0;
-    uint8_t operand_size = 0;
+    MCU_Operand_Size operand_size{};
     uint8_t operand_reg = 0;
     uint8_t operand_status = 0;
     uint16_t operand_data = 0;
@@ -322,7 +342,7 @@ inline uint32_t MCU_GetVectorAddress(mcu_t& mcu, uint32_t vector)
     return MCU_Read32(mcu, vector * 4);
 }
 
-inline uint32_t MCU_GetPageForRegister(mcu_t& mcu, uint32_t reg)
+inline uint8_t MCU_GetPageForRegister(mcu_t& mcu, uint8_t reg)
 {
     if (reg >= 6)
         return mcu.tp;
@@ -331,10 +351,11 @@ inline uint32_t MCU_GetPageForRegister(mcu_t& mcu, uint32_t reg)
     return mcu.dp;
 }
 
-inline void MCU_ControlRegisterWrite(mcu_t& mcu, uint32_t reg, uint32_t siz, uint32_t data)
+inline void MCU_ControlRegisterWrite(mcu_t& mcu, uint32_t reg, MCU_Operand_Size siz, uint32_t data)
 {
-    if (siz)
+    switch (siz)
     {
+    case MCU_Operand_Size::WORD:
         if (reg == 0)
         {
             mcu.sr = (uint16_t)data;
@@ -356,9 +377,8 @@ inline void MCU_ControlRegisterWrite(mcu_t& mcu, uint32_t reg, uint32_t siz, uin
         {
             MCU_ErrorTrap(mcu);
         }
-    }
-    else
-    {
+        break;
+    case MCU_Operand_Size::BYTE:
         if (reg == 1)
         {
             mcu.sr &= ~0xff;
@@ -385,14 +405,16 @@ inline void MCU_ControlRegisterWrite(mcu_t& mcu, uint32_t reg, uint32_t siz, uin
         {
             MCU_ErrorTrap(mcu);
         }
+        break;
     }
 }
 
-inline uint32_t MCU_ControlRegisterRead(mcu_t& mcu, uint32_t reg, uint32_t siz)
+inline uint32_t MCU_ControlRegisterRead(mcu_t& mcu, uint32_t reg, MCU_Operand_Size siz)
 {
     uint32_t ret = 0;
-    if (siz)
+    switch (siz)
     {
+    case MCU_Operand_Size::WORD:
         if (reg == 0)
         {
             ret = mcu.sr & sr_mask;
@@ -407,16 +429,15 @@ inline uint32_t MCU_ControlRegisterRead(mcu_t& mcu, uint32_t reg, uint32_t siz)
         }
         else if (reg == 3) // FIXME: undocumented
         {
-            ret = (uint32_t)mcu.br | ((uint32_t)mcu.br << 8);;
+            ret = (uint32_t)mcu.br | ((uint32_t)mcu.br << 8);
         }
         else
         {
             MCU_ErrorTrap(mcu);
         }
         ret &= 0xffff;
-    }
-    else
-    {
+        break;
+    case MCU_Operand_Size::BYTE:
         if (reg == 1)
         {
             ret = mcu.sr & sr_mask;
@@ -442,16 +463,17 @@ inline uint32_t MCU_ControlRegisterRead(mcu_t& mcu, uint32_t reg, uint32_t siz)
             MCU_ErrorTrap(mcu);
         }
         ret &= 0xff;
+        break;
     }
     return ret;
 }
 
-inline void MCU_SetStatus(mcu_t& mcu, uint32_t condition, uint32_t mask)
+inline void MCU_SetStatus(mcu_t& mcu, bool condition, uint16_t mask)
 {
     if (condition)
-        mcu.sr |= (uint16_t)mask;
+        mcu.sr |= mask;
     else
-        mcu.sr &= (uint16_t)(~mask);
+        mcu.sr &= ~mask;
 }
 
 inline void MCU_PushStack(mcu_t& mcu, uint16_t data)
@@ -533,10 +555,11 @@ uint8_t MCU_ReadP0(mcu_t& mcu);
 uint8_t MCU_ReadP1(mcu_t& mcu);
 void MCU_WriteP0(mcu_t& mcu, uint8_t data);
 void MCU_WriteP1(mcu_t& mcu, uint8_t data);
-void MCU_GA_SetGAInt(mcu_t& mcu, int line, int value);
+void MCU_GA_SetGAInt(mcu_t& mcu, uint8_t line, bool value);
 
 void MCU_EncoderTrigger(mcu_t& mcu, int dir);
 
 void MCU_PostSample(mcu_t& mcu, const AudioFrame<int32_t>& frame);
 void MCU_PostUART(mcu_t& mcu, uint8_t data);
 
+void MCU_SetRomset(mcu_t& mcu, Romset romset);

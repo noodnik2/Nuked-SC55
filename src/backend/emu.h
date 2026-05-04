@@ -37,17 +37,21 @@
 #include "mcu.h"
 #include "mcu_timer.h"
 #include "pcm.h"
+#include "rom.h"
+#include "rom_io.h"
 #include "submcu.h"
 #include <filesystem>
 #include <memory>
 #include <span>
-#include <string_view>
 
 struct EMU_Options
 {
     // The backend provided here will receive callbacks from the emulator.
     // If left null, LCD processing will be skipped.
     LCD_Backend* lcd_backend = nullptr;
+
+    // If not empty, nvram will be saved to and loaded from here. JV-880 only.
+    std::filesystem::path nvram_filename;
 };
 
 enum class EMU_SystemReset {
@@ -59,6 +63,14 @@ enum class EMU_SystemReset {
 struct Emulator {
 public:
     Emulator() = default;
+
+    virtual ~Emulator();
+
+    Emulator& operator=(Emulator&&) = default;
+    Emulator(Emulator&&)            = default;
+
+    Emulator(const Emulator&)            = delete;
+    Emulator& operator=(const Emulator&) = delete;
 
     bool Init(const EMU_Options& options);
 
@@ -72,7 +84,18 @@ public:
 
     void SetSampleCallback(mcu_sample_callback callback, void* userdata);
 
-    bool LoadRoms(Romset romset, const std::filesystem::path& base_path);
+    // Loads roms from buffers referenced by `all_info`. If the slot for a rom in `all_info` has a non-empty `rom_data`,
+    // it will be loaded even if the romset doesn't require it.
+    //
+    // It is unspecified whether or not the emulator will copy `rom_data`. `all_info` should outlive the emulator
+    // instance.
+    //
+    // For roms that were successfully loaded, this function will set their corresponding index in `loaded` to true if
+    // `loaded` is non-null.
+    //
+    // It is recommended to check if the romset has all the necessary roms by first calling
+    // `IsCompleteRomset(all_info, romset)`.
+    bool LoadRoms(Romset romset, const AllRomsetInfo& all_info, RomLocationSet* loaded = nullptr);
 
     void PostMIDI(uint8_t data_byte);
     void PostMIDI(std::span<const uint8_t> data);
@@ -86,6 +109,14 @@ public:
     lcd_t& GetLCD() { return *m_lcd; }
 
 private:
+    void SaveNVRAM();
+    void LoadNVRAM();
+
+    std::span<uint8_t> MapBuffer(RomLocation location);
+
+    bool LoadRom(RomLocation location, std::span<const uint8_t> source);
+
+private:
     std::unique_ptr<mcu_t>       m_mcu;
     std::unique_ptr<submcu_t>    m_sm;
     std::unique_ptr<mcu_timer_t> m_timer;
@@ -94,7 +125,3 @@ private:
     EMU_Options                  m_options;
 };
 
-Romset EMU_DetectRomset(const std::filesystem::path& base_path);
-const char* EMU_RomsetName(Romset romset);
-bool EMU_ParseRomsetName(std::string_view name, Romset& romset);
-std::span<const char*> EMU_GetParsableRomsetNames();

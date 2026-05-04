@@ -37,12 +37,7 @@
 
 struct mcu_t;
 
-void MCU_Interrupt_SetRequest(mcu_t& mcu, uint32_t interrupt, uint32_t value);
-void MCU_Interrupt_Exception(mcu_t& mcu, uint32_t exception);
-void MCU_Interrupt_TRAPA(mcu_t& mcu, uint32_t vector);
-void MCU_Interrupt_Handle(mcu_t& mcu);
-
-enum {
+enum MCU_Interrupt_Source : uint8_t {
     INTERRUPT_SOURCE_NMI = 0,
     INTERRUPT_SOURCE_IRQ0, // GPINT
     INTERRUPT_SOURCE_IRQ1,
@@ -67,8 +62,13 @@ enum {
     INTERRUPT_SOURCE_MAX
 };
 
-enum {
+enum MCU_Exception_Source : int8_t {
     EXCEPTION_SOURCE_ADDRESS_ERROR = 0,
     EXCEPTION_SOURCE_INVALID_INSTRUCTION,
     EXCEPTION_SOURCE_TRACE,
 };
+
+void MCU_Interrupt_SetRequest(mcu_t& mcu, MCU_Interrupt_Source interrupt, bool value);
+void MCU_Interrupt_Exception(mcu_t& mcu, MCU_Exception_Source exception);
+void MCU_Interrupt_TRAPA(mcu_t& mcu, uint8_t vector);
+void MCU_Interrupt_Handle(mcu_t& mcu);
