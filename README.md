@@ -31,7 +31,7 @@ To help orient the reader, here's a quick overview of the project's folder struc
 - `dist` - Folder into which executables and scripts are collected to make it easy to run everything
            from one place (aka "distribution" folder).
 - `share` - User-managed folder containing files that are needed to run the project.
-  - `midis` - Source collection of MIDI files (e.g., symbolic link).
+  - `midis` - Source collection of MIDI files (e.g., could be a symbolic link).
   - `lists` - Managed list of MIDI files (e.g., favorites, etc.)
     - `favorites.list` _(example)_
   - `nuked-sc55` - SC55 ROM files (see below)
@@ -159,7 +159,7 @@ And, to route the sound through my MacBook's speakers, I'll direct the output to
 
 In its "interactive" mode, Nuked-SC55 acts as a MIDI synthesizer by responding to MIDI events it receives on the
 input Buses it listens to.  Its standard user interface presents an LCD representing the physical device it's
-emulating while listening for, and responding, to user input from the keyboard.
+emulating while listening for and responding to user input from the keyboard.
 
 For a better idea of what keys are available to control the Nuked-SC55 application while it's running in "interactive"
 mode, check out the source code: e.g., [lcd_sdl.cpp](src/standard/lcd_sdl.cpp).
@@ -167,7 +167,7 @@ mode, check out the source code: e.g., [lcd_sdl.cpp](src/standard/lcd_sdl.cpp).
 An example command that can be used to start the Nuked-SC55 in interactive mode:
 
 ```shell
-$ dist/nuked-sc55 --mk2 -p 2 -a 2
+$ dist/nuked-sc55 --romset mk2 -p 2 -a 2
 ```
 
 - `-p` - listens for MIDI events on the input Bus `2`.
@@ -234,21 +234,26 @@ to Apple Music.
 How I did this:
 
 ```shell
+$ # collect the executables and scripts into the distribution folder
+$ make dist
 $ # create a list of all my MIDI files
-$ find share/midis/ -type f -name "*.mid" > favorites.list
+$ find share/midis/ -type f -name "*.mid" > share/lists/favorites.list
 $ # edit the list to remove any files I don't want to include in the album
-$ edit favorites.list
-$ # create the "album" folder into which to write the `.m4a` files to be created
-$ mkdir -p favorites.album
-$ # transcode the MIDI files into `.m4a` files 
-$ scripts/create-m4a-album.sh favorites.album $(cat favorites.list)
-$ # open the "album" folder in Finder and click on one, or upload them all to Apple Music, etc. 
-$ open favorites.album
+$ edit share/lists/favorites.list
+$ # create the "album" folder into which to write the `.m4a` audio files to be created
+$ mkdir -p share/output/favorites.album
+$ # transcode the MIDI files into `.m4a` audio files 
+$ dist/create-m4a-album.sh share/output/favorites.album $(cat share/lists/favorites.list)
+$ # open the "album" folder in Finder and click on one, or import them to Apple Music, etc. 
+$ open share/output/favorites.album
 ```
 
-Next, by using the "Add to Album" feature of Apple Music, I was able to create a new album containing the `.m4a` files
-created in the step depicted above.  After watching these files get synchronized to the Cloud within my Apple Music
-account, I was then able to enjoy playing them through my phone, computer, and Sonos speakers!
+Next, I was able to import the `share/output/favorites.album` folder into Apple Music so that it becomes an album
+there, playable from any of my Apple Music devices.  I found that I could do this by dragging the folder into the
+Apple Music app's "Songs" sidebar, or by using `File:Import` from its menu.
+
+- _Tip: check out how the [wav2m4a.sh](./scripts/wav2m4a.sh) script assigns the metadata used by Apple Music to
+  name the album and sequence the audio files into it from that folder..._
 
 
 [BUILDING]: ./BUILDING.md
